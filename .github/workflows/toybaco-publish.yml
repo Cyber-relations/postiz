@@ -23,7 +23,8 @@
         "AWS_REGION": "ap-northeast-1",
         "ECR_REPOSITORY": "951034765053.dkr.ecr.ap-northeast-1.amazonaws.com/toybaco/postiz",
         "SOURCE_COMMIT": "${{ github.sha }}",
-        "IMAGE_TAG": "sha-${{ github.sha }}-${{ github.run_number }}"
+        "IMAGE_TAG": "sha-${{ github.sha }}-${{ github.run_number }}",
+        "TRIVY_IMAGE": "docker.io/aquasec/trivy:0.67.2@sha256:ac2f9d0197456a8ce460884b113e49d65b667f506c31d014c9955869a7a5d682"
       },
       "steps": [
         {
@@ -39,7 +40,26 @@
             "REQUEST_REF": "${{ github.ref }}",
             "REQUEST_REF_TYPE": "${{ github.ref_type }}"
           },
-          "run": "set -Eeuo pipefail\nif [[ \"$REQUEST_REF_TYPE\" != 'branch' || \"$REQUEST_REF\" != 'refs/heads/main' ]]; then\n  echo '::error::publisherはmain branchからのみ実行できます。'\n  exit 1\nfi\n[[ \"$SOURCE_COMMIT\" =~ ^[0-9a-f]{40}$ ]] || { echo '::error::github.shaが40桁commitではありません。'; exit 1; }\n[[ \"$(git rev-parse HEAD)\" = \"$SOURCE_COMMIT\" ]]\nexpected_tag=\"sha-${SOURCE_COMMIT}-${GITHUB_RUN_NUMBER}\"\n[[ \"$IMAGE_TAG\" = \"$expected_tag\" && \"$IMAGE_TAG\" =~ ^sha-[0-9a-f]{40}-[1-9][0-9]*$ ]] || { echo '::error::commit/run由来image tagが不正です。'; exit 1; }\ngit diff --exit-code\ngit diff --cached --exit-code\n[[ -z \"$(git status --porcelain=v1 --untracked-files=all)\" ]]\nsource_tree=\"$(git rev-parse 'HEAD^{tree}')\"\n[[ \"$source_tree\" =~ ^[0-9a-f]{40}$ ]]\n[[ -f Dockerfile.dev && ! -L Dockerfile.dev ]]\nsource_offer='apps/frontend/src/components/new-layout/layout.component.tsx'\n[[ -f \"$source_offer\" && ! -L \"$source_offer\" ]]\ngrep -Fq 'https://github.com/Cyber-relations/postiz/tree/' \"$source_offer\"\ngrep -Fq 'process.env.NEXT_PUBLIC_VERSION' \"$source_offer\"\nprintf 'source_commit=%s\\n' \"$SOURCE_COMMIT\" >> \"$GITHUB_OUTPUT\"\nprintf 'source_tree=%s\\n' \"$source_tree\" >> \"$GITHUB_OUTPUT\"\nprintf 'image_tag=%s\\n' \"$IMAGE_TAG\" >> \"$GITHUB_OUTPUT\""
+          "run": "set -Eeuo pipefail\nif [[ \"$REQUEST_REF_TYPE\" != 'branch' || \"$REQUEST_REF\" != 'refs/heads/main' ]]; then\n  echo '::error::publisherはmain branchからのみ実行できます。'\n  exit 1\nfi\n[[ \"$SOURCE_COMMIT\" =~ ^[0-9a-f]{40}$ ]] || { echo '::error::github.shaが40桁commitではありません。'; exit 1; }\n[[ \"$(git rev-parse HEAD)\" = \"$SOURCE_COMMIT\" ]]\nexpected_tag=\"sha-${SOURCE_COMMIT}-${GITHUB_RUN_NUMBER}\"\n[[ \"$IMAGE_TAG\" = \"$expected_tag\" && \"$IMAGE_TAG\" =~ ^sha-[0-9a-f]{40}-[1-9][0-9]*$ ]] || { echo '::error::commit/run由来image tagが不正です。'; exit 1; }\ngit diff --exit-code\ngit diff --cached --exit-code\n[[ -z \"$(git status --porcelain=v1 --untracked-files=all)\" ]]\nsource_tree=\"$(git rev-parse 'HEAD^{tree}')\"\n[[ \"$source_tree\" =~ ^[0-9a-f]{40}$ ]]\n[[ -f Dockerfile.dev && ! -L Dockerfile.dev ]]\nentrypoint='var/docker/toybaco-entrypoint.sh'\n[[ -f \"$entrypoint\" && ! -L \"$entrypoint\" && -x \"$entrypoint\" ]]\nsource_offer='apps/frontend/src/components/new-layout/layout.component.tsx'\n[[ -f \"$source_offer\" && ! -L \"$source_offer\" ]]\ngrep -Fq 'https://github.com/Cyber-relations/postiz/tree/' \"$source_offer\"\ngrep -Fq 'process.env.NEXT_PUBLIC_VERSION' \"$source_offer\"\nprintf 'source_commit=%s\\n' \"$SOURCE_COMMIT\" >> \"$GITHUB_OUTPUT\"\nprintf 'source_tree=%s\\n' \"$source_tree\" >> \"$GITHUB_OUTPUT\"\nprintf 'image_tag=%s\\n' \"$IMAGE_TAG\" >> \"$GITHUB_OUTPUT\""
+        },
+        {
+          "name": "linux/amd64 imageを一度だけbuild・loadしlocal runtimeを確認",
+          "id": "build",
+          "shell": "bash",
+          "env": {
+            "SOURCE_TREE": "${{ steps.source.outputs.source_tree }}"
+          },
+          "run": "set -Eeuo pipefail\n[[ \"$SOURCE_TREE\" =~ ^[0-9a-f]{40}$ ]]\nmetadata=\"$RUNNER_TEMP/postiz-build-metadata.json\"\nlocal_image=\"$ECR_REPOSITORY:$IMAGE_TAG\"\ndocker buildx version\ndocker buildx build --pull --platform linux/amd64 --file Dockerfile.dev --build-arg \"NEXT_PUBLIC_VERSION=$SOURCE_COMMIT\" --label \"org.opencontainers.image.revision=$SOURCE_COMMIT\" --label \"jp.toybaco.source.tree=$SOURCE_TREE\" --tag \"$local_image\" --metadata-file \"$metadata\" --provenance=false --sbom=false --load .\n[[ -f \"$metadata\" && ! -L \"$metadata\" ]]\nlocal_id=\"$(docker image inspect --format '{{.Id}}' \"$local_image\")\"\n[[ \"$local_id\" =~ ^sha256:[0-9a-f]{64}$ ]]\nmetadata_id=\"$(jq -r '.\"containerimage.config.digest\" // empty' \"$metadata\")\"\n[[ \"$metadata_id\" = \"$local_id\" ]] || { echo \"::error::buildx metadataとlocal image IDが一致しません。metadata=$metadata_id local=$local_id\"; exit 1; }\nimage_json=\"$(docker image inspect \"$local_image\")\"\njq -e --arg revision \"$SOURCE_COMMIT\" --arg tree \"$SOURCE_TREE\" '.[0].Os == \"linux\" and .[0].Architecture == \"amd64\" and .[0].Config.User == \"www\" and .[0].Config.Entrypoint == [\"/sbin/tini\", \"-g\", \"--\"] and .[0].Config.Cmd == [\"/usr/local/bin/toybaco-entrypoint\"] and .[0].Config.Labels[\"org.opencontainers.image.revision\"] == $revision and .[0].Config.Labels[\"jp.toybaco.source.tree\"] == $tree' <<<\"$image_json\" >/dev/null\ndocker run --rm --entrypoint /bin/sh \"$local_image\" -ec 'test \"$(id -u)\" = 10001; ! command -v bash; ! command -v pnpm; ! command -v pm2'\ndocker run --rm --entrypoint /usr/sbin/nginx \"$local_image\" -t -g 'pid /tmp/nginx.pid;'\nprintf 'local_image=%s\\n' \"$local_image\" >> \"$GITHUB_OUTPUT\"\nprintf 'local_image_id=%s\\n' \"$local_id\" >> \"$GITHUB_OUTPUT\""
+        },
+        {
+          "name": "固定TrivyでOS Critical/Highゼロを公開前確認",
+          "id": "trivy_os",
+          "shell": "bash",
+          "env": {
+            "LOCAL_IMAGE": "${{ steps.build.outputs.local_image }}",
+            "LOCAL_IMAGE_ID": "${{ steps.build.outputs.local_image_id }}"
+          },
+          "run": "set -Eeuo pipefail\n[[ \"$TRIVY_IMAGE\" == 'docker.io/aquasec/trivy:0.67.2@sha256:ac2f9d0197456a8ce460884b113e49d65b667f506c31d014c9955869a7a5d682' ]]\n[[ \"$(docker image inspect --format '{{.Id}}' \"$LOCAL_IMAGE\")\" = \"$LOCAL_IMAGE_ID\" ]]\ntrivy_cache=\"$RUNNER_TEMP/trivy-cache\"\nmkdir -p \"$trivy_cache\"\nchmod 0700 \"$trivy_cache\"\ndocker pull \"$TRIVY_IMAGE\"\ndocker run --rm --volume /var/run/docker.sock:/var/run/docker.sock --volume \"$trivy_cache:/root/.cache/\" \"$TRIVY_IMAGE\" image --scanners vuln --pkg-types os --severity CRITICAL,HIGH --ignore-unfixed=false --exit-code 1 --skip-java-db-update --no-progress \"$LOCAL_IMAGE\""
         },
         {
           "name": "GitHub OIDCで本番publisher roleを取得",
@@ -62,19 +82,21 @@
           }
         },
         {
-          "name": "linux/amd64 imageを一度だけbuild・pushしdigestとlabelを確認",
-          "id": "build",
+          "name": "scan済み同一imageを一度だけpushしexact digestを確認",
+          "id": "push",
           "shell": "bash",
           "env": {
+            "LOCAL_IMAGE": "${{ steps.build.outputs.local_image }}",
+            "LOCAL_IMAGE_ID": "${{ steps.build.outputs.local_image_id }}",
             "SOURCE_TREE": "${{ steps.source.outputs.source_tree }}"
           },
-          "run": "set -Eeuo pipefail\n[[ \"$SOURCE_TREE\" =~ ^[0-9a-f]{40}$ ]]\nmetadata=\"$RUNNER_TEMP/postiz-build-metadata.json\"\nimage=\"$ECR_REPOSITORY:$IMAGE_TAG\"\ndocker buildx version\ndocker buildx build --pull --platform linux/amd64 --file Dockerfile.dev --build-arg \"NEXT_PUBLIC_VERSION=$SOURCE_COMMIT\" --label \"org.opencontainers.image.revision=$SOURCE_COMMIT\" --label \"jp.toybaco.source.tree=$SOURCE_TREE\" --tag \"$image\" --metadata-file \"$metadata\" --provenance=false --sbom=false --push .\n[[ -f \"$metadata\" && ! -L \"$metadata\" ]]\ndigest=\"$(jq -r '.\"containerimage.digest\" // empty' \"$metadata\")\"\n[[ \"$digest\" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo '::error::buildx metadata digestが不正です。'; exit 1; }\ndescribed_digest=\"$(aws ecr describe-images --region \"$AWS_REGION\" --registry-id 951034765053 --repository-name toybaco/postiz --image-ids \"imageTag=$IMAGE_TAG\" --query 'imageDetails[0].imageDigest' --output text)\"\n[[ \"$described_digest\" = \"$digest\" ]] || { echo \"::error::buildxとECRのdigestが一致しません。buildx=$digest ecr=$described_digest\"; exit 1; }\nimage_json=\"$(docker buildx imagetools inspect \"$ECR_REPOSITORY@$digest\" --format '{{json .Image}}')\"\njq -e --arg revision \"$SOURCE_COMMIT\" --arg tree \"$SOURCE_TREE\" '.os == \"linux\" and .architecture == \"amd64\" and .config.Labels[\"org.opencontainers.image.revision\"] == $revision and .config.Labels[\"jp.toybaco.source.tree\"] == $tree' <<<\"$image_json\" >/dev/null\nprintf 'image_digest=%s\\n' \"$digest\" >> \"$GITHUB_OUTPUT\"\nprintf 'image_uri=%s@%s\\n' \"$ECR_REPOSITORY\" \"$digest\" >> \"$GITHUB_OUTPUT\""
+          "run": "set -Eeuo pipefail\n[[ \"$(docker image inspect --format '{{.Id}}' \"$LOCAL_IMAGE\")\" = \"$LOCAL_IMAGE_ID\" ]]\n[[ \"$LOCAL_IMAGE\" = \"$ECR_REPOSITORY:$IMAGE_TAG\" ]]\ndocker push \"$LOCAL_IMAGE\"\ndigest=\"$(aws ecr describe-images --region \"$AWS_REGION\" --registry-id 951034765053 --repository-name toybaco/postiz --image-ids \"imageTag=$IMAGE_TAG\" --query 'imageDetails[0].imageDigest' --output text)\"\n[[ \"$digest\" =~ ^sha256:[0-9a-f]{64}$ ]]\nmanifest=\"$(docker buildx imagetools inspect \"$ECR_REPOSITORY@$digest\" --raw)\"\nremote_id=\"$(jq -r '.config.digest // empty' <<<\"$manifest\")\"\n[[ \"$remote_id\" = \"$LOCAL_IMAGE_ID\" ]] || { echo \"::error::scan済みlocal image IDとECR config digestが一致しません。local=$LOCAL_IMAGE_ID ecr=$remote_id\"; exit 1; }\nimage_json=\"$(docker buildx imagetools inspect \"$ECR_REPOSITORY@$digest\" --format '{{json .Image}}')\"\njq -e --arg revision \"$SOURCE_COMMIT\" --arg tree \"$SOURCE_TREE\" '.os == \"linux\" and .architecture == \"amd64\" and .config.Labels[\"org.opencontainers.image.revision\"] == $revision and .config.Labels[\"jp.toybaco.source.tree\"] == $tree' <<<\"$image_json\" >/dev/null\nprintf 'image_digest=%s\\n' \"$digest\" >> \"$GITHUB_OUTPUT\"\nprintf 'image_uri=%s@%s\\n' \"$ECR_REPOSITORY\" \"$digest\" >> \"$GITHUB_OUTPUT\""
         },
         {
           "name": "ECR scan完了・Critical/Highゼロを確認",
           "id": "scan",
           "shell": "bash",
-          "env": { "IMAGE_DIGEST": "${{ steps.build.outputs.image_digest }}" },
+          "env": { "IMAGE_DIGEST": "${{ steps.push.outputs.image_digest }}" },
           "run": "set -Eeuo pipefail\n[[ \"$IMAGE_DIGEST\" =~ ^sha256:[0-9a-f]{64}$ ]]\nscan_file=\"$RUNNER_TEMP/postiz-ecr-scan.json\"\nerror_file=\"$RUNNER_TEMP/postiz-ecr-scan.error\"\ncomplete=0\nfor ((attempt = 1; attempt <= 60; attempt += 1)); do\n  if aws ecr describe-image-scan-findings --region \"$AWS_REGION\" --registry-id 951034765053 --repository-name toybaco/postiz --image-id \"imageDigest=$IMAGE_DIGEST\" --output json > \"$scan_file\" 2> \"$error_file\"; then\n    status=\"$(jq -r '.imageScanStatus.status // empty' \"$scan_file\")\"\n    case \"$status\" in\n      COMPLETE) complete=1; break ;;\n      PENDING|IN_PROGRESS) sleep 10 ;;\n      *) echo \"::error::ECR scanがfail-closed statusになりました: $status\"; exit 1 ;;\n    esac\n  elif grep -Fq 'ScanNotFoundException' \"$error_file\"; then\n    sleep 10\n  else\n    echo '::error::ECR scan結果を取得できません。'\n    exit 1\n  fi\ndone\n[[ \"$complete\" -eq 1 ]] || { echo '::error::ECR scanが10分以内に完了しません。'; exit 1; }\ncritical=\"$(jq -r '.imageScanFindings.findingSeverityCounts.CRITICAL // 0' \"$scan_file\")\"\nhigh=\"$(jq -r '.imageScanFindings.findingSeverityCounts.HIGH // 0' \"$scan_file\")\"\n[[ \"$critical\" =~ ^[0-9]+$ && \"$high\" =~ ^[0-9]+$ ]]\nif [[ \"$critical\" -ne 0 || \"$high\" -ne 0 ]]; then\n  echo \"::error::ECR scan gate失敗: CRITICAL=$critical HIGH=$high\"\n  exit 1\nfi\nprintf 'ECR scan verified: digest=%s CRITICAL=0 HIGH=0\\n' \"$IMAGE_DIGEST\""
         },
         {
@@ -86,7 +108,7 @@
             "SYFT_RELATIONSHIPS_PACKAGE_FILE_OWNERSHIP": "false"
           },
           "with": {
-            "image": "${{ steps.build.outputs.image_uri }}",
+            "image": "${{ steps.push.outputs.image_uri }}",
             "format": "spdx-json",
             "output-file": "${{ runner.temp }}/toybaco-postiz.spdx.json",
             "syft-version": "v1.51.1",
@@ -106,7 +128,7 @@
           "uses": "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6",
           "with": {
             "subject-name": "951034765053.dkr.ecr.ap-northeast-1.amazonaws.com/toybaco/postiz",
-            "subject-digest": "${{ steps.build.outputs.image_digest }}",
+            "subject-digest": "${{ steps.push.outputs.image_digest }}",
             "push-to-registry": true,
             "create-storage-record": true,
             "show-summary": false
@@ -118,7 +140,7 @@
           "uses": "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6",
           "with": {
             "subject-name": "951034765053.dkr.ecr.ap-northeast-1.amazonaws.com/toybaco/postiz",
-            "subject-digest": "${{ steps.build.outputs.image_digest }}",
+            "subject-digest": "${{ steps.push.outputs.image_digest }}",
             "sbom-path": "${{ runner.temp }}/toybaco-postiz.spdx.json",
             "push-to-registry": true,
             "create-storage-record": false,
@@ -130,7 +152,7 @@
           "shell": "bash",
           "env": {
             "GH_TOKEN": "${{ github.token }}",
-            "IMAGE_DIGEST": "${{ steps.build.outputs.image_digest }}"
+            "IMAGE_DIGEST": "${{ steps.push.outputs.image_digest }}"
           },
           "run": "set -Eeuo pipefail\n[[ \"$IMAGE_DIGEST\" =~ ^sha256:[0-9a-f]{64}$ ]]\nimage=\"oci://$ECR_REPOSITORY@$IMAGE_DIGEST\"\nidentity='https://github.com/Cyber-relations/postiz/.github/workflows/toybaco-publish.yml@refs/heads/main'\ngh attestation verify \"$image\" --repo Cyber-relations/postiz --bundle-from-oci --cert-identity \"$identity\" --source-digest \"$SOURCE_COMMIT\" --source-ref refs/heads/main --deny-self-hosted-runners --predicate-type 'https://slsa.dev/provenance/v1' >/dev/null\ngh attestation verify \"$image\" --repo Cyber-relations/postiz --bundle-from-oci --cert-identity \"$identity\" --source-digest \"$SOURCE_COMMIT\" --source-ref refs/heads/main --deny-self-hosted-runners --predicate-type 'https://spdx.dev/Document/v2.3' >/dev/null\nprintf 'Published %s:%s@%s from %s\\n' \"$ECR_REPOSITORY\" \"$IMAGE_TAG\" \"$IMAGE_DIGEST\" \"$SOURCE_COMMIT\""
         }
