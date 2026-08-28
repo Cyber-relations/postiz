@@ -43,19 +43,6 @@ export const startMcp = async (app: INestApplication) => {
   const agent = mastra.getAgent('postiz');
   const tools = await agent.listTools();
 
-  // The Claude connector directory does not accept AI media generation tools,
-  // so the directory-facing endpoint hides them. Direct connections
-  // (/mcp, /mcp/:id, /sse/:id) and the ChatGPT app keep the full toolset.
-  const claudeHiddenTools = [
-    'generateImageTool',
-    'generateVideoTool',
-    'generateVideoOptions',
-    'videoFunctionTool',
-  ];
-  const claudeTools = Object.fromEntries(
-    Object.entries(tools).filter(([name]) => !claudeHiddenTools.includes(name))
-  ) as typeof tools;
-
   const serverConfig = {
     name: 'Postiz MCP',
     version: '1.0.0',
@@ -77,7 +64,7 @@ export const startMcp = async (app: INestApplication) => {
   const claudeOauthServer = new MCPServer({
     name: 'Postiz MCP',
     version: '1.0.0',
-    tools: claudeTools,
+    tools,
   });
 
   const oauthResource = new URL('/mcp-oauth', process.env.NEXT_PUBLIC_BACKEND_URL!).toString();

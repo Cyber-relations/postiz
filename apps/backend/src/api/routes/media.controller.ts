@@ -1,14 +1,21 @@
 import {
+  ForbiddenException,
+  ArgumentsHost,
+  BadRequestException,
   Body,
+  Catch,
   Controller,
   Delete,
+  ExceptionFilter,
   Get,
+  HttpException,
   Param,
   Post,
   Query,
   Req,
   Res,
   UploadedFile,
+  UseFilters,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
@@ -25,6 +32,49 @@ import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { SaveMediaInformationDto } from '@gitroom/nestjs-libraries/dtos/media/save.media.information.dto';
 import { VideoDto } from '@gitroom/nestjs-libraries/dtos/videos/video.dto';
 import { VideoFunctionDto } from '@gitroom/nestjs-libraries/dtos/videos/video.function.dto';
+
+// toybaco_memory_upload_boundary_v1: multerがbufferを確保する前に止める。
+const toybacoMemoryUploadOptions = {
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1,
+    fields: 4,
+    parts: 5,
+    fieldNameSize: 100,
+    fieldSize: 1024,
+    headerPairs: 64,
+  },
+  fileFilter: (_req: any, file: any, callback: any) => {
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file?.mimetype)) {
+      callback(new BadRequestException('メディアをアップロードできませんでした'), false);
+      return;
+    }
+    callback(null, true);
+  },
+};
+
+@Catch()
+class ToybacoUploadExceptionFilter implements ExceptionFilter {
+  catch(exception: any, host: ArgumentsHost) {
+    const response = host.switchToHttp().getResponse<Response>();
+    const tooLarge = exception?.code === 'LIMIT_FILE_SIZE';
+    const status = tooLarge
+      ? 413
+      : exception instanceof HttpException && exception.getStatus() < 500
+        ? exception.getStatus()
+        : 500;
+    response.status(status).json({
+      code: tooLarge ? 'UPLOAD_TOO_LARGE' : status >= 500 ? 'UPLOAD_FAILED' : 'UPLOAD_INVALID_FILE',
+      message: tooLarge
+        ? 'この経路では10MB以下の画像だけアップロードできます'
+        : 'メディアをアップロードできませんでした',
+    });
+  }
+}
+
+function toybacoRejectMediaGeneration(): void {
+  throw new ForbiddenException('この機能は利用できません');
+}
 
 @ApiTags('Media')
 @Controller('/media')
@@ -45,6 +95,10 @@ export class MediaController {
     @GetOrgFromRequest() org: Organization,
     @Body() body: VideoDto
   ) {
+    // 画像・動画の生成は提供しない。顧客が投稿するのは実際の商品・施術・
+    // 物件の写真であり、AI で作った画像を使うと誤認表示になりかねない。
+    // toybaco_ai_media_permanent_block: 製品判断なので設定値に関係なく閉じる。
+    toybacoRejectMediaGeneration();
     console.log('hello');
     return this._mediaService.generateVideo(org, body);
   }
@@ -56,6 +110,10 @@ export class MediaController {
     @Body('prompt') prompt: string,
     isPicturePrompt = false
   ) {
+    // 画像・動画の生成は提供しない。顧客が投稿するのは実際の商品・施術・
+    // 物件の写真であり、AI で作った画像を使うと誤認表示になりかねない。
+    // toybaco_ai_media_permanent_block: 製品判断なので設定値に関係なく閉じる。
+    toybacoRejectMediaGeneration();
     const total = await this._subscriptionService.checkCredits(org);
     if (process.env.STRIPE_PUBLISHABLE_KEY && total.credits <= 0) {
       return false;
@@ -74,18 +132,25 @@ export class MediaController {
     @Req() req: Request,
     @Body('prompt') prompt: string
   ) {
+    // 画像・動画の生成は提供しない。顧客が投稿するのは実際の商品・施術・
+    // 物件の写真であり、AI で作った画像を使うと誤認表示になりかねない。
+    // toybaco_ai_media_permanent_block: 製品判断なので設定値に関係なく閉じる。
+    toybacoRejectMediaGeneration();
     const image = await this.generateImage(org, req, prompt, true);
     if (!image) {
       return false;
     }
 
-    const file = await this.storage.uploadSimple(image.output);
+    const file = await this.storage.uploadSimple(
+      (image as { output: string }).output
+    );
 
     return this._mediaService.saveFile(org.id, file.split('/').pop(), file);
   }
 
   @Post('/upload-server')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', toybacoMemoryUploadOptions))
+  @UseFilters(new ToybacoUploadExceptionFilter())
   @UsePipes(new CustomFileValidationPipe())
   async uploadServer(
     @GetOrgFromRequest() org: Organization,
@@ -128,7 +193,8 @@ export class MediaController {
   }
 
   @Post('/upload-simple')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', toybacoMemoryUploadOptions))
+  @UseFilters(new ToybacoUploadExceptionFilter())
   @UsePipes(new CustomFileValidationPipe())
   async uploadSimple(
     @GetOrgFromRequest() org: Organization,
@@ -158,24 +224,35 @@ export class MediaController {
     @Res() res: Response,
     @Param('endpoint') endpoint: string
   ) {
-    const upload = await handleR2Upload(endpoint, req, res);
-    if (endpoint !== 'complete-multipart-upload') {
+    const upload = await handleR2Upload(endpoint, org.id, req, res);
+    if (res.headersSent || endpoint !== 'complete-multipart-upload') {
       return upload;
     }
-
-    // @ts-ignore
-    const name = upload.Location.split('/').pop();
-    const originalName = req.body?.file?.name;
-
+    const completed = upload as any;
+    if (
+      !completed ||
+      typeof completed.Location !== 'string' ||
+      typeof completed.Key !== 'string' ||
+      typeof completed.OriginalName !== 'string'
+    ) {
+      return res.status(502).json({
+        code: 'UPLOAD_STORAGE_ERROR',
+        message: 'メディアを確定できませんでした',
+      });
+    }
     const saveFile = await this._mediaService.saveFile(
       org.id,
-      name,
-      // @ts-ignore
-      upload.Location,
-      originalName || undefined
+      completed.Key,
+      completed.Location,
+      completed.OriginalName
     );
 
-    res.status(200).json({ ...upload, saved: saveFile });
+    res.status(200).json({
+      Location: completed.Location,
+      Key: completed.Key,
+      ETag: completed.ETag,
+      saved: saveFile,
+    });
   }
 
   @Get('/')
@@ -189,6 +266,10 @@ export class MediaController {
 
   @Get('/video-options')
   getVideos() {
+    // 画像・動画の生成は提供しない。顧客が投稿するのは実際の商品・施術・
+    // 物件の写真であり、AI で作った画像を使うと誤認表示になりかねない。
+    // toybaco_ai_media_permanent_block: 製品判断なので設定値に関係なく閉じる。
+    toybacoRejectMediaGeneration();
     return this._mediaService.getVideoOptions();
   }
 
@@ -196,6 +277,10 @@ export class MediaController {
   videoFunction(
     @Body() body: VideoFunctionDto
   ) {
+    // 画像・動画の生成は提供しない。顧客が投稿するのは実際の商品・施術・
+    // 物件の写真であり、AI で作った画像を使うと誤認表示になりかねない。
+    // toybaco_ai_media_permanent_block: 製品判断なので設定値に関係なく閉じる。
+    toybacoRejectMediaGeneration();
     return this._mediaService.videoFunction(body.identifier, body.functionName, body.params);
   }
 
@@ -204,6 +289,10 @@ export class MediaController {
     @GetOrgFromRequest() org: Organization,
     @Param('type') type: string
   ) {
+    // 画像・動画の生成は提供しない。顧客が投稿するのは実際の商品・施術・
+    // 物件の写真であり、AI で作った画像を使うと誤認表示になりかねない。
+    // toybaco_ai_media_permanent_block: 製品判断なので設定値に関係なく閉じる。
+    toybacoRejectMediaGeneration();
     return this._mediaService.generateVideoAllowed(org, type);
   }
 }

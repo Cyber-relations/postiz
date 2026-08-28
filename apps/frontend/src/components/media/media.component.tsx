@@ -25,16 +25,12 @@ import { VideoFrame } from '@gitroom/react/helpers/video.frame';
 import { useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
 import dynamic from 'next/dynamic';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
-import { AiImage } from '@gitroom/frontend/components/launches/ai.image';
 import { DropFiles } from '@gitroom/frontend/components/layout/drop.files';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { ThirdPartyMedia } from '@gitroom/frontend/components/third-parties/third-party.media';
 import { ReactSortable } from 'react-sortablejs';
 import { MediaComponentInner } from '@gitroom/frontend/components/launches/helpers/media.settings.component';
-import { AiVideo } from '@gitroom/frontend/components/launches/ai.video';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { ThirdPartyMediaLibrary } from '@gitroom/frontend/components/third-parties/third-party.media-library';
 import { Dashboard } from '@uppy/react';
 import {
   ChevronLeftIcon,
@@ -123,7 +119,7 @@ export const Pagination: FC<{
       <li className={clsx(current === 0 && 'opacity-20 pointer-events-none')}>
         <div
           className="cursor-pointer inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 gap-1 ps-2.5 text-gray-400 hover:text-white border-[#1F1F1F] hover:bg-forth"
-          aria-label="Go to previous page"
+          aria-label="前のページへ"
           onClick={() => setPage(current - 1)}
         >
           <ChevronLeftIcon className="lucide lucide-chevron-left h-4 w-4" />
@@ -159,7 +155,7 @@ export const Pagination: FC<{
       >
         <a
           className="text-textColor hover:text-white group cursor-pointer inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 gap-1 pe-2.5 text-gray-400 border-[#1F1F1F] hover:bg-forth"
-          aria-label="Go to next page"
+          aria-label="次のページへ"
           onClick={() => setPage(current + 1)}
         >
           <span>{t('next', 'Next')}</span>
@@ -363,7 +359,7 @@ export const MediaBox: FC<{
                 height="100%"
                 className="w-full h-full max-h-[100%] max-w-[100%] object-cover"
                 src={mediaDirectory.set(media.path)}
-                alt="media"
+                alt="メディア"
               />
             )}
           </div>
@@ -443,7 +439,6 @@ export const MediaBox: FC<{
           />
           <div className="flex gap-[8px]">
             {btn}
-            <ThirdPartyMediaLibrary onImported={() => mutate()} />
           </div>
         </div>
         <div className="w-full pointer-events-none relative mt-[5px] mb-[5px]">
@@ -505,7 +500,6 @@ export const MediaBox: FC<{
                 </div>
                 <div className="forceChange flex gap-[8px]">
                   {btn}
-                  <ThirdPartyMediaLibrary onImported={() => mutate()} />
                 </div>
               </>
             )}
@@ -588,7 +582,7 @@ export const MediaBox: FC<{
                           height="100%"
                           className="w-full h-full object-cover"
                           src={mediaDirectory.set(media.path)}
-                          alt="media"
+                          alt="メディア"
                         />
                       )}
                     </div>
@@ -853,14 +847,8 @@ export const MultiMediaComponent: FC<{
                 </div>
               </div>
 
-              <ThirdPartyMedia allData={allData} onChange={changeMedia} />
 
-              {!!user?.tier?.ai && (
-                <>
-                  <AiImage value={text} onChange={changeMedia} />
-                  <AiVideo value={text} onChange={changeMedia} />
-                </>
-              )}
+
             </div>
           )}
           {!mediaNotAvailable && (

@@ -27,7 +27,7 @@ export const useAddProvider = (update?: () => void, invite?: boolean) => {
   return useCallback(async () => {
     const data = await (await fetch('/integrations')).json();
     modal.openModal({
-      title: 'Add Channel',
+      title: 'チャンネルを追加',
       withCloseButton: true,
       children: (
         <AddProviderComponent invite={!!invite} update={update} {...data} />
@@ -67,7 +67,7 @@ export const AddProviderButton: FC<{
           </svg>
         </div>
         <div className="text-start text-[14px] group-[.sidebar]:hidden">
-          {t('add_channel', 'Add Channel')}
+          {t('add_channel', 'チャンネルを追加')}
         </div>
       </button>
       <button
@@ -75,7 +75,7 @@ export const AddProviderButton: FC<{
         data-tooltip-id="tooltip"
         data-tooltip-content={t(
           'invite_link',
-          'Send Invite Link to a customer to add channel'
+          '顧客へチャンネル追加用の招待リンクを送る'
         )}
         className="group-[.sidebar]:hidden min-h-[44px] min-w-[44px] bg-btnSimple justify-center items-center flex rounded-[8px] cursor-pointer"
       >
@@ -280,7 +280,7 @@ const ExtensionNotFound: FC = () => {
       <p className="text-[14px] text-textColor/80">
         {t(
           'extension_not_available',
-          'The Postiz browser extension is not installed. You need to install it before connecting this channel.'
+          'The トイバコのブラウザ拡張 is not installed. You need to install it before connecting this channel.'
         )}
       </p>
       <div className="flex gap-[10px]">
@@ -295,7 +295,7 @@ const ExtensionNotFound: FC = () => {
             modals.closeCurrent();
           }}
         >
-          {t('install_extension', 'Install Extension')}
+          {t('install_extension', '拡張機能をインストール')}
         </Button>
         <Button
           type="button"
@@ -343,11 +343,11 @@ const ChromeExtensionWarning: FC<{
           )}
         </li>
         <li>
-          We will store your cookies securely to facilitate the connection.
+          連携に必要なCookieは安全に保管します。
         </li>
         <li>
-          Postiz does not take responsibility for any issues arising or account
-          termination due to the use of this method.
+          この方法の利用により問題やアカウント停止が発生する可能性があります。
+          内容をご確認のうえ、ご自身の判断で利用してください。
         </li>
       </ul>
       <div className="flex gap-[10px] mt-[8px]">
@@ -359,7 +359,7 @@ const ChromeExtensionWarning: FC<{
             onConfirm();
           }}
         >
-          {t('i_understand_continue', 'I understand, continue')}
+          {t('i_understand_continue', '内容を理解して続ける')}
         </Button>
         <Button
           type="button"
@@ -487,7 +487,7 @@ export const AddProviderComponent: FC<{
             toaster.show(
               t(
                 'could_not_connect_to_platform',
-                'Could not connect to the platform'
+                '連携先へ接続できませんでした'
               ),
               'warning'
             );
@@ -496,7 +496,7 @@ export const AddProviderComponent: FC<{
 
           if (invite) {
             toaster.show(
-              'Invite link copied to clipboard, link will be available for 1 hour',
+              t('invite_link_copied_one_hour', '招待リンクをコピーしました。有効期限は1時間です。'),
               'success'
             );
             modal.closeAll();
@@ -521,6 +521,31 @@ export const AddProviderComponent: FC<{
             return;
           }
 
+          // OAuth 先は iframe 表示を拒否するため、埋め込み中だけ別ウィンドウで接続する。
+          if (document.documentElement.dataset.toybacoEmbed) {
+            // noopener は「付けない」のが既定で opener が残る。
+            // 'noopener=no' のような書き方は規格に無く、字面を見て
+            // noopener 扱いにするブラウザがある。そうなると完了通知
+            // (opener への postMessage)が届かないので、指定しない。
+            const toybacoWindow = window as Window & {
+              __toybacoConnectPopup?: Window | null;
+            };
+            const popup = window.open(
+              url,
+              'toybaco-connect',
+              'width=600,height=800'
+            );
+            if (!popup) {
+              toaster.show(
+                'チャネル接続用のポップアップを開けませんでした。ブラウザのポップアップを許可して、もう一度お試しください。',
+                'warning'
+              );
+              return;
+            }
+            // 完了通知はこのWindowProxyから来たものだけを受理する。
+            toybacoWindow.__toybacoConnectPopup = popup;
+            return;
+          }
           window.location.href = url;
         };
         if (isWeb3) {
@@ -530,7 +555,7 @@ export const AddProviderComponent: FC<{
         if (isChromeExtension) {
           const confirmed = await new Promise<boolean>((resolve) => {
             modal.openModal({
-              title: t('chrome_extension_notice', 'Browser Extension Notice'),
+              title: t('chrome_extension_notice', 'ブラウザ拡張機能に関する注意'),
               withCloseButton: true,
               onClose: () => resolve(false),
               children: (
@@ -550,7 +575,7 @@ export const AddProviderComponent: FC<{
           }
           if (!extensionId || !chrome?.runtime?.sendMessage) {
             modal.openModal({
-              title: t('extension_not_available_title', 'Extension Not Found'),
+              title: t('extension_not_available_title', '拡張機能が見つかりません'),
               withCloseButton: true,
               children: <ExtensionNotFound />,
             });
@@ -574,7 +599,7 @@ export const AddProviderComponent: FC<{
             toaster.show(
               t(
                 'extension_not_installed',
-                'Postiz browser extension is not installed or not reachable.'
+                'トイバコのブラウザ拡張 is not installed or not reachable.'
               ),
               'warning'
             );
@@ -595,12 +620,12 @@ export const AddProviderComponent: FC<{
               );
             });
             if (!cookieResponse.success) {
+              // 拡張機能由来の生エラーは内部情報を含み得るため表示しない。
               toaster.show(
-                cookieResponse.error ||
-                  t(
-                    'extension_cookies_missing',
-                    'Could not get cookies. Please log in to the platform first.'
-                  ),
+                t(
+                  'extension_cookies_missing',
+                  '接続情報を取得できませんでした。先に接続先サービスへログインしてください。'
+                ),
                 'warning'
               );
               return;
@@ -641,7 +666,7 @@ export const AddProviderComponent: FC<{
         }
         if (customFields) {
           modal.openModal({
-            title: t('add_provider_title', 'Add Provider'),
+            title: t('add_provider_title', '連携先を追加'),
             withCloseButton: true,
             ...(isMobile ? { removeLayout: true, fullScreen: true } : {}),
             classNames: {

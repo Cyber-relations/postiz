@@ -24,11 +24,15 @@ import {
   postId as postIdSearchParam,
 } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
-import { withHeartbeat } from '@gitroom/nestjs-libraries/temporal/temporal.heartbeat';
+import {
+  setHeartbeatDetails,
+  withHeartbeat,
+} from '@gitroom/nestjs-libraries/temporal/temporal.heartbeat';
 import {
   BadBody,
   Disconnect,
 } from '@gitroom/nestjs-libraries/integrations/social.abstract';
+import { toybacoNotificationJa } from '@gitroom/nestjs-libraries/toybaco/notification.ja';
 
 // Drops fields the workflow and downstream activities never read — biggest wins are `error` (grows per retry) and `childrenPost` (Prisma side-loads it on every recursive row).
 function slimPost(post: any) {
@@ -110,42 +114,79 @@ export class PostActivity {
 
   @ActivityMethod()
   async searchForMissingThreeHoursPosts() {
+    await this._postService.recoverWorkflowStops();
+    await this._postService.recoverClaimedComments();
     const list = await this._postService.searchForMissingThreeHoursPosts();
     for (const post of list) {
-      await this._temporalService.client
-        .getRawClient()
-        .workflow.signalWithStart('postWorkflowV109', {
-          workflowId: `post_${post.id}`,
-          taskQueue: 'main',
-          signal: 'poke',
-          workflowIdConflictPolicy: 'USE_EXISTING',
-          signalArgs: [],
-          args: [
-            {
-              taskQueue: post.integration.providerIdentifier
-                .split('-')[0]
-                .toLowerCase(),
-              postId: post.id,
-              organizationId: post.organizationId,
-            },
-          ],
-          typedSearchAttributes: new TypedSearchAttributes([
-            {
-              key: postIdSearchParam,
-              value: post.id,
-            },
-            {
-              key: organizationId,
-              value: post.organizationId,
-            },
-          ]),
-        });
+      const marker = post.error || '';
+      try {
+        await this._postService.startWorkflow(
+          post.integration.providerIdentifier.split('-')[0].toLowerCase(),
+          post.id,
+          post.organizationId,
+          post.state,
+          marker
+        );
+        // toybaco_approval_flow_v5: Temporal成功後だけoutboxをackする。
+        await this._postService.completeWorkflowDispatch(
+          post.organizationId,
+          [{ postId: post.id, marker }]
+        );
+      } catch (_) {
+        // malformed/staleな1行で、後続tenantのrecoveryを停止しない。
+        continue;
+      }
     }
   }
 
   @ActivityMethod()
   async updatePost(id: string, postId: string, releaseURL: string) {
     await this._postService.updatePost(id, postId, releaseURL);
+  }
+
+  @ActivityMethod()
+  async toybacoUpdatePostV110(
+    orgId: string,
+    id: string,
+    postId: string,
+    releaseURL: string,
+    expectedPublishMarker: string,
+    finalStep: 'MAIN' | 'FINALIZE' | 'COMMENT'
+  ) {
+    await this._postService.updatePostFromWorkflow(
+      orgId,
+      id,
+      postId,
+      releaseURL,
+      expectedPublishMarker,
+      finalStep
+    );
+  }
+
+  @ActivityMethod()
+  async toybacoPrepareRepeatV110(
+    orgId: string,
+    postId: string,
+    expectedPublishMarker: string
+  ) {
+    return this._postService.prepareRepeatWorkflow(
+      orgId,
+      postId,
+      expectedPublishMarker
+    );
+  }
+
+  @ActivityMethod()
+  async toybacoGetWorkflowReadinessV110(
+    orgId: string,
+    postId: string,
+    expectedPublishMarker: string
+  ) {
+    return this._postService.getWorkflowReadiness(
+      orgId,
+      postId,
+      expectedPublishMarker
+    );
   }
 
   @ActivityMethod()
@@ -201,8 +242,61 @@ export class PostActivity {
     return !!getIntegration.comment;
   }
 
+  // V101..V109はworkflow履歴をbyte不変で再生する。旧activity名は残し、
+  // providerへ再送せず、全旧workflowが既にterminal扱いするnon-retryable
+  // bad_bodyへ変換して安全にERROR終端させる。
+  private toybacoStopLegacyWorkflow(
+    version: string,
+    integration: Integration,
+    postId = 'unknown'
+  ): never {
+    throw new BadBody(
+      integration?.providerIdentifier || 'toybaco',
+      JSON.stringify({ version, postId }),
+      Buffer.from('{}'),
+      `アップグレード前（${version}）に予約された投稿は、安全のため公開を中止しました。内容を確認して再度予約してください。`
+    );
+  }
+
   @ActivityMethod()
   async postComment(
+    _postId: string,
+    _lastPostId: string | undefined,
+    integration: Integration,
+    posts: Post[]
+  ): Promise<any> {
+    return this.toybacoStopLegacyWorkflow(
+      'V101..V109 comment',
+      integration,
+      posts[0]?.id
+    );
+  }
+
+  @ActivityMethod()
+  async toybacoPostCommentV110(
+    postId: string,
+    lastPostId: string | undefined,
+    integration: Integration,
+    posts: Post[],
+    rootPostId: string,
+    expectedPublishMarker: string
+  ) {
+    await this._postService.claimProviderStep(
+      integration.organizationId,
+      rootPostId,
+      posts[0].id,
+      expectedPublishMarker,
+      'COMMENT'
+    );
+    return this.toybacoPostCommentV110Body(
+      postId,
+      lastPostId,
+      integration,
+      posts
+    );
+  }
+
+  private async toybacoPostCommentV110Body(
     postId: string,
     lastPostId: string | undefined,
     integration: Integration,
@@ -254,17 +348,71 @@ export class PostActivity {
   }
 
   @ActivityMethod()
-  async postSocial(integration: Integration, posts: Post[]) {
-    return this.postSocialInternal(integration, posts, false);
+  async toybacoCompleteCommentV110(
+    organizationId: string,
+    childPostId: string,
+    expectedPublishMarker: string,
+    outcome: 'ERROR' | 'UNCONFIRMED',
+    reason: unknown
+  ) {
+    return this._postService.completeProviderCommentStep(
+      organizationId,
+      childPostId,
+      expectedPublishMarker,
+      outcome,
+      reason
+    );
   }
 
-  // Used by postWorkflowV106 and up: providers that implement `postPending`
-  // return a `pending` response the workflow resolves via checkPostStatus /
-  // finalizePost. Older workflow versions keep calling `postSocial` and get
-  // the old blocking behavior.
   @ActivityMethod()
-  async postSocialPending(integration: Integration, posts: Post[]) {
-    return this.postSocialInternal(integration, posts, true);
+  async postSocial(
+    integration: Integration,
+    posts: Post[]
+  ): Promise<any[]> {
+    return this.toybacoStopLegacyWorkflow(
+      'V101..V105 publish',
+      integration,
+      posts[0]?.id
+    );
+  }
+
+  @ActivityMethod()
+  async postSocialPending(
+    integration: Integration,
+    posts: Post[]
+  ): Promise<any[]> {
+    return this.toybacoStopLegacyWorkflow(
+      'V106..V109 publish',
+      integration,
+      posts[0]?.id
+    );
+  }
+
+  @ActivityMethod()
+  async toybacoPostSocialV110(
+    rootPostId: string,
+    organizationId: string,
+    expectedPublishMarker: string,
+    expectedState: State
+  ) {
+    await this._postService.claimProviderPost(
+      organizationId,
+      rootPostId,
+      expectedPublishMarker,
+      expectedState
+    );
+    const posts = await this.getPostsList(organizationId, rootPostId);
+    const integration = posts[0]?.integration as Integration | undefined;
+    if (!integration || posts.length === 0) {
+      throw new Error('claim後のpublish payloadを再取得できません。');
+    }
+    return this.postSocialInternal(
+      integration,
+      posts,
+      true,
+      expectedPublishMarker,
+      expectedState
+    );
   }
 
   // A Disconnect error means the platform will keep rejecting this channel no
@@ -305,7 +453,9 @@ export class PostActivity {
   private async postSocialInternal(
     integration: Integration,
     posts: Post[],
-    allowPending: boolean
+    allowPending: boolean,
+    expectedPublishMarker: string,
+    expectedState: State
   ) {
     // kept only for in-flight postWorkflowV108 runs, which set a
     // heartbeatTimeout on this activity - removing the sender would kill
@@ -313,7 +463,13 @@ export class PostActivity {
     // dropped once all V108 executions have drained
     return withHeartbeat(() =>
       this.handleDisconnect(integration, () =>
-        this.postSocialBody(integration, posts, allowPending)
+        this.postSocialBody(
+          integration,
+          posts,
+          allowPending,
+          expectedPublishMarker,
+          expectedState
+        )
       )
     );
   }
@@ -321,8 +477,15 @@ export class PostActivity {
   private async postSocialBody(
     integration: Integration,
     posts: Post[],
-    allowPending: boolean
+    allowPending: boolean,
+    expectedPublishMarker: string,
+    expectedState: State
   ) {
+    // Stage markers: whatever ran last is what a timed-out activity reports.
+    // Providers that go through this.fetch overwrite these with the exact URL;
+    // the ones on their own HTTP client (x, youtube, bluesky) are still
+    // narrowed down to the step they hung on.
+    setHeartbeatDetails('subscription lookup');
     if (process.env.STRIPE_SECRET_KEY) {
       const subscription = await this._subscriptionService.getSubscription(
         integration.organizationId
@@ -337,11 +500,13 @@ export class PostActivity {
       integration.providerIdentifier
     );
 
+    setHeartbeatDetails('update tags');
     const newPosts = await this._postService.updateTags(
       integration.organizationId,
       posts
     );
 
+    setHeartbeatDetails('resolve media');
     const mappedPosts = await Promise.all(
       (newPosts || []).map(async (p) => ({
         id: p.id,
@@ -362,6 +527,8 @@ export class PostActivity {
       }))
     );
 
+    setHeartbeatDetails(`${integration.providerIdentifier}: publish`);
+    // V110はactivity入口でclaimし、その後にDB payloadを再取得済み。
     const postNow =
       allowPending && getIntegration.postPending
         ? await getIntegration.postPending(
@@ -377,26 +544,9 @@ export class PostActivity {
             integration
           );
 
-    // The post is already published at this point: the streak is best-effort,
-    // failing the activity here would retry it and publish again.
-    try {
-      await this._temporalService.client
-        .getRawClient()
-        .workflow.start('streakWorkflow', {
-          args: [{ organizationId: integration.organizationId }],
-          workflowId: `streak_${integration.organizationId}`,
-          taskQueue: 'main',
-          workflowIdConflictPolicy: 'TERMINATE_EXISTING',
-          typedSearchAttributes: new TypedSearchAttributes([
-            {
-              key: organizationId,
-              value: integration.organizationId,
-            },
-          ]),
-        });
-    } catch (err) {
-      /**empty**/
-    }
+    // トイバコの顧客層には連投を促すゲーミフィケーションが合わないため、
+    // 22時間後に既定で届く streak メールは workflow を起動する手前で止める。
+    // workflow 自体は Temporal の再生互換を守るため変更・削除しない。
 
     return postNow;
   }
@@ -413,11 +563,33 @@ export class PostActivity {
   }
 
   @ActivityMethod()
-  async finalizePost(integration: Integration, pendingData: any) {
+  async finalizePost(
+    integration: Integration,
+    _pendingData: any
+  ): Promise<any> {
+    return this.toybacoStopLegacyWorkflow(
+      'V106..V109 finalize',
+      integration
+    );
+  }
+
+  @ActivityMethod()
+  async toybacoFinalizePostV110(
+    integration: Integration,
+    pendingData: any,
+    rootPostId: string,
+    expectedPublishMarker: string
+  ) {
+    await this._postService.claimProviderStep(
+      integration.organizationId,
+      rootPostId,
+      rootPostId,
+      expectedPublishMarker,
+      'FINALIZE'
+    );
     const getIntegration = this._integrationManager.getSocialIntegration(
       integration.providerIdentifier
     );
-
     return withHeartbeat(() =>
       this.handleDisconnect(integration, () =>
         getIntegration.finalizePost(integration.token, pendingData, integration)
@@ -434,10 +606,12 @@ export class PostActivity {
     digest = false,
     type: NotificationType = 'success'
   ) {
+    // workflow の文言は再生互換のため固定し、activity で送信直前に翻訳する。
+    const notification = toybacoNotificationJa(subject, message);
     await this._notificationService.inAppNotification(
       orgId,
-      subject,
-      message,
+      notification.subject,
+      notification.message,
       sendEmail,
       digest,
       type
@@ -456,6 +630,25 @@ export class PostActivity {
   @ActivityMethod()
   async changeState(id: string, state: State, err?: any, body?: any) {
     await this._postService.changeState(id, state, err, body);
+  }
+
+  @ActivityMethod()
+  async toybacoChangeStateV110(
+    orgId: string,
+    id: string,
+    state: State,
+    expectedPublishMarker: string,
+    err?: any,
+    body?: any
+  ) {
+    await this._postService.changeStateFromWorkflow(
+      orgId,
+      id,
+      state,
+      expectedPublishMarker,
+      err,
+      body
+    );
   }
 
   @ActivityMethod()

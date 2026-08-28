@@ -194,7 +194,7 @@ export const CreateThumbnail: FC<{
       } catch (fallbackError) {
         console.error('Fallback capture also failed:', fallbackError);
         alert(
-          'Unable to capture frame. This might be due to CORS restrictions on the video source.'
+          '動画から画像を取得できませんでした。動画の配信元による制限の可能性があります。'
         );
         setIsCapturing(false);
       }
@@ -256,7 +256,7 @@ export const CreateThumbnail: FC<{
               disabled={isCapturing}
               className="bg-forth text-white px-6 py-2 rounded-lg hover:bg-opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isCapturing ? 'Capturing...' : 'Select This Frame'}
+              {isCapturing ? '取得中...' : 'この場面を選択'}
             </button>
           </div>
         </>
@@ -366,13 +366,13 @@ export const MediaComponentInner: FC<{
     <div className="mt-[10px] flex flex-col gap-[20px]">
       <div className="flex flex-col space-y-2">
         <label className="text-sm text-textColor font-medium">
-          Alt Text (for accessibility)
+          代替テキスト（アクセシビリティ）
         </label>
         <input
           type="text"
           value={altText}
           onChange={(e) => setAltText(e.target.value)}
-          placeholder="Describe the image/video content..."
+          placeholder="画像や動画の内容を説明してください..."
           className="w-full px-3 py-2 bg-fifth border border-tableBorder rounded-lg text-textColor placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forth focus:border-transparent"
         />
       </div>
@@ -386,11 +386,11 @@ export const MediaComponentInner: FC<{
                 {(newThumbnail || thumbnail) && (
                   <div className="flex flex-col space-y-2">
                     <span className="text-sm text-textColor">
-                      Current Thumbnail:
+                      現在のサムネイル：
                     </span>
                     <img
                       src={newThumbnail || thumbnail}
-                      alt="Current thumbnail"
+                      alt="現在のサムネイル"
                       className="max-w-full max-h-[500px] object-contain rounded-lg border border-tableBorder"
                     />
                   </div>
@@ -404,8 +404,8 @@ export const MediaComponentInner: FC<{
                     className="bg-third text-textColor px-6 py-2 rounded-lg hover:bg-opacity-80 transition-all flex-1 border border-tableBorder"
                   >
                     {media.thumbnail || newThumbnail
-                      ? 'Edit Thumbnail'
-                      : 'Create Thumbnail'}
+                      ? 'サムネイルを編集'
+                      : 'サムネイルを作成'}
                   </button>
                   {(thumbnail || newThumbnail) && (
                     <button
@@ -416,7 +416,7 @@ export const MediaComponentInner: FC<{
                       }}
                       className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-opacity-80 transition-all flex-1 border border-red-700"
                     >
-                      Clear Thumbnail
+                      サムネイルを削除
                     </button>
                   )}
                 </div>
@@ -444,7 +444,7 @@ export const MediaComponentInner: FC<{
                         strokeLinejoin="round"
                       />
                     </svg>
-                    <span>Back</span>
+                    <span>戻る</span>
                   </button>
                 </div>
 
@@ -479,13 +479,13 @@ export const MediaComponentInner: FC<{
             onClick={onClose}
             className="flex-1 bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-opacity-80 transition-all"
           >
-            Cancel
+            キャンセル
           </button>
           <button
             onClick={save}
             className="flex-1 bg-forth text-white px-6 py-2 rounded-lg hover:bg-opacity-80 transition-all"
           >
-            Save Changes
+            変更を保存
           </button>
         </div>
       )}

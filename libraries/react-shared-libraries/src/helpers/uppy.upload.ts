@@ -1,6 +1,5 @@
 import XHRUpload from '@uppy/xhr-upload';
 import AwsS3Multipart from '@uppy/aws-s3';
-import sha256 from 'sha256';
 import Transloadit from '@uppy/transloadit';
 const fetchUploadApiEndpoint = async (
   fetch: any,
@@ -44,51 +43,36 @@ export const getUppyUploadPlugin = (
       return {
         plugin: AwsS3Multipart,
         options: {
-          shouldUseMultipart: (file: any) => true,
+          // toybaco_upload_client_boundary_v1: browser/ECSへ全体bufferを作らない。
+          shouldUseMultipart: (_file: any) => true,
+          getChunkSize: (_file: any) => 10 * 1024 * 1024,
           endpoint: '',
-          createMultipartUpload: async (file: any) => {
-            let fileHash = '';
-            const contentType = file.type;
-
-            // Skip hash calculation for files larger than 100MB to avoid "Invalid array length" error
-            if (file.size <= 100 * 1024 * 1024) {
-              try {
-                const arrayBuffer = await new Response(file.data).arrayBuffer();
-                fileHash = sha256(Buffer.from(arrayBuffer));
-              } catch (error) {
-                console.warn(
-                  'Failed to calculate file hash, proceeding without hash:',
-                  error
-                );
-                fileHash = '';
-              }
-            }
-
-            return fetchUploadApiEndpoint(fetch, 'create-multipart-upload', {
-              file,
-              fileHash,
-              contentType,
-            });
-          },
-          listParts: (file: any, props: any) =>
+          createMultipartUpload: (file: any) =>
+            fetchUploadApiEndpoint(fetch, 'create-multipart-upload', {
+              file: { name: file.name, size: file.size, type: file.type },
+              contentType: file.type,
+            }),
+          listParts: (_file: any, props: any) =>
             fetchUploadApiEndpoint(fetch, 'list-parts', {
-              file,
-              ...props,
+              key: props.key,
+              uploadId: props.uploadId,
             }),
-          signPart: (file: any, props: any) =>
+          signPart: (_file: any, props: any) =>
             fetchUploadApiEndpoint(fetch, 'sign-part', {
-              file,
-              ...props,
+              key: props.key,
+              uploadId: props.uploadId,
+              partNumber: props.partNumber,
             }),
-          abortMultipartUpload: (file: any, props: any) =>
+          abortMultipartUpload: (_file: any, props: any) =>
             fetchUploadApiEndpoint(fetch, 'abort-multipart-upload', {
-              file,
-              ...props,
+              key: props.key,
+              uploadId: props.uploadId,
             }),
-          completeMultipartUpload: (file: any, props: any) =>
+          completeMultipartUpload: (_file: any, props: any) =>
             fetchUploadApiEndpoint(fetch, 'complete-multipart-upload', {
-              file,
-              ...props,
+              key: props.key,
+              uploadId: props.uploadId,
+              parts: props.parts,
             }),
         },
       };

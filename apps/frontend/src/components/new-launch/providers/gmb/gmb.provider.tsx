@@ -13,50 +13,50 @@ import { useWatch } from 'react-hook-form';
 
 const topicTypes = [
   {
-    label: 'Standard Update',
+    label: '通常のお知らせ',
     value: 'STANDARD',
   },
   {
-    label: 'Event',
+    label: 'イベント',
     value: 'EVENT',
   },
   {
-    label: 'Offer',
+    label: '特典',
     value: 'OFFER',
   },
 ];
 
 const callToActionTypes = [
   {
-    label: 'None',
+    label: 'なし',
     value: 'NONE',
   },
   {
-    label: 'Book',
+    label: '予約',
     value: 'BOOK',
   },
   {
-    label: 'Order Online',
+    label: 'オンライン注文',
     value: 'ORDER',
   },
   {
-    label: 'Shop',
+    label: '購入',
     value: 'SHOP',
   },
   {
-    label: 'Learn More',
+    label: '詳細を見る',
     value: 'LEARN_MORE',
   },
   {
-    label: 'Sign Up',
+    label: '登録',
     value: 'SIGN_UP',
   },
   {
-    label: 'Get Offer',
+    label: '特典を利用',
     value: 'GET_OFFER',
   },
   {
-    label: 'Call',
+    label: '電話',
     value: 'CALL',
   },
 ];
@@ -69,7 +69,7 @@ const GmbSettings: FC = () => {
   return (
     <div className="flex flex-col gap-[10px]">
       <Select
-        label="Post Type"
+        label="投稿タイプ"
         {...register('topicType', {
           value: 'STANDARD',
         })}
@@ -82,7 +82,7 @@ const GmbSettings: FC = () => {
       </Select>
 
       <Select
-        label="Call to Action"
+        label="アクションボタン"
         {...register('callToActionType', {
           value: 'NONE',
         })}
@@ -98,7 +98,7 @@ const GmbSettings: FC = () => {
         callToActionType !== 'NONE' &&
         callToActionType !== 'CALL' && (
           <Input
-            label="Call to Action URL"
+            label="アクションボタンのURL"
             placeholder="https://example.com"
             {...register('callToActionUrl')}
           />
@@ -106,28 +106,28 @@ const GmbSettings: FC = () => {
 
       {topicType === 'EVENT' && (
         <div className="flex flex-col gap-[10px] mt-[10px] p-[15px] border border-input rounded-[8px]">
-          <div className="text-[14px] font-medium mb-[5px]">Event Details</div>
+          <div className="text-[14px] font-medium mb-[5px]">イベントの詳細</div>
           <Input
-            label="Event Title"
-            placeholder="Event name"
+            label="イベント名"
+            placeholder="イベント名"
             {...register('eventTitle')}
           />
           <div className="grid grid-cols-2 gap-[10px]">
             <Input
-              label="Start Date"
+              label="開始日"
               type="date"
               {...register('eventStartDate')}
             />
-            <Input label="End Date" type="date" {...register('eventEndDate')} />
+            <Input label="終了日" type="date" {...register('eventEndDate')} />
           </div>
           <div className="grid grid-cols-2 gap-[10px]">
             <Input
-              label="Start Time (optional)"
+              label="開始時刻（任意）"
               type="time"
               {...register('eventStartTime')}
             />
             <Input
-              label="End Time (optional)"
+              label="終了時刻（任意）"
               type="time"
               {...register('eventEndTime')}
             />
@@ -137,20 +137,20 @@ const GmbSettings: FC = () => {
 
       {topicType === 'OFFER' && (
         <div className="flex flex-col gap-[10px] mt-[10px] p-[15px] border border-input rounded-[8px]">
-          <div className="text-[14px] font-medium mb-[5px]">Offer Details</div>
+          <div className="text-[14px] font-medium mb-[5px]">特典の詳細</div>
           <Input
-            label="Coupon Code (optional)"
+            label="クーポンコード（任意）"
             placeholder="SAVE20"
             {...register('offerCouponCode')}
           />
           <Input
-            label="Redeem Online URL (optional)"
+            label="オンライン利用URL（任意）"
             placeholder="https://example.com/redeem"
             {...register('offerRedeemUrl')}
           />
           <Input
-            label="Terms & Conditions (optional)"
-            placeholder="Valid until..."
+            label="利用条件（任意）"
+            placeholder="有効期限など..."
             {...register('offerTerms')}
           />
         </div>

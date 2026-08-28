@@ -8,12 +8,35 @@ import dayjs from 'dayjs';
 import { useClickAway } from '@uidotdev/usehooks';
 import ReactLoading from '@gitroom/frontend/components/layout/loading';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-function replaceLinks(text: string) {
+function renderNotificationContent(text: string) {
+  // 通知は上流・外部API由来の動的値を含む。HTMLとして評価せず、既存通知で
+  // 使っている改行とリンクをプレーンテキストへ正規化してReactに描画させる。
+  const plainText = text
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(
+      /<a\b[^>]*\bhref=(["'])(https?:\/\/[^"']+)\1[^>]*>([\s\S]*?)<\/a>/gi,
+      '$3 $2'
+    )
+    .replace(/<[^>]*>/g, '');
   const urlRegex =
     /(\bhttps?:\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/gi;
-  return text.replace(
-    urlRegex,
-    '<a class="cursor-pointer underline font-bold" target="_blank" href="$1">$1</a>'
+  const exactUrl =
+    /^https?:\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|]$/i;
+
+  return plainText.split(urlRegex).map((part, index) =>
+    exactUrl.test(part) ? (
+      <a
+        className="cursor-pointer underline font-bold"
+        target="_blank"
+        rel="noopener noreferrer"
+        href={part}
+        key={`notification-link-${index}`}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
   );
 }
 export const ShowNotification: FC<{
@@ -37,12 +60,9 @@ export const ShowNotification: FC<{
         newNotification && 'font-bold bg-seventh animate-newMessages'
       )}
     >
-      <div
-        className="break-words"
-        dangerouslySetInnerHTML={{
-          __html: replaceLinks(notification.content),
-        }}
-      />
+      <div className="break-words whitespace-pre-wrap">
+        {renderNotificationContent(notification.content)}
+      </div>
       <div
         className="text-[11px] mt-[4px] opacity-60 font-normal"
         title={isWithin24h ? fullDate : undefined}

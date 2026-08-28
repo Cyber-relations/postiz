@@ -816,3 +816,46 @@ html[dir='rtl'] [dir='ltr'] {
   text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black,
     1px 1px 0 black;
 }
+
+/* iframe 内では受信箱側のナビを残すため、Postiz 固有の外枠だけを隠す。 */
+html[data-toybaco-embed] [data-toybaco-sidebar] {
+  display: none;
+}
+
+/* 受信箱側が画面名を持つため、Postiz の重複タイトルだけを隠す。 */
+html[data-toybaco-embed] [data-toybaco-header-title] {
+  display: none;
+}
+
+/* 組織選択・通知・AGPLソース提示は必要なので、keep 印のない直下要素だけを隠す。 */
+html[data-toybaco-embed]
+  [data-toybaco-header-controls]
+  > *:not([data-toybaco-keep]) {
+  display: none;
+}
+
+/* iframe と受信箱の余白が二重にならないよう、埋め込み時だけ外側余白を外す。 */
+html[data-toybaco-embed] [data-toybaco-shell] {
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100vh;
+  min-height: 0;
+}
+
+/* 受信箱側のpanelが外枠を持つので、内側の角丸と幅超過を外す。 */
+html[data-toybaco-embed] [data-toybaco-content-frame] {
+  min-width: 0;
+  border-radius: 0;
+}
+
+/* トイバコ: 和文の見え方を受信箱と揃える。
+   欧文は上流と同じ Plus Jakarta Sans のまま、和文だけ受信箱と同じ系統にする。 */
+body.toybaco-font,
+body.toybaco-font input,
+body.toybaco-font textarea,
+body.toybaco-font button,
+body.toybaco-font select {
+  font-family: 'Plus Jakarta Sans', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans',
+    'Noto Sans JP', 'Yu Gothic Medium', meiryo, sans-serif;
+}

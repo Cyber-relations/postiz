@@ -129,7 +129,7 @@ export const ChartSocial: FC<{
           {
             borderColor: colors.border,
             borderWidth: 2,
-            label: 'Total',
+            label: '合計',
             backgroundColor: gradient,
             fill: true,
             data: list.map((row) => row.total),

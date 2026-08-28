@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 // @ts-ignore
 import Uppy, { BasePlugin, UploadResult, UppyFile } from '@uppy/core';
+import Japanese from '@uppy/locales/lib/ja_JP';
 // @ts-ignore
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { getUppyUploadPlugin } from '@gitroom/react/helpers/uppy.upload';
@@ -53,11 +54,18 @@ export function useUppyUploader(props: {
     let fileOrderIndex = 0;
 
     const uppy2 = new Uppy({
+      locale: Japanese,
       autoProceed: true,
       restrictions: {
-        // maxNumberOfFiles: 5,
-        // allowedFileTypes: allowedFileTypes.split(','),
-        maxFileSize: 1000000000, // Default 1GB, but we'll override with custom validation
+        // toybaco_upload_ui_boundary_v1: 投稿APIと同じpositive allowlist。
+        allowedFileTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'video/mp4',
+        ],
+        maxFileSize: 1024 * 1024 * 1024,
       },
     });
 
@@ -81,14 +89,13 @@ export function useUppyUploader(props: {
               'image/webp',
             ];
           }
-          if (type === 'video/*') {
-            return ['video/mp4', 'video/mpeg', 'video/quicktime'];
-          }
-          if (type === 'video/mp4' && transloadit && transloadit.length > 0) {
-            return ['video/mp4', 'video/mpeg', 'video/quicktime'];
+          if (type === 'video/*' || type === 'video/mp4') {
+            return ['video/mp4'];
           }
           return [type];
-        });
+        }).filter((type) =>
+          ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'video/mp4'].includes(type)
+        );
 
         for (const file of files) {
           if (fileIDs.includes(file.id)) {
@@ -105,12 +112,12 @@ export function useUppyUploader(props: {
 
             if (!isAllowed) {
               const error = new Error(
-                `File type "${fileType}" is not allowed for file "${file.name}". Allowed types: ${allowedFileTypes}`
+                `「${file.name}」の形式（${fileType}）には対応していません。対応形式：${allowedFileTypes}`
               );
               uppy2.log(error.message, 'error');
-              uppy2.info(error.message, 'error', 5000);
+              uppy2.info('ファイルを追加できませんでした。形式またはサイズを確認してください。', 'error', 5000);
               toast.show(
-                `File type "${fileType}" is not allowed. Allowed types: ${allowedFileTypes}`,
+                `「${file.name}」の形式（${fileType}）には対応していません。対応形式：${allowedFileTypes}`,
                 'warning'
               );
               uppy2.removeFile(file.id);
@@ -137,12 +144,12 @@ export function useUppyUploader(props: {
 
             if (isImage && file.size > maxImageSize) {
               const error = new Error(
-                `Image file "${file.name}" is too large. Maximum size allowed is 30MB.`
+                `「${file.name}」は30MBを超えています。`
               );
               uppy2.log(error.message, 'error');
-              uppy2.info(error.message, 'error', 5000);
+              uppy2.info('ファイルを追加できませんでした。形式またはサイズを確認してください。', 'error', 5000);
               toast.show(
-                `Image file is too large. Maximum size allowed is 30MB.`
+                `「${file.name}」は30MBを超えています。`
               );
               uppy2.removeFile(file.id); // Remove file from queue
               return reject(error);
@@ -150,12 +157,12 @@ export function useUppyUploader(props: {
 
             if (isVideo && file.size > maxVideoSize) {
               const error = new Error(
-                `Video file "${file.name}" is too large. Maximum size allowed is 1GB.`
+                `「${file.name}」は1GBを超えています。`
               );
               uppy2.log(error.message, 'error');
-              uppy2.info(error.message, 'error', 5000);
+              uppy2.info('ファイルを追加できませんでした。形式またはサイズを確認してください。', 'error', 5000);
               toast.show(
-                `Video file is too large. Maximum size allowed is 1GB.`
+                `「${file.name}」は1GBを超えています。`
               );
               uppy2.removeFile(file.id); // Remove file from queue
               return reject(error);

@@ -12,7 +12,7 @@ export const SignatureBox: FC<{
 
   const addSignature = useCallback(() => {
     modals.openModal({
-      title: 'Add Signature',
+      title: '署名を追加',
       withCloseButton: true,
       children: (close) => (
         <SignatureModal appendSignature={appendValue} close={close} />
@@ -25,7 +25,7 @@ export const SignatureBox: FC<{
       <div
         onClick={addSignature}
         data-tooltip-id="tooltip"
-        data-tooltip-content="Add Signature"
+        data-tooltip-content="署名を追加"
         className="select-none cursor-pointer rounded-[6px] w-[30px] h-[30px] bg-newColColor flex justify-center items-center"
       >
         <svg

@@ -25,6 +25,71 @@ import { Provider } from '@prisma/client';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import * as Sentry from '@sentry/nestjs';
 
+// toybaco_identity_boundary_v1: 認証cookieは post.toybaco.jp host-only に固定。
+const TOYBACO_RETURN_PATHS = ['/launches', '/analytics', '/media', '/settings'];
+const TOYBACO_SESSION_COOKIES = ['auth', 'showorg', 'impersonate', 'oauth_state'];
+
+function toybacoHostCookieOptions() {
+  return {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    secure: true,
+  };
+}
+
+function toybacoSafeReturnPath(value: unknown): string | null {
+  if (
+    typeof value !== 'string' ||
+    value.length < 1 ||
+    value.length > 2000 ||
+    !/^\/[A-Za-z0-9._~/?=&-]*$/.test(value) ||
+    value.includes('%') ||
+    value.includes('\\') ||
+    value.includes('#')
+  ) {
+    return null;
+  }
+  const rawPath = value.split('?', 1)[0];
+  if (rawPath.split('/').some((segment) => segment === '.' || segment === '..')) {
+    return null;
+  }
+  const parsed = new URL(value, 'https://post.toybaco.invalid');
+  if (
+    parsed.origin !== 'https://post.toybaco.invalid' ||
+    !TOYBACO_RETURN_PATHS.some(
+      (prefix) => parsed.pathname === prefix || parsed.pathname.startsWith(`${prefix}/`)
+    )
+  ) {
+    return null;
+  }
+  return parsed.pathname + parsed.search;
+}
+
+function expireToybacoCookie(
+  response: Response,
+  name: string,
+  domain?: string
+) {
+  response.cookie(name, '', {
+    ...toybacoHostCookieOptions(),
+    ...(domain ? { domain } : {}),
+    expires: new Date(0),
+    maxAge: -1,
+  });
+}
+
+function clearToybacoCookies(response: Response, includeReturn = false) {
+  const domain = getCookieUrlFromDomain(process.env.FRONTEND_URL || '');
+  const names = includeReturn
+    ? [...TOYBACO_SESSION_COOKIES, 'toybaco_return']
+    : TOYBACO_SESSION_COOKIES;
+  for (const name of names) {
+    expireToybacoCookie(response, name);
+    expireToybacoCookie(response, name, domain);
+  }
+}
+
 @ApiTags('Auth')
 @Controller('/auth')
 export class AuthController {
@@ -213,12 +278,58 @@ export class AuthController {
     return response.redirect(302, `${scheme}?${params.toString()}`);
   }
 
+  // iframeを開くたび、古いPostiz sessionを破棄してChatwootへ再束縛する専用入口。
+  @Get('/toybaco-entry')
+  async toybacoEntry(
+    @Query('return') returnPath: string,
+    @Res({ passthrough: false }) response: Response
+  ) {
+    const safeReturn = toybacoSafeReturnPath(returnPath);
+    if (!safeReturn) {
+      clearToybacoCookies(response, true);
+      return response.status(400).json({
+        code: 'TOYBACO_IDENTITY_INVALID_RETURN',
+        message: '投稿画面の移動先が不正です',
+      });
+    }
+
+    try {
+      const state = `toybaco-${makeId(32)}`;
+      clearToybacoCookies(response, true);
+      response.cookie('toybaco_return', safeReturn, {
+        ...toybacoHostCookieOptions(),
+        expires: new Date(Date.now() + 10 * 60 * 1000),
+      });
+      response.cookie('oauth_state', state, {
+        ...toybacoHostCookieOptions(),
+        expires: new Date(Date.now() + 10 * 60 * 1000),
+      });
+      const link = await this._authService.oauthLink(Provider.GENERIC, {
+        state,
+      });
+      return response.redirect(303, link);
+    } catch (_error) {
+      clearToybacoCookies(response, true);
+      return response.status(503).json({
+        code: 'TOYBACO_IDENTITY_UNAVAILABLE',
+        message: 'トイバコIDを現在利用できません',
+      });
+    }
+  }
+
   @Get('/oauth/:provider')
   async oauthLink(
     @Param('provider') provider: string,
     @Query() query: any,
     @Res({ passthrough: true }) response: Response
   ) {
+    if (provider.toUpperCase() === Provider.GENERIC) {
+      return response.status(403).json({
+        code: 'TOYBACO_IDENTITY_ENTRY_REQUIRED',
+        message: '投稿画面の入口から開いてください',
+      });
+    }
+
     const state = `login-${makeId(16)}`;
     response.cookie('oauth_state', state, {
       domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
@@ -315,43 +426,70 @@ export class AuthController {
     @Param('provider') provider: string,
     @Res({ passthrough: false }) response: Response
   ) {
-    // a cross-site form post can spoof any body field, a json body cannot
+    const generic = provider.toUpperCase() === Provider.GENERIC;
     if (!req.headers['content-type']?.includes('application/json')) {
-      return response.status(400).send('Invalid request');
+      return generic
+        ? response.status(400).json({
+            code: 'TOYBACO_IDENTITY_INVALID_REQUEST',
+            message: '本人確認のリクエストが不正です',
+          })
+        : response.status(400).send('Invalid request');
     }
 
-    const { jwt, token } = await this._authService.checkExists(
-      provider,
-      code,
-      redirect_uri,
-      state,
-      req?.cookies?.oauth_state
-    );
+    try {
+      const { jwt, token, organizationId } =
+        await this._authService.checkExists(
+          provider,
+          code,
+          redirect_uri,
+          state,
+          req?.cookies?.oauth_state
+        );
 
-    if (token) {
-      return response.json({ token });
+      if (generic) {
+        if (!jwt || token || !organizationId) {
+          throw new Error('trusted membership is missing');
+        }
+        // 旧domain cookieを消してから、host-onlyのauth/showorgだけを再発行する。
+        clearToybacoCookies(response);
+        response.cookie('auth', jwt, {
+          ...toybacoHostCookieOptions(),
+          expires: new Date(Date.now() + 10 * 60 * 1000),
+        });
+        response.cookie('showorg', organizationId, {
+          ...toybacoHostCookieOptions(),
+          expires: new Date(Date.now() + 10 * 60 * 1000),
+        });
+        if (process.env.NOT_SECURED) {
+          response.header('auth', jwt);
+          response.header('showorg', organizationId);
+        }
+        response.header('reload', 'true');
+        return response.status(200).json({ login: true });
+      }
+
+      if (token) {
+        return response.json({ token });
+      }
+      response.cookie('auth', jwt, {
+        domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+        ...(!process.env.NOT_SECURED
+          ? { secure: true, httpOnly: true, sameSite: 'none' }
+          : {}),
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+      });
+      if (process.env.NOT_SECURED && jwt) {
+        response.header('auth', jwt);
+      }
+      response.header('reload', 'true');
+      return response.status(200).json({ login: true });
+    } catch (error) {
+      if (!generic) throw error;
+      clearToybacoCookies(response, true);
+      return response.status(403).json({
+        code: 'TOYBACO_IDENTITY_DENIED',
+        message: 'トイバコIDで有効な所属を確認できませんでした',
+      });
     }
-
-    response.cookie('auth', jwt, {
-      domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
-      ...(!process.env.NOT_SECURED
-        ? {
-            secure: true,
-            httpOnly: true,
-            sameSite: 'none',
-          }
-        : {}),
-      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
-    });
-
-    if (process.env.NOT_SECURED) {
-      response.header('auth', jwt);
-    }
-
-    response.header('reload', 'true');
-
-    response.status(200).json({
-      login: true,
-    });
   }
 }

@@ -5,17 +5,14 @@ import {
   ToolMessage,
 } from '@langchain/core/messages';
 import { END, START, StateGraph } from '@langchain/langgraph';
-import { ChatOpenAI, DallEAPIWrapper } from '@langchain/openai';
+import { ChatOpenAI } from '@langchain/openai';
 import { TavilySearch } from '@langchain/tavily';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import dayjs from 'dayjs';
 import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
 import { z } from 'zod';
-import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
-import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { GeneratorDto } from '@gitroom/nestjs-libraries/dtos/generator/generator.dto';
-import { generationError } from '@gitroom/nestjs-libraries/openai/generation.error';
 
 const tools = !process.env.TAVILY_API_KEY
   ? []
@@ -26,11 +23,6 @@ const model = new ChatOpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
   model: 'gpt-4.1',
   temperature: 0.7,
-});
-
-const dalle = new DallEAPIWrapper({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'chatgpt-image-latest',
 });
 
 interface WorkflowChannelsState {
@@ -47,10 +39,7 @@ interface WorkflowChannelsState {
   content?: {
     content: string;
     website?: string;
-    prompt?: string;
-    image?: string;
   }[];
-  isPicture?: boolean;
   popularPosts?: { content: string; hook: string }[];
 }
 
@@ -71,7 +60,6 @@ const hook = z.object({
 });
 
 const contentZod = (
-  isPicture: boolean,
   format: 'one_short' | 'one_long' | 'thread_short' | 'thread_long'
 ) => {
   const content = z.object({
@@ -83,32 +71,24 @@ const contentZod = (
       .describe(
         "Website for the new post if exists, If one of the post present a brand, website link must be to the root domain of the brand or don't include it, website url should contain the brand name"
       ),
-    ...(isPicture
-      ? {
-          prompt: z
-            .string()
-            .describe(
-              "Prompt to generate a picture for this post later, make sure it doesn't contain brand names and make it very descriptive in terms of style"
-            ),
-        }
-      : {}),
   });
 
   return z.object({
     content:
       format === 'one_short' || format === 'one_long'
         ? content
-        : z.array(content).min(2).describe(`Content for the new post`),
+        : // toybaco_no_min_items: 「配列は最低 2 件」という指定を外す。
+          // 東京の Bedrock はこの指定を受け付けず、指定を残すと連投形式を
+          // 選んだ顧客は必ず失敗する（実機で確認）。件数は指示文の側で伝える。
+          z
+            .array(content)
+            .describe(`Content for the new post. 2 件以上に分けて作ること。`),
   });
 };
 
 @Injectable()
 export class AgentGraphService {
-  private storage = UploadFactory.createStorage();
-  constructor(
-    private _postsService: PostsService,
-    private _mediaService: MediaService
-  ) {}
+  constructor(private _postsService: PostsService) {}
   static state = () =>
     new StateGraph<WorkflowChannelsState>({
       channels: {
@@ -128,7 +108,6 @@ export class AgentGraphService {
         category: null,
         popularPosts: null,
         topic: null,
-        isPicture: null,
       },
     });
 
@@ -223,7 +202,10 @@ export class AgentGraphService {
         - Use ${state.tone === 'personal' ? '1st' : '3rd'} person mode
         - Make sure it's engaging
         - Don't be cringy
-        - Use simple english
+        - toybaco_ja_output: 必ず日本語で書くこと。
+          読むのは日本のお客さまで、書いたものは手直しなしでそのまま SNS に載る。
+        - やさしい言葉で書く。英語やカタカナの専門用語をむやみに混ぜない。
+        - 敬体（です・ます）で書く。
         - Make sure you add "\n" between the lines
         - Don't take the hook from "request of the user"
 
@@ -255,7 +237,7 @@ export class AgentGraphService {
 
   async generateContent(state: WorkflowChannelsState) {
     const structuredOutput = model.withStructuredOutput(
-      contentZod(!!state.isPicture, state.format)
+      contentZod(state.format)
     );
     const { content: outputContent } = await ChatPromptTemplate.fromTemplate(
       `
@@ -265,7 +247,7 @@ export class AgentGraphService {
         - Use ${state.tone === 'personal' ? '1st' : '3rd'} person mode
         - ${
           state.format === 'one_short' || state.format === 'thread_short'
-            ? 'Post should be maximum 200 chars to fit twitter'
+            ? '本文は日本語で 120 文字以内。見出しと合わせて一つの投稿になるため、長すぎると読み飛ばされる'
             : 'Post should be long'
         }
         - ${
@@ -276,7 +258,10 @@ export class AgentGraphService {
         - Use the hook as inspiration
         - Make sure it's engaging
         - Don't be cringy
-        - Use simple english
+        - toybaco_ja_output: 必ず日本語で書くこと。
+          読むのは日本のお客さまで、書いたものは手直しなしでそのまま SNS に載る。
+        - やさしい言葉で書く。英語やカタカナの専門用語をむやみに混ぜない。
+        - 敬体（です・ます）で書く。
         - The Content should not contain the hook
         - Try to put some call to action at the end of the post
         - Make sure you add "\n" between the lines
@@ -314,63 +299,6 @@ export class AgentGraphService {
     return {};
   }
 
-  async generatePictures(state: WorkflowChannelsState) {
-    if (!state.isPicture) {
-      return {};
-    }
-
-    try {
-      const newContent = await Promise.all(
-        (state.content || []).map(async (p) => {
-          const image = await dalle.invoke(p.prompt!);
-          return {
-            ...p,
-            image,
-          };
-        })
-      );
-
-      return {
-        content: newContent,
-      };
-    } catch (err) {
-      throw generationError(err);
-    }
-  }
-
-  async uploadPictures(state: WorkflowChannelsState) {
-    const all = await Promise.all(
-      (state.content || []).map(async (p) => {
-        if (p.image) {
-          const upload = await this.storage.uploadSimple(p.image);
-          const name = upload.split('/').pop()!;
-          const uploadWithId = await this._mediaService.saveFile(
-            state.orgId,
-            name,
-            upload
-          );
-
-          return {
-            ...p,
-            image: uploadWithId,
-          };
-        }
-
-        return p;
-      })
-    );
-
-    return { content: all };
-  }
-
-  async isGeneratePicture(state: WorkflowChannelsState) {
-    if (state.isPicture) {
-      return 'generate-picture';
-    }
-
-    return 'post-time';
-  }
-
   async postDateTime(state: WorkflowChannelsState) {
     return { date: await this._postsService.findFreeDateTime(state.orgId) };
   }
@@ -387,8 +315,6 @@ export class AgentGraphService {
       .addNode('generate-hook', this.generateHook.bind(this))
       .addNode('generate-content', this.generateContent.bind(this))
       .addNode('generate-content-fix', this.fixArray.bind(this))
-      .addNode('generate-picture', this.generatePictures.bind(this))
-      .addNode('upload-pictures', this.uploadPictures.bind(this))
       .addNode('post-time', this.postDateTime.bind(this))
       .addEdge(START, 'agent')
       .addEdge('agent', 'research')
@@ -399,12 +325,7 @@ export class AgentGraphService {
       .addEdge('find-popular-posts', 'generate-hook')
       .addEdge('generate-hook', 'generate-content')
       .addEdge('generate-content', 'generate-content-fix')
-      .addConditionalEdges(
-        'generate-content-fix',
-        this.isGeneratePicture.bind(this)
-      )
-      .addEdge('generate-picture', 'upload-pictures')
-      .addEdge('upload-pictures', 'post-time')
+      .addEdge('generate-content-fix', 'post-time')
       .addEdge('post-time', END);
 
     const app = workflow.compile();
@@ -412,7 +333,6 @@ export class AgentGraphService {
     return app.streamEvents(
       {
         messages: [new HumanMessage(body.research)],
-        isPicture: body.isPicture,
         format: body.format,
         tone: body.tone,
         orgId,

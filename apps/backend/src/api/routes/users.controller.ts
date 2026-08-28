@@ -130,13 +130,7 @@ export class UsersController {
         : organization?.isTrailing,
       allowTrial: organization?.allowTrial,
       streakSince: organization?.streakSince || null,
-      publicApi:
-        // @ts-ignore
-        organization?.users[0]?.role === 'SUPERADMIN' ||
-        // @ts-ignore
-        organization?.users[0]?.role === 'ADMIN'
-          ? organization?.apiKey
-          : '',
+      publicApi: '',
     };
   }
 
@@ -372,46 +366,29 @@ export class UsersController {
 
   @Post('/logout')
   logout(@Res({ passthrough: true }) response: Response) {
+    // toybaco_identity_boundary_v1: GENERICはhost-only cookieを発行するため、
+    // 現行host cookieと旧registrable-domain cookieの両方を同じlogoutで消す。
+    const legacyDomain = getCookieUrlFromDomain(process.env.FRONTEND_URL || '');
+    for (const name of [
+      'auth',
+      'showorg',
+      'impersonate',
+      'oauth_state',
+      'toybaco_return',
+      'toybaco_embed',
+    ]) {
+      const options = {
+        path: '/',
+        secure: true,
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        maxAge: -1,
+        expires: new Date(0),
+      };
+      response.cookie(name, '', options);
+      response.cookie(name, '', { ...options, domain: legacyDomain });
+    }
     response.header('logout', 'true');
-    response.cookie('auth', '', {
-      domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
-      ...(!process.env.NOT_SECURED
-        ? {
-            secure: true,
-            httpOnly: true,
-            sameSite: 'none',
-          }
-        : {}),
-      maxAge: -1,
-      expires: new Date(0),
-    });
-
-    response.cookie('showorg', '', {
-      domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
-      ...(!process.env.NOT_SECURED
-        ? {
-            secure: true,
-            httpOnly: true,
-            sameSite: 'none',
-          }
-        : {}),
-      maxAge: -1,
-      expires: new Date(0),
-    });
-
-    response.cookie('impersonate', '', {
-      domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
-      ...(!process.env.NOT_SECURED
-        ? {
-            secure: true,
-            httpOnly: true,
-            sameSite: 'none',
-          }
-        : {}),
-      maxAge: -1,
-      expires: new Date(0),
-    });
-
     response.status(200).send();
   }
 

@@ -39,7 +39,33 @@ import { WhopProvider } from '@gitroom/nestjs-libraries/integrations/social/whop
 import { MeweProvider } from '@gitroom/nestjs-libraries/integrations/social/mewe.provider';
 import { TumblrProvider } from '@gitroom/nestjs-libraries/integrations/social/tumblr.provider';
 
-export const socialIntegrationList: Array<SocialAbstract & SocialProvider> = [
+const TOYBACO_PRODUCT_PROVIDER_IDS = new Set([
+  'instagram-standalone',
+  'threads',
+]);
+
+// envは安全側へ機能を減らすためのもの。製品承認済みID以外、空要素、
+// 重複、未設定は設定ミスとして全拒否する。
+export function toybacoAllowedProviderIds(
+  raw = process.env.TOYBACO_ALLOWED_PROVIDERS
+): string[] {
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    return [];
+  }
+
+  const values = raw.split(',').map((value) => value.trim());
+  if (
+    values.some((value) => value === '') ||
+    new Set(values).size !== values.length ||
+    values.some((value) => !TOYBACO_PRODUCT_PROVIDER_IDS.has(value))
+  ) {
+    return [];
+  }
+
+  return values;
+}
+
+const allSocialIntegrationList: Array<SocialAbstract & SocialProvider> = [
   new XProvider(),
   new LinkedinProvider(),
   new LinkedinPageProvider(),
@@ -78,19 +104,21 @@ export const socialIntegrationList: Array<SocialAbstract & SocialProvider> = [
   // new MastodonCustomProvider(),
 ];
 
+// 直接importする上流コードもraw listを迂回路にできないようexport時点で絞る。
+export const socialIntegrationList = allSocialIntegrationList.filter(
+  (provider) => toybacoAllowedProviderIds().includes(provider.identifier)
+);
+
 @Injectable()
 export class IntegrationManager {
-  // Both are env-driven so cloud and self-hosted instances can differ:
-  // HIDDEN_PROVIDERS ("tiktok,x") hides providers from the add-channel screen,
+  // toybaco_provider_allowlist_v1: 一覧と全実行経路で共通のfail-closed判定。
+  isAllowedProvider(identifier: string) {
+    return toybacoAllowedProviderIds().includes(identifier);
+  }
+
   // MIGRATE_PROVIDERS ("tiktok:tiktok-business") routes a reconnect of the old
   // provider through the new provider's OAuth and migrates the channel in
   // place, keeping its id, scheduled posts and settings.
-  isHiddenProvider(identifier: string) {
-    return (process.env.HIDDEN_PROVIDERS || '')
-      .split(',')
-      .map((p) => p.trim())
-      .includes(identifier);
-  }
 
   // Note: a target provider that implements `reConnect` is not supported - the
   // connect callback would run reConnect with the old app-scoped id before the
@@ -129,7 +157,7 @@ export class IntegrationManager {
     return {
       social: await Promise.all(
         socialIntegrationList
-          .filter((p) => !this.isHiddenProvider(p.identifier))
+          .filter((p) => this.isAllowedProvider(p.identifier))
           .map(async (p) => ({
             name: p.name,
             identifier: p.identifier,
@@ -155,35 +183,40 @@ export class IntegrationManager {
       methodName: string;
     }[];
   } {
-    return socialIntegrationList.reduce(
-      (all, current) => ({
-        ...all,
-        [current.identifier]:
-          Reflect.getMetadata('custom:tool', current.constructor.prototype) ||
-          [],
-      }),
-      {}
-    );
+    return socialIntegrationList
+      .filter((provider) => this.isAllowedProvider(provider.identifier))
+      .reduce(
+        (all, current) => ({
+          ...all,
+          [current.identifier]:
+            Reflect.getMetadata('custom:tool', current.constructor.prototype) ||
+            [],
+        }),
+        {}
+      );
   }
 
   getAllRulesDescription(): {
     [key: string]: string;
   } {
-    return socialIntegrationList.reduce(
-      (all, current) => ({
-        ...all,
-        [current.identifier]:
-          Reflect.getMetadata(
-            'custom:rules:description',
-            current.constructor
-          ) || '',
-      }),
-      {}
-    );
+    return socialIntegrationList
+      .filter((provider) => this.isAllowedProvider(provider.identifier))
+      .reduce(
+        (all, current) => ({
+          ...all,
+          [current.identifier]:
+            Reflect.getMetadata(
+              'custom:rules:description',
+              current.constructor
+            ) || '',
+        }),
+        {}
+      );
   }
 
   getAllPlugs() {
     return socialIntegrationList
+      .filter((provider) => this.isAllowedProvider(provider.identifier))
       .map((p) => {
         return {
           name: p.name,
@@ -205,7 +238,7 @@ export class IntegrationManager {
   }
 
   getInternalPlugs(providerName: string) {
-    const p = socialIntegrationList.find((p) => p.identifier === providerName)!;
+    const p = this.getSocialIntegration(providerName);
     return {
       internalPlugs:
         (
@@ -218,9 +251,19 @@ export class IntegrationManager {
   }
 
   getAllowedSocialsIntegrations() {
-    return socialIntegrationList.map((p) => p.identifier);
+    return toybacoAllowedProviderIds();
   }
   getSocialIntegration(integration: string): SocialProvider {
-    return socialIntegrationList.find((i) => i.identifier === integration)!;
+    if (!this.isAllowedProvider(integration)) {
+      throw new Error('Integration not allowed');
+    }
+
+    const provider = socialIntegrationList.find(
+      (item) => item.identifier === integration
+    );
+    if (!provider) {
+      throw new Error('Integration not allowed');
+    }
+    return provider;
   }
 }

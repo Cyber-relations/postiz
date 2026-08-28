@@ -56,6 +56,8 @@ export const useMenuItem = () => {
     },
     {
       name: 'Agent',
+      // トイバコでは提供しないため隠す
+      hide: true,
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -116,6 +118,8 @@ export const useMenuItem = () => {
     },
     {
       name: t('plugs', 'Plugs'),
+      // トイバコでは提供しないため隠す
+      hide: true,
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -137,6 +141,8 @@ export const useMenuItem = () => {
     },
     {
       name: t('integrations', 'Integrations'),
+      // トイバコでは提供しないため隠す
+      hide: true,
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -161,6 +167,8 @@ export const useMenuItem = () => {
   const secondMenu = [
     {
       name: t('UGC', 'UGC'),
+      // トイバコでは提供しないため隠す
+      hide: true,
       icon: (
         <svg
           fill="#c52e2e"
@@ -194,6 +202,8 @@ export const useMenuItem = () => {
     },
     {
       name: t('affiliate', 'Affiliate'),
+      // トイバコでは提供しないため隠す
+      hide: true,
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -252,6 +262,8 @@ export const useMenuItem = () => {
     },
     {
       name: t('billing', 'Billing'),
+      // トイバコでは提供しないため隠す
+      hide: true,
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"

@@ -11,15 +11,15 @@ export const DummyCodeComponent: FC<{ code: any }> = ({ code }) => {
 
   return (
     <div className="rounded-[4px] border border-customColor6 bg-sixth px-[16px] pb-[16px] relative w-full">
-      <TopTitle title={`Output`}>
+      <TopTitle title={`出力内容`}>
         <Button
           className="mr-[50px]"
           onClick={() => {
             copy(JSON.stringify(code, null, 2));
-            toaster.show('Code copied to clipboard', 'success');
+            toaster.show('コードをクリップボードにコピーしました', 'success');
           }}
         >
-          Copy Code
+          コードをコピー
         </Button>
       </TopTitle>
       <button

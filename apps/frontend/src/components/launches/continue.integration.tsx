@@ -19,9 +19,7 @@ interface TwoStepState {
   returnURL?: string;
 }
 
-interface SuccessState {
-  message: string;
-}
+type ConnectionOutcome = 'connected' | 'precondition' | 'review';
 
 export const ContinueIntegration: FC<{
   provider: string;
@@ -34,14 +32,13 @@ export const ContinueIntegration: FC<{
   const fetch = useFetch();
   const { extensionId, backendUrl } = useVariables();
   const [error, setError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [twoStepState, setTwoStepState] = useState<TwoStepState | null>(null);
-  const [successState, setSuccessState] = useState<SuccessState | null>(null);
+  const [successState, setSuccessState] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Helper to handle navigation - redirects if logged or returnURL exists, otherwise shows inline
   const navigateOrShow = useCallback(
-    (path: string, returnURL: string | undefined, successMessage: string) => {
+    (path: string, returnURL: string | undefined, outcome: ConnectionOutcome) => {
       if (returnURL) {
         // If returnURL exists, always redirect to it with the path params
         const params = path.includes('?') ? path.split('?')[1] : '';
@@ -50,8 +47,12 @@ export const ContinueIntegration: FC<{
         // If logged in without returnURL, use normal navigation
         push(path);
       } else {
-        // If not logged in without returnURL, show success inline
-        setSuccessState({ message: successMessage });
+        // 外部由来の文言ではなく、型で接続結果を分岐する。
+        if (outcome === 'connected') {
+          setSuccessState(true);
+        } else {
+          setError(true);
+        }
       }
     },
     [logged, push]
@@ -133,14 +134,14 @@ export const ContinueIntegration: FC<{
         navigateOrShow(
           `/launches?precondition=true`,
           returnURL,
-          'Precondition failed'
+          'precondition'
         );
         return;
       }
 
       if (data.status === HttpStatusCode.NotAcceptable) {
-        const { msg, returnURL } = await data.json();
-        navigateOrShow(`/launches?msg=${msg}`, returnURL, msg);
+        const { returnURL } = await data.json().catch(() => ({}));
+        navigateOrShow('/launches?connection=review', returnURL, 'review');
         return;
       }
 
@@ -148,10 +149,8 @@ export const ContinueIntegration: FC<{
         data.status !== HttpStatusCode.Ok &&
         data.status !== HttpStatusCode.Created
       ) {
-        const errorData = await data.json().catch(() => ({}));
-        setErrorMessage(
-          errorData.message || errorData.msg || 'Could not add provider'
-        );
+        // API・連携先の生エラーは顧客画面へ出さない。
+        await data.json().catch(() => ({}));
         setError(true);
         return;
       }
@@ -202,11 +201,9 @@ export const ContinueIntegration: FC<{
       }
 
       navigateOrShow(
-        `/launches?added=${provider}&msg=Channel Updated${
-          onboarding ? '&onboarding=true' : ''
-        }`,
+        `/launches?added=${provider}${onboarding ? '&onboarding=true' : ''}`,
         returnURL,
-        'Channel Updated'
+        'connected'
       );
     })();
   }, []);
@@ -232,20 +229,18 @@ export const ContinueIntegration: FC<{
           response.status !== HttpStatusCode.Ok &&
           response.status !== HttpStatusCode.Created
         ) {
-          const errorData = await response.json().catch(() => ({}));
-          setErrorMessage(
-            errorData.message || 'Failed to save channel configuration'
-          );
+          // API・連携先の生エラーは顧客画面へ出さない。
+          await response.json().catch(() => ({}));
           setError(true);
           return;
         }
 
         navigateOrShow(
-          `/launches?added=${provider}&msg=Channel Added${
+          `/launches?added=${provider}${
             twoStepState.onboarding ? '&onboarding=true' : ''
           }`,
           twoStepState.returnURL,
-          'Channel Added'
+          'connected'
         );
       } finally {
         setIsSaving(false);
@@ -259,19 +254,6 @@ export const ContinueIntegration: FC<{
       continueProviderList[provider as keyof typeof continueProviderList] ||
       null
     );
-  }, [provider]);
-
-  const providerDisplayName = useMemo(() => {
-    const names: Record<string, string> = {
-      facebook: 'Facebook',
-      instagram: 'Instagram',
-      'linkedin-page': 'LinkedIn',
-      youtube: 'YouTube',
-      gmb: 'Google Business',
-      tumblr: 'Tumblr',
-      'tiktok-business': 'TikTok Business',
-    };
-    return names[provider] || provider;
   }, [provider]);
 
   // Success state for non-logged users without returnURL
@@ -302,11 +284,10 @@ export const ContinueIntegration: FC<{
             {t('channel_connected', 'Channel Connected!')}
           </div>
           <div className="text-[16px] text-gray-400 max-w-[400px]">
-            {successState.message ||
-              t(
-                'channel_connected_description',
-                `Your ${providerDisplayName} channel has been successfully connected. You can close this window now.`
-              )}
+            {t(
+              'channel_connected_description',
+              'チャンネルを接続しました。この画面を閉じてください。'
+            )}
           </div>
         </div>
       </div>
@@ -333,7 +314,7 @@ export const ContinueIntegration: FC<{
               <p className="text-[14px] text-gray-400">
                 {t(
                   'select_the_page_or_account',
-                  `Select the ${providerDisplayName} page or account you want to connect.`
+                  '接続するページまたはアカウントを選択してください。'
                 )}
               </p>
             </div>
@@ -399,11 +380,10 @@ export const ContinueIntegration: FC<{
             {t('could_not_add_provider', 'Could not add provider')}
           </div>
           <div className="text-[16px] text-gray-400 max-w-[400px]">
-            {errorMessage ||
-              t(
-                'you_are_being_redirected_back',
-                'An error occurred. Please try again.'
-              )}
+            {t(
+              'you_are_being_redirected_back',
+              'チャンネルを追加できませんでした。もう一度お試しください。'
+            )}
           </div>
           {logged && <Redirect url="/launches" delay={3000} />}
         </div>

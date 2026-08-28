@@ -17,22 +17,22 @@ import { InstagramPreview } from '@gitroom/frontend/components/new-launch/provid
 const postType = [
   {
     value: 'post',
-    label: 'Post / Reel',
+    label: '投稿／リール',
   },
   {
     value: 'story',
-    label: 'Story',
+    label: 'ストーリーズ',
   },
 ];
 
 const graduationStrategies = [
   {
     value: 'MANUAL',
-    label: 'Manual',
+    label: '手動',
   },
   {
     value: 'SS_PERFORMANCE',
-    label: 'Auto (based on performance)',
+    label: '自動（パフォーマンスに基づく）',
   },
 ];
 const InstagramCollaborators: FC<{
@@ -48,12 +48,12 @@ const InstagramCollaborators: FC<{
   return (
     <>
       <Select
-        label="Post Type"
+        label="投稿タイプ"
         {...register('post_type', {
           value: 'post',
         })}
       >
-        <option value="">{t('select_post_type', 'Select Post Type...')}</option>
+        <option value="">{t('select_post_type', '投稿タイプを選択...')}</option>
         {postType.map((item) => (
           <option key={item.value} value={item.value}>
             {item.label}
@@ -63,7 +63,7 @@ const InstagramCollaborators: FC<{
 
       {postCurrentType !== 'story' && (
         <InstagramCollaboratorsTags
-          label="Collaborators (max 3) - accounts can't be private"
+          label="共同投稿者（最大3件・非公開アカウントは指定不可）"
           {...register('collaborators', {
             value: [],
           })}
@@ -75,7 +75,7 @@ const InstagramCollaborators: FC<{
           <InstagramAudioSelector
             label={t(
               'instagram_audio_label',
-              'Audio (Reels only - single video)'
+              '音源（1本の動画を使うリールのみ）'
             )}
             disabled={!supportsAudio}
             {...register('audio')}
@@ -89,12 +89,12 @@ const InstagramCollaborators: FC<{
             {...register('is_trial_reel', {
               value: false,
             })}
-            label={t('trial_reel', 'Trial Reel (share only to non-followers first)')}
+            label={t('trial_reel', 'トライアルリール（最初はフォロワー以外にのみ表示）')}
           />
 
           {isTrialReel && (
             <Select
-              label="Graduation Strategy"
+              label="通常公開への移行方法"
               {...register('graduation_strategy', {
                 value: 'MANUAL',
               })}

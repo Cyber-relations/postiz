@@ -6,7 +6,7 @@ import { END, START, StateGraph } from '@langchain/langgraph';
 import { AutoPost, Integration } from '@prisma/client';
 import { BaseMessage } from '@langchain/core/messages';
 import striptags from 'striptags';
-import { ChatOpenAI, DallEAPIWrapper } from '@langchain/openai';
+import { ChatOpenAI } from '@langchain/openai';
 import { JSDOM } from 'jsdom';
 import { z } from 'zod';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
@@ -41,21 +41,10 @@ const model = new ChatOpenAI({
   temperature: 0.7,
 });
 
-const dalle = new DallEAPIWrapper({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'chatgpt-image-latest',
-});
-
 const generateContent = z.object({
   socialMediaPostContent: z
     .string()
     .describe('Content for social media posts max 120 chars'),
-});
-
-const dallePrompt = z.object({
-  generatedTextToBeSentToDallE: z
-    .string()
-    .describe('Generated prompt from description to be sent to DallE'),
 });
 
 @Injectable()
@@ -241,27 +230,6 @@ export class AutopostService {
     };
   }
 
-  async generatePicture(state: WorkflowChannelsState) {
-    const structuredOutput = model.withStructuredOutput(dallePrompt);
-    const { generatedTextToBeSentToDallE } =
-      await ChatPromptTemplate.fromTemplate(
-        `
-        You are an assistant that gets description and generate a prompt that will be sent to DallE to generate pictures.
-        
-        content:
-        {content}
-      `
-      )
-        .pipe(structuredOutput)
-        .invoke({
-          content: state.load.description || state.description,
-        });
-
-    const image = await dalle.invoke(generatedTextToBeSentToDallE);
-
-    return { ...state, image };
-  }
-
   async schedulePost(state: WorkflowChannelsState) {
     const nextTime = await this._postsService.findFreeDateTime(
       state.integrations[0].organizationId
@@ -290,20 +258,11 @@ export class AutopostService {
               state.description.replace(/\n/g, '\n\n') +
               '\n\n' +
               state.load.url,
-            image: !state.image
-              ? []
-              : [
-                  {
-                    id: makeId(10),
-                    name: makeId(10),
-                    path: state.image,
-                    organizationId: state.integrations[0].organizationId,
-                  },
-                ],
+            image: [],
           },
         ],
       })),
-    }, 'AUTOPOST');
+    }, 'AUTOPOST', false, 'SYSTEM_DRAFT');
   }
 
   async updateUrl(state: WorkflowChannelsState) {
@@ -339,23 +298,10 @@ export class AutopostService {
     const state = AutopostService.state();
     const workflow = state
       .addNode('generate-description', this.generateDescription.bind(this))
-      .addNode('generate-picture', this.generatePicture.bind(this))
       .addNode('schedule-post', this.schedulePost.bind(this))
       .addNode('update-url', this.updateUrl.bind(this))
       .addEdge(START, 'generate-description')
-      .addConditionalEdges(
-        'generate-description',
-        (state: WorkflowChannelsState) => {
-          if (!state.description) {
-            return 'schedule-post';
-          }
-          if (state.body.addPicture) {
-            return 'generate-picture';
-          }
-          return 'schedule-post';
-        }
-      )
-      .addEdge('generate-picture', 'schedule-post')
+      .addEdge('generate-description', 'schedule-post')
       .addEdge('schedule-post', 'update-url')
       .addEdge('update-url', END);
 

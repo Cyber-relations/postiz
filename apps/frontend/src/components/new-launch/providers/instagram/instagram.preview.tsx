@@ -39,7 +39,7 @@ export const InstagramPreview: FC<{
         .replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
           return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
         }) +
-      `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="This text will be cropped">` +
+      `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="この部分は切り取られます">` +
       newContent.slice(end).replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
         return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
       }) +
@@ -53,7 +53,7 @@ export const InstagramPreview: FC<{
         <div className="w-[36px] h-[36px]">
           <img
             src={integration?.picture || '/no-picture.jpg'}
-            alt="social"
+            alt="プロフィール画像"
             className="rounded-full relative z-[2] w-[36px] h-[36px]"
           />
         </div>
@@ -174,7 +174,7 @@ export const InstagramPreview: FC<{
                 <div className="h-[34px]">
                   <img
                     src={integration?.picture || '/no-picture.jpg'}
-                    alt="social"
+                    alt="プロフィール画像"
                     className="rounded-full relative z-[2] h-[34px] w-[34px]"
                   />
                 </div>
@@ -206,9 +206,9 @@ export const InstagramPreview: FC<{
                   </div>
                   <div className="flex font-[400] text-[12px] text-textLinkedin items-center">
                     <div className="flex gap-[16px] flex-1">
-                      <div className="font-[700]">30m</div>
-                      <div className="font-[700]">8 Likes</div>
-                      <div className="font-[700]">Reply</div>
+                      <div className="font-[700]">30分</div>
+                      <div className="font-[700]">いいね！8件</div>
+                      <div className="font-[700]">返信</div>
                     </div>
                   </div>
                 </div>

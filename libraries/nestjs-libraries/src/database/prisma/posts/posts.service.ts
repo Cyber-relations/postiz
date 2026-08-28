@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   ValidationPipe,
 } from '@nestjs/common';
 import { PostsRepository } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
@@ -30,7 +32,8 @@ import {
   minifyPostsList,
   minifyPosts,
 } from '@gitroom/helpers/utils/posts.list.minify';
-import axios from 'axios';
+import { toybacoIsAllowedUploadUrl } from '@gitroom/helpers/utils/valid.url.path';
+import { getSsrfSafeDispatcher } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
 import sharp from 'sharp';
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { Readable } from 'stream';
@@ -38,7 +41,10 @@ import { OpenaiService } from '@gitroom/nestjs-libraries/openai/openai.service';
 dayjs.extend(utc);
 import * as Sentry from '@sentry/nestjs';
 import { TemporalService } from 'nestjs-temporal-core';
-import { TypedSearchAttributes } from '@temporalio/common';
+import {
+  TypedSearchAttributes,
+  WorkflowNotFoundError,
+} from '@temporalio/common';
 import {
   organizationId,
   postId as postIdSearchParam,
@@ -60,6 +66,124 @@ type PostWithConditionals = Post & {
   childrenPost: Post[];
 };
 
+// toybaco_approval_flow_v5_matrix_start
+const TOYBACO_MANAGER_MUTATIONS = {
+  ANY: {
+    create: ['DRAFT', 'QUEUE', 'UNCHANGED'],
+    content: ['DRAFT', 'QUEUE', 'PUBLISHED', 'ERROR', 'UNCHANGED'],
+    date: ['DRAFT', 'QUEUE', 'PUBLISHED', 'ERROR'],
+    schedule: ['QUEUE'],
+    settings: ['DRAFT', 'QUEUE', 'PUBLISHED', 'ERROR', 'UNCHANGED'],
+    status: ['DRAFT', 'QUEUE'],
+    delete: ['UNCHANGED'],
+  },
+} as const;
+
+const TOYBACO_DRAFT_MUTATIONS = {
+  NEW: {
+    create: ['DRAFT'],
+  },
+  DRAFT: {
+    content: ['DRAFT'],
+    date: ['DRAFT'],
+    settings: ['DRAFT'],
+  },
+} as const;
+
+export const TOYBACO_POST_MUTATION_MATRIX = {
+  USER: TOYBACO_DRAFT_MUTATIONS,
+  TOYBACO_AI_DRAFT: TOYBACO_DRAFT_MUTATIONS,
+  SYSTEM_DRAFT: TOYBACO_DRAFT_MUTATIONS,
+  ADMIN: TOYBACO_MANAGER_MUTATIONS,
+  SUPERADMIN: TOYBACO_MANAGER_MUTATIONS,
+} as const;
+
+export function toybacoCanMutatePost(
+  role: string,
+  currentState: string,
+  action: string,
+  targetState: string
+): boolean {
+  if (
+    ![
+      'USER',
+      'TOYBACO_AI_DRAFT',
+      'SYSTEM_DRAFT',
+      'ADMIN',
+      'SUPERADMIN',
+    ].includes(role) ||
+    !['NEW', 'DRAFT', 'QUEUE', 'PUBLISHED', 'ERROR', 'UNKNOWN'].includes(
+      currentState
+    ) ||
+    ![
+      'create',
+      'content',
+      'date',
+      'schedule',
+      'settings',
+      'status',
+      'delete',
+    ].includes(action) ||
+    !['DRAFT', 'QUEUE', 'PUBLISHED', 'ERROR', 'UNCHANGED'].includes(targetState)
+  ) {
+    return false;
+  }
+  const roleMatrix = (TOYBACO_POST_MUTATION_MATRIX as any)[role];
+  const stateMatrix = roleMatrix?.[currentState] || roleMatrix?.ANY;
+  const allowedTargets = stateMatrix?.[action];
+  return Array.isArray(allowedTargets) && allowedTargets.includes(targetState);
+}
+// toybaco_approval_flow_v5_matrix_end
+
+// service層の全channel DB書き込みは、1つのPrisma transactionのみを境界とする。
+export async function toybacoRunCreatePostServiceTransaction(
+  repository: any,
+  preparedPosts: any[],
+  writeOne: any
+) {
+  return repository.runPostTransaction(async (database: any) => {
+    const committed: any[] = [];
+    for (const post of preparedPosts) {
+      committed.push(await writeOne(database, post));
+    }
+    return committed;
+  });
+}
+
+export async function toybacoDispatchCommittedWorkflows(
+  repository: any,
+  orgId: string,
+  workflows: any[],
+  dispatch: any
+) {
+  for (let index = 0; index < workflows.length; index += 1) {
+    const workflow = workflows[index];
+    try {
+      await dispatch(workflow);
+      await repository.completeWorkflowDispatch(orgId, [workflow]);
+    } catch (error: any) {
+      await repository.recordWorkflowDispatchFailure(
+        orgId,
+        workflows.slice(index),
+        error instanceof Error ? error.message : String(error)
+      );
+      throw error;
+    }
+  }
+}
+
+const TOYBACO_APPROVAL_DENIED_MESSAGE =
+  'この操作は本部の管理者のみ実行できます。店舗担当者は下書きの作成・編集のみ可能です。';
+const TOYBACO_DRAFT_CHANGED_MESSAGE =
+  '下書き以外の投稿は編集できません。画面を再読み込みして状態を確認してください。';
+
+function toybacoWorkflowAlreadyClosed(error: unknown) {
+  return (
+    error instanceof WorkflowNotFoundError ||
+    (error as any)?.cause instanceof WorkflowNotFoundError
+  );
+}
+
 @Injectable()
 export class PostsService {
   private storage = UploadFactory.createStorage();
@@ -76,6 +200,144 @@ export class PostsService {
 
   searchForMissingThreeHoursPosts() {
     return this._postRepository.searchForMissingThreeHoursPosts();
+  }
+
+  async recoverWorkflowStops() {
+    const rows = await this._postRepository.recoverWorkflowStops();
+    for (const row of rows) {
+      try {
+        await this.terminatePostWorkflows(row.workflowIds);
+        await this._postRepository.completeWorkflowStop(
+          row.organizationId,
+          row.id,
+          row.error
+        );
+      } catch (_) {
+        // ackしなければ次回も同じexact IDだけを再試行する。
+        continue;
+      }
+    }
+  }
+
+  completeWorkflowStop(orgId: string, postId: string, marker: string) {
+    return this._postRepository.completeWorkflowStop(orgId, postId, marker);
+  }
+
+  recoverClaimedComments() {
+    return this._postRepository.recoverClaimedComments();
+  }
+
+  completeWorkflowDispatch(
+    orgId: string,
+    dispatches: Array<{ postId: string; marker: string }>
+  ) {
+    return this._postRepository.completeWorkflowDispatch(orgId, dispatches);
+  }
+
+  getWorkflowReadiness(
+    orgId: string,
+    postId: string,
+    expectedPublishMarker: string
+  ) {
+    return this._postRepository.getWorkflowReadiness(
+      orgId,
+      postId,
+      expectedPublishMarker
+    );
+  }
+
+  claimProviderPost(
+    orgId: string,
+    postId: string,
+    expectedPublishMarker: string,
+    expectedState: State
+  ) {
+    return this._postRepository.claimProviderPost(
+      orgId,
+      postId,
+      expectedPublishMarker,
+      expectedState
+    );
+  }
+
+  claimProviderStep(
+    orgId: string,
+    rootPostId: string,
+    stepPostId: string,
+    expectedPublishMarker: string,
+    step: 'FINALIZE' | 'COMMENT'
+  ) {
+    return this._postRepository.claimProviderStep(
+      orgId,
+      rootPostId,
+      stepPostId,
+      expectedPublishMarker,
+      step
+    );
+  }
+
+  completeProviderCommentStep(
+    orgId: string,
+    childPostId: string,
+    expectedPublishMarker: string,
+    outcome: 'ERROR' | 'UNCONFIRMED',
+    reason: unknown
+  ) {
+    return this._postRepository.completeProviderCommentStep(
+      orgId,
+      childPostId,
+      expectedPublishMarker,
+      outcome,
+      reason
+    );
+  }
+
+  updatePostFromWorkflow(
+    orgId: string,
+    id: string,
+    postId: string,
+    releaseURL: string,
+    expectedPublishMarker: string,
+    finalStep: 'MAIN' | 'FINALIZE' | 'COMMENT'
+  ) {
+    return this._postRepository.updatePostFromWorkflow(
+      orgId,
+      id,
+      postId,
+      releaseURL,
+      expectedPublishMarker,
+      finalStep
+    );
+  }
+
+  changeStateFromWorkflow(
+    orgId: string,
+    id: string,
+    state: State,
+    expectedPublishMarker: string,
+    err?: any,
+    body?: any
+  ) {
+    return this._postRepository.changeStateFromWorkflow(
+      orgId,
+      id,
+      state,
+      expectedPublishMarker,
+      err,
+      body
+    );
+  }
+
+  prepareRepeatWorkflow(
+    orgId: string,
+    postId: string,
+    expectedPublishMarker: string
+  ) {
+    return this._postRepository.prepareRepeatWorkflow(
+      orgId,
+      postId,
+      expectedPublishMarker
+    );
   }
 
   updatePost(id: string, postId: string, releaseURL: string) {
@@ -382,11 +644,24 @@ export class PostsService {
 
             if (hasExtension(m.path, 'png')) {
               imageUpdateNeeded = true;
-              const response = await axios.get(m.url, {
-                responseType: 'arraybuffer',
+              // 保存時のDTO検証だけに依存しない。既存DB値や将来の別入口から
+              // 到達しても、正規media URL以外を外向きfetchしない。
+              if (!toybacoIsAllowedUploadUrl(m.url)) {
+                throw new BadRequestException(
+                  'アップロード済みのメディアを指定してください'
+                );
+              }
+              const response = await fetch(m.url, {
+                redirect: 'manual',
+                // DNS解決結果をpublic IPへ固定し、rebinding/private IPを拒否する。
+                // @ts-ignore — undici option, not in lib.dom fetch types
+                dispatcher: getSsrfSafeDispatcher(),
               });
+              if (!response.ok) {
+                throw new BadRequestException('メディアを取得できませんでした');
+              }
 
-              const imageBuffer = Buffer.from(response.data);
+              const imageBuffer = Buffer.from(await response.arrayBuffer());
 
               // Use sharp to get the metadata of the image
               const buffer = await sharp(imageBuffer)
@@ -653,34 +928,44 @@ export class PostsService {
       });
   }
 
-  async deletePost(orgId: string, group: string) {
-    const post = await this._postRepository.deletePost(orgId, group);
-
-    if (post?.id) {
-      try {
-        const workflows = this._temporalService.client
-          .getRawClient()
-          ?.workflow.list({
-            query: `postId="${post.id}" AND ExecutionStatus="Running"`,
-          });
-
-        for await (const executionInfo of workflows) {
-          try {
-            const workflow =
-              await this._temporalService.client.getWorkflowHandle(
-                executionInfo.workflowId
-              );
-            if (
-              workflow &&
-              (await workflow.describe()).status.name !== 'TERMINATED'
-            ) {
-              await workflow.terminate();
-            }
-          } catch (err) {}
-        }
-      } catch (err) {}
+  async terminatePostWorkflows(workflowIds: string[]) {
+    // DB transaction commit後のみ呼び出す外部副作用。失敗は呼び出し元へ返す。
+    const rawClient = this._temporalService.client.getRawClient();
+    if (!rawClient) {
+      throw new ServiceUnavailableException(
+        '投稿ワークフローの停止サービスに接続できません。'
+      );
     }
+    for (const workflowId of workflowIds) {
+      try {
+        const workflow =
+          await this._temporalService.client.getWorkflowHandle(workflowId);
+        await workflow.terminate();
+      } catch (error: any) {
+        if (!toybacoWorkflowAlreadyClosed(error)) throw error;
+      }
+    }
+  }
 
+  async deletePost(
+    orgId: string,
+    group: string,
+    toybacoActorRole = 'UNKNOWN'
+  ) {
+    if (
+      !toybacoCanMutatePost(toybacoActorRole, 'UNKNOWN', 'delete', 'UNCHANGED')
+    ) {
+      throw new ForbiddenException(TOYBACO_APPROVAL_DENIED_MESSAGE);
+    }
+    const post = await this._postRepository.deletePost(orgId, group);
+    await this.terminatePostWorkflows(post?.workflowIds || []);
+    if (post?.id && post?.stopMarker) {
+      await this._postRepository.completeWorkflowStop(
+        orgId,
+        post.id,
+        post.stopMarker
+      );
+    }
     return { error: true };
   }
 
@@ -696,60 +981,74 @@ export class PostsService {
     taskQueue: string,
     postId: string,
     orgId: string,
-    state: State
+    state: State,
+    expectedMarker: string
   ) {
-    try {
-      const workflows = this._temporalService.client
-        .getRawClient()
-        ?.workflow.list({
-          query: `postId="${postId}" AND ExecutionStatus="Running"`,
-        });
-
-      for await (const executionInfo of workflows) {
-        try {
-          const workflow = await this._temporalService.client.getWorkflowHandle(
-            executionInfo.workflowId
-          );
-          if (
-            workflow &&
-            (await workflow.describe()).status.name !== 'TERMINATED'
-          ) {
-            await workflow.terminate();
-          }
-        } catch (err) {}
-      }
-    } catch (err) {}
-
-    if (state === 'DRAFT') {
-      return;
+    const rawClient = this._temporalService.client.getRawClient();
+    if (!rawClient) {
+      throw new ServiceUnavailableException(
+        '投稿ワークフローサービスに接続できません。'
+      );
     }
-
-    try {
-      await this._temporalService.client
-        .getRawClient()
-        ?.workflow.start('postWorkflowV109', {
-          workflowId: `post_${postId}`,
-          taskQueue: 'main',
-          workflowIdConflictPolicy: 'TERMINATE_EXISTING',
-          args: [
-            {
-              taskQueue: taskQueue,
-              postId: postId,
-              organizationId: orgId,
-            },
-          ],
-          typedSearchAttributes: new TypedSearchAttributes([
-            {
-              key: postIdSearchParam,
-              value: postId,
-            },
-            {
-              key: organizationId,
-              value: orgId,
-            },
-          ]),
-        });
-    } catch (err) {}
+    const parsed = await this._postRepository.claimWorkflowDispatch(
+      orgId,
+      postId,
+      expectedMarker
+    );
+    const { operation: mode, generation } = parsed;
+    if (parsed.previousWorkflowId) {
+      if (
+        !parsed.previousToken ||
+        !parsed.previousGeneration ||
+        parsed.previousPostId !== postId ||
+        parsed.previousWorkflowId !==
+          `post_${postId}_g${parsed.previousGeneration}_t${parsed.previousToken}`
+      ) {
+        throw new ForbiddenException('prior workflow identityが不正です。');
+      }
+      try {
+        const previousWorkflow =
+          await this._temporalService.client.getWorkflowHandle(
+            parsed.previousWorkflowId
+          );
+        await previousWorkflow.terminate();
+      } catch (error: any) {
+        // Temporal TypeScript SDKはclosed/missing executionのNOT_FOUNDを
+        // WorkflowNotFoundErrorへ変換する。その型以外は握りつぶさない。
+        if (!toybacoWorkflowAlreadyClosed(error)) throw error;
+      }
+    }
+    // terminate待ちの間に新mutationがcommitしていれば、stale callerをここで止める。
+    await this._postRepository.claimWorkflowDispatch(
+      orgId,
+      postId,
+      expectedMarker
+    );
+    if (mode === 'CANCEL') return;
+    if (state !== 'QUEUE') {
+      throw new ServiceUnavailableException(
+        'QUEUE以外の投稿ワークフローは開始できません。'
+      );
+    }
+    await rawClient.workflow.signalWithStart('postWorkflowV110', {
+      workflowId: `post_${postId}_g${generation}_t${parsed.token}`,
+      taskQueue: 'main',
+      signal: 'poke',
+      signalArgs: [],
+      workflowIdConflictPolicy: 'USE_EXISTING',
+      workflowIdReusePolicy: 'REJECT_DUPLICATE',
+      args: [{
+        taskQueue,
+        postId,
+        organizationId: orgId,
+        expectedPublishMarker:
+          `TOYBACO_PUBLISH_V2|${generation}|${parsed.token}|READY`,
+      }],
+      typedSearchAttributes: new TypedSearchAttributes([
+        { key: postIdSearchParam, value: postId },
+        { key: organizationId, value: orgId },
+      ]),
+    });
   }
 
   /**
@@ -810,20 +1109,26 @@ export class PostsService {
           const validationErrors = await validate(instance as object, {
             skipMissingProperties: false,
           });
-          settingsError = this.firstValidationError(validationErrors);
+          // 顧客境界へclass-validatorの自由文やproperty名を出さない。
+          settingsError =
+            validationErrors.length === 0
+              ? ''
+              : 'TOYBACO_POST_SETTINGS_INVALID';
           valid = validationErrors.length === 0;
         }
 
         // Provider-specific media validation (the old client `checkValidity`).
-        let errors: string | true = true;
+        let errors: 'TOYBACO_POST_MEDIA_INVALID' | true = true;
         try {
-          errors = await provider.checkValidity(
+          const providerResult = await provider.checkValidity(
             media,
             settings,
             additionalSettings
           );
-        } catch (err: any) {
-          errors = err?.message || 'Invalid media';
+          errors =
+            providerResult === true ? true : 'TOYBACO_POST_MEDIA_INVALID';
+        } catch {
+          errors = 'TOYBACO_POST_MEDIA_INVALID';
         }
 
         const maximumCharacters = provider.maxLength(additionalSettings, settings);
@@ -846,12 +1151,29 @@ export class PostsService {
         return {
           id: integration.id,
           identifier: integration.providerIdentifier,
-          name: integration.name,
+          // 顧客が付けたアカウント名(PII)ではなく固定ラベルだけを返す。
+          name:
+            integration.providerIdentifier === 'instagram-standalone' ||
+            integration.providerIdentifier === 'instagram'
+              ? 'Instagram'
+              : integration.providerIdentifier === 'threads'
+              ? 'Threads'
+              : '連携先',
           valid,
           settingsError,
           errors,
           emptyContent,
           tooLong,
+          // UIはこの閉じたコードだけを日本語へ変換する。raw provider errorは禁止。
+          toybacoErrorCode: emptyContent
+            ? 'TOYBACO_POST_CONTENT_REQUIRED'
+            : !valid
+            ? 'TOYBACO_POST_SETTINGS_INVALID'
+            : errors !== true
+            ? 'TOYBACO_POST_MEDIA_INVALID'
+            : tooLong
+            ? 'TOYBACO_POST_TOO_LONG'
+            : null,
           maximumCharacters,
         };
       })
@@ -901,71 +1223,137 @@ export class PostsService {
     orgId: string,
     body: CreatePostDto,
     creationMethod: CreationMethod,
-    keepGroup = false
+    keepGroup = false,
+    toybacoActorRole = 'UNKNOWN'
   ): Promise<any[]> {
-    const postList = [];
-    for (const post of body.posts) {
-      if (
-        (body.type === 'schedule' || body.type === 'now') &&
-        !body.republish &&
-        post.value?.[0]?.id
-      ) {
-        this.guardAgainstRepublish(
-          await this._postRepository.getPostById(post.value[0].id, orgId),
-          'createPost'
-        );
+    const toybacoIsUpdate = body.type === 'update';
+    const toybacoCreateTarget =
+      body.type === 'draft' || toybacoIsUpdate
+        ? 'DRAFT'
+        : body.type === 'schedule' || body.type === 'now'
+        ? 'QUEUE'
+        : 'UNKNOWN';
+    if (
+      !toybacoCanMutatePost(
+        toybacoActorRole,
+        toybacoIsUpdate ? 'DRAFT' : 'NEW',
+        toybacoIsUpdate ? 'content' : 'create',
+        toybacoCreateTarget
+      )
+    ) {
+      throw new ForbiddenException(TOYBACO_APPROVAL_DENIED_MESSAGE);
+    }
+
+    const toybacoDraftOnly = [
+      'USER',
+      'TOYBACO_AI_DRAFT',
+      'SYSTEM_DRAFT',
+    ].includes(toybacoActorRole);
+    const suppliedIds = body.posts.flatMap((post) =>
+      (post.value || []).flatMap((value) => (value.id ? [value.id] : []))
+    );
+    if (new Set(suppliedIds).size !== suppliedIds.length) {
+      throw new ForbiddenException(TOYBACO_DRAFT_CHANGED_MESSAGE);
+    }
+    if (body.shortLink) {
+      // 外部短縮URL providerへの書き込みはDB transactionでrollbackできない。
+      // トイバコではproviderを構成しないため、製品境界でも明示的に拒否する。
+      throw new BadRequestException(
+        'トイバコでは短縮URLを利用できません。元のURLのまま保存してください。'
+      );
+    }
+
+    if (toybacoDraftOnly) {
+      if (body.type !== 'draft' && body.type !== 'update') {
+        throw new ForbiddenException(TOYBACO_APPROVAL_DENIED_MESSAGE);
       }
+
+      // 既存/新規の判定とDRAFT条件更新は同じDB transaction内で行う。
+      // MCP・UIは新規投稿にも一時idを付けるため、ここでnot-foundを拒否しない。
+    }
+
+    const toybacoPreparedPosts = [];
+    for (const post of body.posts) {
       const provider = this._integrationManager.getSocialIntegration(
         (post.settings as any)?.__type
       );
       const removeLinks = !!provider?.stripLinks?.();
-
       const messages = (post.value || []).map((p) => p.content);
-      // No point shortlinking links on platforms that strip them out anyway
-      const updateContent =
-        !body.shortLink || removeLinks
-          ? messages
-          : await this._shortLinkService.convertTextToShortLinks(
-              orgId,
-              messages
-            );
-
+      const updateContent = messages;
       post.value = (post.value || []).map((p, i) => ({
         ...p,
         content: removeLinks ? stripLinks(updateContent[i]) : updateContent[i],
       }));
-
-      const { posts } = await this._postRepository.createOrUpdatePost(
-        body.type,
-        orgId,
-        body.type === 'now' ? dayjs().format('YYYY-MM-DDTHH:mm:00') : body.date,
-        post,
-        body.tags,
-        creationMethod,
-        body.inter,
-        keepGroup
-      );
-
-      if (!posts?.length) {
-        return [] as any[];
-      }
-
-      if (body.type !== 'update') {
-        this.startWorkflow(
-          post.settings.__type.split('-')[0].toLowerCase(),
-          posts[0].id,
-          orgId,
-          posts[0].state
-        ).catch((err) => {});
-      }
-
-      Sentry.metrics.count('post_created', 1);
-      postList.push({
-        postId: posts[0].id,
-        integration: post.integration.id,
-      });
+      toybacoPreparedPosts.push(post);
     }
 
+    const committed = await toybacoRunCreatePostServiceTransaction(
+      this._postRepository,
+      toybacoPreparedPosts,
+      async (toybacoDatabase: any, post: any) => {
+        const { posts } = await this._postRepository.createOrUpdatePost(
+          body.type,
+          orgId,
+          body.type === 'now'
+            ? dayjs().format('YYYY-MM-DDTHH:mm:00')
+            : (post as any).__toybacoDate || body.date,
+          post,
+          body.tags,
+          creationMethod,
+          body.inter,
+          keepGroup,
+          toybacoDraftOnly,
+          !!body.republish,
+          toybacoDatabase
+        );
+        return {
+          postList: posts?.length
+            ? [{ postId: posts[0].id, integration: post.integration.id }]
+            : [],
+          workflow:
+            posts?.length &&
+            (body.type !== 'update' || posts[0].state === 'QUEUE')
+              ? {
+                  taskQueue: post.settings.__type.split('-')[0].toLowerCase(),
+                  postId: posts[0].id,
+                  state: posts[0].state,
+                  marker: posts[0].error,
+                }
+              : null,
+        };
+      }
+    );
+
+    // TemporalはDB commit後にdispatchし、失敗時は全対象をERRORへ記録して
+    // 同じpost idで安全に再試行できるようにする。API成功でQUEUEだけ残さない。
+    const postList = committed.flatMap((item: any) => item.postList);
+    const workflows = committed
+      .map((item: any) => item.workflow)
+      .filter((workflow: any) => workflow && workflow.state !== 'DRAFT');
+    try {
+      await toybacoDispatchCommittedWorkflows(
+        this._postRepository,
+        orgId,
+        workflows,
+        (workflow: any) =>
+          this.startWorkflow(
+          workflow.taskQueue,
+          workflow.postId,
+          orgId,
+          workflow.state,
+          workflow.marker
+          )
+      );
+    } catch (error: any) {
+      throw new ServiceUnavailableException(
+        '投稿ワークフローを開始できませんでした。投稿は再試行待ちとして保存されました。'
+      );
+    }
+    for (const item of committed) {
+      for (const _post of item.postList) {
+        Sentry.metrics.count('post_created', 1);
+      }
+    }
     return postList;
   }
 
@@ -978,7 +1366,8 @@ export class PostsService {
     orgId: string,
     postId: string,
     settings: Record<string, any>,
-    creationMethod: CreationMethod
+    creationMethod: CreationMethod,
+    toybacoActorRole = 'UNKNOWN'
   ): Promise<{ postId: string; publishDate: string }> {
     // Ordered as post -> comments, root includes integration and tags.
     const ordered = await this.getPostsRecursively(postId, true, orgId, true);
@@ -992,6 +1381,17 @@ export class PostsService {
       throw new BadRequestException(
         'This id belongs to a comment, pass the id of the main post'
       );
+    }
+
+    if (
+      !toybacoCanMutatePost(
+        toybacoActorRole,
+        root.state,
+        'settings',
+        root.state
+      )
+    ) {
+      throw new ForbiddenException(TOYBACO_APPROVAL_DENIED_MESSAGE);
     }
 
     if (root.state !== 'QUEUE' && root.state !== 'DRAFT') {
@@ -1051,28 +1451,24 @@ export class PostsService {
 
     if (validation.emptyContent) {
       throw new BadRequestException(
-        `${validation.name}: Your post should have at least one character or one image.`
+        '投稿内容または画像を1件以上入力してください。'
       );
     }
 
     if (root.state !== 'DRAFT') {
       if (!validation.valid) {
-        throw new BadRequestException(
-          `${validation.name}: ${
-            validation.settingsError || 'Please fix your settings'
-          }`
-        );
+        throw new BadRequestException('投稿設定を確認してください。');
       }
 
       if (validation.errors !== true) {
         throw new BadRequestException(
-          `${validation.name}: ${validation.errors}`
+          '投稿に利用できないメディアが含まれています。'
         );
       }
 
       if (validation.tooLong) {
         throw new BadRequestException(
-          `${validation.name}: The maximum characters is ${validation.maximumCharacters}`
+          '投稿文が長すぎます。短くしてから保存してください。'
         );
       }
     }
@@ -1103,7 +1499,8 @@ export class PostsService {
       creationMethod,
       // Keep the group stable: a client may have the calendar open while the
       // settings are updated out of band, and the calendar links posts by group.
-      true
+      true,
+      toybacoActorRole
     );
 
     if (!output) {
@@ -1127,7 +1524,8 @@ export class PostsService {
   async changePostStatus(
     orgId: string,
     id: string,
-    status: 'draft' | 'schedule'
+    status: 'draft' | 'schedule',
+    toybacoActorRole = 'UNKNOWN'
   ) {
     const getPostById = await this._postRepository.getPostById(id, orgId);
     if (!getPostById) {
@@ -1135,16 +1533,41 @@ export class PostsService {
     }
 
     const state: State = status === 'draft' ? 'DRAFT' : 'QUEUE';
-    await this._postRepository.changeState(id, state);
+    if (
+      (status !== 'draft' && status !== 'schedule') ||
+      !toybacoCanMutatePost(
+        toybacoActorRole,
+        getPostById.state,
+        'status',
+        state
+      )
+    ) {
+      throw new ForbiddenException(TOYBACO_APPROVAL_DENIED_MESSAGE);
+    }
+    const toybacoChanged = await this._postRepository.changeState(id, state);
 
     try {
       await this.startWorkflow(
         getPostById.integration.providerIdentifier.split('-')[0].toLowerCase(),
         getPostById.id,
         orgId,
-        state
+        state,
+        toybacoChanged.error
       );
-    } catch (err) {}
+      await this._postRepository.completeWorkflowDispatch(
+        orgId,
+        [{ postId: getPostById.id, marker: toybacoChanged.error }]
+      );
+    } catch (error: any) {
+      await this._postRepository.recordWorkflowDispatchFailure(
+        orgId,
+        [{ postId: getPostById.id, marker: toybacoChanged.error }],
+        error instanceof Error ? error.message : String(error)
+      );
+      throw new ServiceUnavailableException(
+        '投稿ワークフローを開始できませんでした。投稿は再試行待ちとして保存されました。'
+      );
+    }
 
     return { id, state };
   }
@@ -1154,9 +1577,27 @@ export class PostsService {
     id: string,
     date: string,
     action: 'schedule' | 'update' = 'schedule',
-    republish = false
+    republish = false,
+    toybacoActorRole = 'UNKNOWN'
   ) {
     const getPostById = await this._postRepository.getPostById(id, orgId);
+    if (!getPostById) {
+      throw new BadRequestException('投稿が見つかりません。');
+    }
+
+    const toybacoAction =
+      action === 'schedule' ? 'schedule' : action === 'update' ? 'date' : '';
+    if (
+      !toybacoAction ||
+      !toybacoCanMutatePost(
+        toybacoActorRole,
+        getPostById.state,
+        toybacoAction,
+        action === 'schedule' ? 'QUEUE' : getPostById.state
+      )
+    ) {
+      throw new ForbiddenException(TOYBACO_APPROVAL_DENIED_MESSAGE);
+    }
 
     if (action === 'schedule' && !republish) {
       this.guardAgainstRepublish(getPostById, 'changeDate');
@@ -1168,8 +1609,12 @@ export class PostsService {
       orgId,
       id,
       date,
-      getPostById.state === 'DRAFT',
-      action
+      getPostById.state,
+      action,
+      ['USER', 'TOYBACO_AI_DRAFT', 'SYSTEM_DRAFT'].includes(
+        toybacoActorRole
+      ),
+      republish
     );
 
     if (action === 'schedule') {
@@ -1180,9 +1625,23 @@ export class PostsService {
             .toLowerCase(),
           getPostById.id,
           orgId,
-          getPostById.state === 'DRAFT' ? 'DRAFT' : 'QUEUE'
+          newDate.state,
+          newDate.error
         );
-      } catch (err) {}
+        await this._postRepository.completeWorkflowDispatch(
+          orgId,
+          [{ postId: getPostById.id, marker: newDate.error }]
+        );
+      } catch (error: any) {
+        await this._postRepository.recordWorkflowDispatchFailure(
+          orgId,
+          [{ postId: getPostById.id, marker: newDate.error }],
+          error instanceof Error ? error.message : String(error)
+        );
+        throw new ServiceUnavailableException(
+          '投稿ワークフローを開始できませんでした。投稿は再試行待ちとして保存されました。'
+        );
+      }
     }
 
     return newDate;
@@ -1223,54 +1682,57 @@ export class PostsService {
       return randomDate;
     };
 
-    for (const integration of getAllIntegrations) {
-      for (const toPost of body.posts) {
-        const group = makeId(10);
-        const randomDate = findTime();
-
-        await this.createPost(
-          orgId,
-          {
-            type: 'draft',
-            date: randomDate,
-            order: '',
-            shortLink: false,
-            tags: [],
-            posts: [
+    const toybacoGeneratedPosts = getAllIntegrations.flatMap(
+      (integration) =>
+        body.posts.map((toPost) => {
+          const randomDate = findTime();
+          return {
+            __toybacoDate: randomDate,
+            group: makeId(10),
+            integration: { id: integration.id },
+            settings: {
+              __type: integration.providerIdentifier as any,
+              title: '',
+              tags: [],
+              subreddit: [],
+            },
+            value: [
+              ...toPost.list.map((item) => ({
+                id: '',
+                content: item.post,
+                delay: 0,
+                image: [],
+              })),
               {
-                group,
-                integration: {
-                  id: integration.id,
-                },
-                settings: {
-                  __type: integration.providerIdentifier as any,
-                  title: '',
-                  tags: [],
-                  subreddit: [],
-                },
-                value: [
-                  ...toPost.list.map((l) => ({
-                    id: '',
-                    content: l.post,
-                    delay: 0,
-                    image: [],
-                  })),
-                  {
-                    id: '',
-                    delay: 0,
-                    content: `Check out the full story here:\n${
-                      body.postId || body.url
-                    }`,
-                    image: [],
-                  },
-                ],
+                id: '',
+                delay: 0,
+                content: `Check out the full story here:
+${
+                  body.postId || body.url
+                }`,
+                image: [],
               },
             ],
-          },
-          'WEB'
-        );
-      }
+          };
+        })
+    );
+    if (toybacoGeneratedPosts.length === 0) {
+      return;
     }
+    await this.createPost(
+      orgId,
+      {
+        type: 'draft',
+        date: toybacoGeneratedPosts[0].__toybacoDate,
+        order: '',
+        shortLink: false,
+        tags: [],
+        posts: toybacoGeneratedPosts,
+      },
+      'WEB',
+      false,
+      'SYSTEM_DRAFT'
+    );
   }
 
   findAllExistingCategories() {
@@ -1309,8 +1771,28 @@ export class PostsService {
   private async findFreeDateTimeRecursive(
     orgId: string,
     times: number[],
-    date: dayjs.Dayjs
+    date: dayjs.Dayjs,
+    depth = 0
   ): Promise<string> {
+    // toybaco_free_slot_guard: 空き枠を探す旅に終わりを設ける。
+    //
+    // 候補の時刻が一つも無いと、この処理は空き枠を見つけられないまま
+    // 永久に翌日を探し続ける（1日ぶんごとにデータベースへ問い合わせながら）。
+    // 候補はチャネルごとの投稿時間帯から作られるので、チャネルを一つも
+    // 繋いでいない状態がまさにそれにあたる。顧客が最初に触る場面である。
+    //
+    // 見つからないときは翌日の朝を返す。日時はあとから顧客が直せるので、
+    // 固まって何も返らないより、ひとまず下書きを届けきる方がよい。
+    // 01:00 UTC = 日本時間の 10:00。
+    if (!times.length || depth >= 60) {
+      return date
+        .clone()
+        .add(1, 'day')
+        .startOf('day')
+        .add(1, 'hour')
+        .format('YYYY-MM-DDTHH:mm:00');
+    }
+
     const list = await this._postRepository.getPostsCountsByDates(
       orgId,
       times,
@@ -1318,7 +1800,12 @@ export class PostsService {
     );
 
     if (!list.length) {
-      return this.findFreeDateTimeRecursive(orgId, times, date.add(1, 'day'));
+      return this.findFreeDateTimeRecursive(
+        orgId,
+        times,
+        date.add(1, 'day'),
+        depth + 1
+      );
     }
 
     const num = list.reduce<null | number>((prev, curr) => {

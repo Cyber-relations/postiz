@@ -72,7 +72,9 @@ export class EmailService {
 
     const modifiedHtml = `
     <div style="
-        background: linear-gradient(to bottom right, #e6f2ff, #f0e6ff);
+        background: #FAF7F2;
+        font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans',
+          'Noto Sans JP', 'Yu Gothic', Meiryo, sans-serif;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -92,12 +94,12 @@ export class EmailService {
                 font-weight: bold;
                 margin-bottom: 1.5rem;
                 text-align: left;
-                color: #1f2937;
+                color: #1F3A5F;
             ">${subject}</h1>
             
             <div style="
                 margin-bottom: 2rem;
-                color: #374151;
+                color: #24303F;
             ">
                 ${html}
             </div>
@@ -105,18 +107,18 @@ export class EmailService {
             <div style="
                 display: flex;
                 align-items: center;
-                border-top: 1px solid #e5e7eb;
+                border-top: 1px solid #E8E2D8;
                 padding-top: 1.5rem;
             ">
                 <div>
                     <h2 style="
                         font-size: 1.25rem;
                         font-weight: 600;
-                        color: #1f2937;
+                        color: #1F3A5F;
                         margin: 0;
                     ">${process.env.EMAIL_FROM_NAME}</h2>
                     <div style="font-size: 12px">
-                      You can change your notification preferences in your <a href="${process.env.FRONTEND_URL}/settings">account settings.</a>
+                      通知の設定は<a href="${process.env.FRONTEND_URL}/settings">設定画面</a>から変更できます。
                      </div>
                 </div>
             </div>

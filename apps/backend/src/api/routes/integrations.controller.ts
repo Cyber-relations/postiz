@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Post,
   Put,
@@ -94,34 +96,41 @@ export class IntegrationsController {
       integrations: await Promise.all(
         (
           await this._integrationService.getIntegrationsList(org.id)
-        ).map(async (p) => {
-          const findIntegration = this._integrationManager.getSocialIntegration(
-            p.providerIdentifier
-          );
-          return {
-            name: p.name,
-            id: p.id,
-            internalId: p.internalId,
-            disabled: p.disabled,
-            editor: findIntegration.editor,
-            stripLinks: !!findIntegration?.stripLinks?.(),
-            picture: p.picture || '/no-picture.jpg',
-            identifier: p.providerIdentifier,
-            inBetweenSteps: p.inBetweenSteps,
-            refreshNeeded: p.refreshNeeded,
-            isCustomFields: !!findIntegration.customFields,
-            ...(findIntegration.customFields
-              ? { customFields: await findIntegration.customFields() }
-              : {}),
-            display: p.profile,
-            type: p.type,
-            time: JSON.parse(p.postingTimes),
-            changeProfilePicture: !!findIntegration?.changeProfilePicture,
-            changeNickName: !!findIntegration?.changeNickname,
-            customer: p.customer,
-            additionalSettings: p.additionalSettings || '[]',
-          };
-        })
+        )
+          .filter((item) =>
+            this._integrationManager
+              .getAllowedSocialsIntegrations()
+              .includes(item.providerIdentifier)
+          )
+          .map(async (p) => {
+            const findIntegration =
+              this._integrationManager.getSocialIntegration(
+                p.providerIdentifier
+              );
+            return {
+              name: p.name,
+              id: p.id,
+              internalId: p.internalId,
+              disabled: p.disabled,
+              editor: findIntegration.editor,
+              stripLinks: !!findIntegration?.stripLinks?.(),
+              picture: p.picture || '/no-picture.jpg',
+              identifier: p.providerIdentifier,
+              inBetweenSteps: p.inBetweenSteps,
+              refreshNeeded: p.refreshNeeded,
+              isCustomFields: !!findIntegration.customFields,
+              ...(findIntegration.customFields
+                ? { customFields: await findIntegration.customFields() }
+                : {}),
+              display: p.profile,
+              type: p.type,
+              time: JSON.parse(p.postingTimes),
+              changeProfilePicture: !!findIntegration?.changeProfilePicture,
+              changeNickName: !!findIntegration?.changeNickname,
+              customer: p.customer,
+              additionalSettings: p.additionalSettings || '[]',
+            };
+          })
       ),
     };
   }
@@ -211,6 +220,17 @@ export class IntegrationsController {
       throw new Error('Integration not allowed');
     }
 
+    // toybaco_provider_allowlist_v1: refresh IDを別providerへ差し替えさせない。
+    if (refresh) {
+      const current = await this._integrationService.getIntegrationByInternalId(
+        org.id,
+        refresh
+      );
+      if (!current || current.providerIdentifier !== integration) {
+        throw new Error('Integration not allowed');
+      }
+    }
+
     // A provider migrated via MIGRATE_PROVIDERS reconnects through its target
     // provider's OAuth: the callback lands on the target and the channel is
     // migrated in place (see migrateIntegration).
@@ -236,6 +256,13 @@ export class IntegrationsController {
 
       const { codeVerifier, state, url } =
         await integrationProvider.generateAuthUrl(getExternalUrl);
+
+      await ioRedis.set(
+        'provider:' + state,
+        migrateTo || integration,
+        'EX',
+        3600
+      );
 
       if (refresh) {
         await ioRedis.set(`refresh:${state}`, refresh, 'EX', 3600);
@@ -425,17 +452,21 @@ export class IntegrationsController {
     @GetOrgFromRequest() org: Organization,
     @Body('id') id: string
   ) {
-    const isTherePosts = await this._integrationService.getPostsForChannel(
-      org.id,
-      id
-    );
-    if (isTherePosts.length) {
-      for (const post of isTherePosts) {
-        this._postService.deletePost(org.id, post.group).catch((err) => {});
-      }
+    // toybaco_approval_flow_v5: チャネル削除は投稿削除を伴うため本部限定。
+    const toybacoRole = (org as any)?.users?.[0]?.role;
+    if (toybacoRole !== 'ADMIN' && toybacoRole !== 'SUPERADMIN') {
+      throw new HttpException(
+        'チャネルの削除は本部の管理者のみ実行できます。',
+        HttpStatus.FORBIDDEN
+      );
     }
 
-    return this._integrationService.deleteChannel(org.id, id);
+    const deleted = await this._integrationService.deleteChannel(org.id, id);
+    // channel+postsのDB commit後にのみTemporalを停止する。
+    await this._postService.terminatePostWorkflows(
+      deleted.workflowIds
+    );
+    return deleted.integration;
   }
 
   @Get('/plug/list')

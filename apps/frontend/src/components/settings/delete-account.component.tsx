@@ -37,12 +37,13 @@ const DeleteAccountComponent: FC<{ isLink?: boolean }> = ({ isLink }) => {
       });
 
       if (response.status !== 200 && response.status !== 201) {
-        const { message } = await response.json().catch(() => ({
-          message: '',
-        }));
+        // APIの生メッセージは内部情報を含み得るため顧客画面へ出さない。
+        await response.json().catch(() => ({}));
         toaster.show(
-          message ||
-            t('could_not_delete_account', 'Could not delete your account'),
+          t(
+            'could_not_delete_account',
+            'アカウントを削除できませんでした'
+          ),
           'warning'
         );
         return;

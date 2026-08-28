@@ -28,6 +28,7 @@ import utc from 'dayjs/plugin/utc';
 import { AutopostRepository } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.repository';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
 import { TemporalService } from 'nestjs-temporal-core';
+import { toybacoNotificationJa } from '@gitroom/nestjs-libraries/toybaco/notification.ja';
 
 dayjs.extend(utc);
 
@@ -113,6 +114,16 @@ export class IntegrationService {
     timezone?: number,
     customInstanceDetails?: string
   ) {
+    // toybaco_provider_allowlist_v1: 外部通信やDB更新より前の最終保存境界。
+    if (
+      type === 'social' &&
+      !this._integrationManager
+        .getAllowedSocialsIntegrations()
+        .includes(provider)
+    ) {
+      throw new HttpException('Integration not allowed', HttpStatus.FORBIDDEN);
+    }
+
     const uploadedPicture = picture
       ? picture?.indexOf('imagedelivery.net') > -1
         ? picture
@@ -169,6 +180,13 @@ export class IntegrationService {
 
   getIntegrationById(org: string, id: string) {
     return this._integrationRepository.getIntegrationById(org, id);
+  }
+
+  getIntegrationByInternalId(org: string, internalId: string) {
+    return this._integrationRepository.getIntegrationByInternalId(
+      org,
+      internalId
+    );
   }
 
   async refreshToken(provider: SocialProvider, refresh: string) {
@@ -303,10 +321,15 @@ export class IntegrationService {
     integration: Integration,
     err = ''
   ) {
+    // 再接続通知は workflow を通らないため、この service で送信直前に翻訳する。
+    const notification = toybacoNotificationJa(
+      `Could not refresh your ${integration.providerIdentifier} channel ${err}`,
+      `Could not refresh your ${integration.providerIdentifier} channel ${err}. Please go back to the system and connect it again ${process.env.FRONTEND_URL}/launches`
+    );
     await this._notificationService.inAppNotification(
       orgId,
-      `Could not refresh your ${integration.providerIdentifier} channel ${err}`,
-      `Could not refresh your ${integration.providerIdentifier} channel ${err}. Please go back to the system and connect it again ${process.env.FRONTEND_URL}/launches`,
+      notification.subject,
+      notification.message,
       true,
       false,
       'info'
@@ -383,7 +406,7 @@ export class IntegrationService {
   }
 
   async deleteChannel(org: string, id: string) {
-    return this._integrationRepository.deleteChannel(org, id);
+    return this._integrationRepository.deleteChannelWithPosts(org, id);
   }
 
   async disableIntegrations(org: string, totalChannels: number) {

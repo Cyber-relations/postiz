@@ -78,9 +78,9 @@ export const SelectCurrent: FC = () => {
       e.stopPropagation();
       e.preventDefault();
       const open = await modals.open({
-        title: 'Remove Social Account',
+        title: '投稿先からアカウントを外す',
         description:
-          'Are you sure you want to remove this social from scheduling?',
+          'このアカウントを投稿先から外してもよろしいですか？',
       });
 
       if (!open) {
@@ -201,7 +201,7 @@ export const IsGlobal: FC<{ id: string }> = ({ id }) => {
       data-tooltip-id="tooltip"
       data-tooltip-content={t(
         'no_longer_global_mode',
-        'No longer in global mode'
+        '個別編集モードです'
       )}
       className="w-[8px] h-[8px] bg-[#FC69FF] -top-[1px] -end-[3px] absolute rounded-full"
     />

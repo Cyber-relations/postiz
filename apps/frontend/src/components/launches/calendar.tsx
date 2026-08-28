@@ -443,13 +443,7 @@ export const MonthView = () => {
     const calendarDays = [];
     let currentDay = calendarStartDate;
     for (let i = 0; i < 42; i++) {
-      let label = 'current-month';
-      if (currentDay.month() < currentMonth) label = 'previous-month';
-      if (currentDay.month() > currentMonth) label = 'next-month';
-      calendarDays.push({
-        day: currentDay,
-        label,
-      });
+      calendarDays.push({ day: currentDay });
 
       // Move to the next day
       currentDay = currentDay.add(1, 'day');
@@ -1059,7 +1053,7 @@ const CalendarItem: FC<{
         <div
           className="absolute -top-[6px] -left-[6px] z-20 w-[18px] h-[18px] rounded-full bg-red-500 flex items-center justify-center text-white text-[11px] font-bold cursor-pointer"
           data-tooltip-id="tooltip"
-          data-tooltip-content={post.error || 'An error occurred while publishing this post'}
+          data-tooltip-content="投稿の公開に失敗しました。連携先を確認して、もう一度お試しください。"
         >
           !
         </div>

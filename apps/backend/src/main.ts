@@ -20,6 +20,108 @@ import { HttpExceptionFilter } from '@gitroom/nestjs-libraries/services/exceptio
 import { ConfigurationChecker } from '@gitroom/helpers/configuration/configuration.checker';
 import { startMcp } from '@gitroom/nestjs-libraries/chat/start.mcp';
 
+const TOYBACO_BLOCKED_API_PREFIXES = Object.freeze([
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/oauth-protected-resource',
+  '/.well-known/openai-apps-challenge',
+  '/.well-known/openid-configuration',
+  '/admin',
+  '/billing',
+  '/enterprise',
+  '/integrations/customers',
+  '/integrations/moltbook',
+  '/integrations/plug/list',
+  '/integrations/plugs',
+  '/integrations/telegram',
+  '/mcp',
+  '/mcp-oauth',
+  '/mcp-oauth-claude',
+  '/message',
+  '/oauth',
+  '/public/agent',
+  '/public/modify-subscription',
+  '/public/v1',
+  '/settings/team',
+  '/sse',
+  '/stripe',
+  '/third-party',
+  '/user/agent-media-sso',
+  '/user/approved-apps',
+  '/user/api-key',
+  '/user/chatbase-token',
+  '/user/delete-account',
+  '/user/impersonate',
+  '/user/join-org',
+  '/user/oauth-app',
+  '/user/subscription',
+  '/user/switch',
+  '/webhooks',
+]);
+
+const TOYBACO_BLOCKED_API_PATTERNS = Object.freeze([
+  /^\/integrations\/[^/]+\/(?:internal-plugs|plugs)(?:\/|$)/,
+]);
+
+function toybacoCanonicalPath(rawUrl) {
+  let value = String(rawUrl || '/').split(/[?#]/, 1)[0] || '/';
+
+  // %252f のような多重encodeも同じpathとして判定する。4回で収束しない
+  // percent escapeは曖昧なため、許可側へ倒さず拒否する。
+  for (let round = 0; round < 4; round++) {
+    let decoded;
+    try {
+      decoded = decodeURIComponent(value);
+    } catch {
+      return null;
+    }
+    if (decoded === value) break;
+    value = decoded;
+  }
+  if (
+    /%[0-9a-f]{2}/i.test(value) ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  ) {
+    return null;
+  }
+
+  value = value.replace(/\\/g, '/');
+  const segments = [];
+  for (const segment of value.split('/')) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      segments.pop();
+      continue;
+    }
+    segments.push(segment);
+  }
+  // Express/Nestの既定routerは大文字小文字を区別しない。境界側もASCIIを
+  // 小文字化しないと /OAUTH のような表記だけcontrollerへ通ってしまう。
+  return ('/' + segments.join('/')).replace(/[A-Z]/g, (letter) =>
+    letter.toLowerCase()
+  );
+}
+
+function toybacoApiBlocked(rawUrl) {
+  const pathname = toybacoCanonicalPath(rawUrl);
+  if (pathname === null) return true;
+
+  // Chatwootを唯一のidentity sourceにする。PostizのLOCAL/GitHub等の認証・
+  // password recovery・登録は、既存LOCAL accountから同期を迂回できるため閉じる。
+  if (pathname === '/auth' || pathname.startsWith('/auth/')) {
+    return ![
+      '/auth/can-register',
+      '/auth/oauth/generic/exists',
+      // iframe openごとにChatwootへ再束縛する専用入口だけを追加で通す。
+      '/auth/toybaco-entry',
+    ].includes(pathname);
+  }
+  return (
+    TOYBACO_BLOCKED_API_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix + '/')
+    ) || TOYBACO_BLOCKED_API_PATTERNS.some((pattern) => pattern.test(pathname))
+  );
+}
+
 async function start() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
@@ -46,6 +148,17 @@ async function start() {
         ...(process.env.MAIN_URL ? [process.env.MAIN_URL] : []),
       ],
     },
+  });
+
+  // toybaco_product_boundary_v1: 非提供機能はcontroller/MCP登録より先に拒否する。
+  app.use((req: any, res: any, next: any) => {
+    if (toybacoApiBlocked(req.originalUrl || req.url)) {
+      return res.status(403).json({
+        code: 'TOYBACO_FEATURE_DISABLED',
+        message: 'この機能は利用できません',
+      });
+    }
+    return next();
   });
 
   await startMcp(app);

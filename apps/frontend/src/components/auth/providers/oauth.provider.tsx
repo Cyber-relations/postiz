@@ -38,8 +38,8 @@ export const OauthProvider = () => {
         />
       </div>
       <div>
-        {t('sign_in_with', 'Sign in with')}&nbsp;
         {oauthDisplayName || 'OAuth'}
+        {t('sign_in_with', 'でサインイン')}
       </div>
     </div>
   );

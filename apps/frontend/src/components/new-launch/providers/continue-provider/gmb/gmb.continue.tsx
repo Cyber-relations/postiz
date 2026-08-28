@@ -24,19 +24,19 @@ export const GmbContinue = withContinueProvider<GmbItem, GmbSelection>({
   endpoint: 'pages',
   swrKey: 'load-gmb-locations',
   titleKey: 'select_location',
-  titleDefault: 'Select Business Location:',
+  titleDefault: 'ビジネスの所在地を選択：',
   emptyStateMessages: [
     {
       key: 'gmb_no_locations_found',
-      text: "We couldn't find any business locations connected to your account.",
+      text: "アカウントに接続されたビジネスの所在地が見つかりませんでした。",
     },
     {
       key: 'gmb_ensure_business_verified',
-      text: 'Please ensure your business is verified on Google My Business.',
+      text: 'Google ビジネスプロフィールでビジネスの確認が完了しているかご確認ください。',
     },
     {
       key: 'gmb_try_again',
-      text: 'Please close this dialog, delete the integration and try again.',
+      text: 'この画面を閉じて連携を削除し、もう一度お試しください。',
     },
   ],
   getItemId: (item) => item.id,

@@ -23,7 +23,7 @@ export class PostSettingsTool implements AgentToolInterface {
         },
       },
       description: `
-Update the provider settings of an existing post (scheduled or draft) that was NOT published yet.
+Update the provider settings of an existing draft. Toybaco AI never changes a scheduled or published post.
 Only the settings change - the content and the publish date stay exactly as they are.
 Find the post first (list your posts) and pass its "id" here.
 The settings are merged into the existing ones, so only pass the keys you want to change; anything you don't pass stays as it is.
@@ -76,14 +76,15 @@ If validation fails, the result contains output.errors describing what to fix; t
             organizationId,
             inputData.id,
             settings,
-            'MCP'
+            'MCP',
+            'TOYBACO_AI_DRAFT'
           );
 
           return { output };
         } catch (err: any) {
           return {
             output: {
-              errors: err?.message || 'Failed to update the post settings',
+              errors: err?.message || '投稿設定を更新できませんでした。',
             },
           };
         }

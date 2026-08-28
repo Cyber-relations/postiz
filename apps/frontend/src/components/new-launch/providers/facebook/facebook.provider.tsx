@@ -20,11 +20,11 @@ import { useEffect } from 'react';
 const postType = [
   {
     value: 'post',
-    label: 'Post',
+    label: '投稿',
   },
   {
     value: 'story',
-    label: 'Story',
+    label: 'ストーリーズ',
   },
 ];
 
@@ -52,13 +52,13 @@ export const FacebookSettings = () => {
     <>
       <div className="pt-[20px]">
         <Select
-          label="Post Type"
+          label="投稿タイプ"
           {...register('post_type', {
             value: 'post',
           })}
         >
           <option value="">
-            {t('select_post_type', 'Select Post Type...')}
+            {t('select_post_type', '投稿タイプを選択...')}
           </option>
           {postType.map((item) => (
             <option key={item.value} value={item.value}>
@@ -70,7 +70,7 @@ export const FacebookSettings = () => {
 
       {postCurrentType !== 'story' && (
         <Input
-          label={'Embedded URL (only for text Post)'}
+          label={'埋め込みURL（テキスト投稿のみ）'}
           {...register('url')}
         />
       )}
@@ -78,7 +78,7 @@ export const FacebookSettings = () => {
       {presetAvailable && (
         <>
           <Select
-            label="Background (applies to text-only posts shorter than 130 characters)"
+            label="背景（130文字未満のテキスト投稿のみ）"
             hideErrors
             {...register('text_format_preset_id')}
             style={
@@ -88,7 +88,7 @@ export const FacebookSettings = () => {
             }
           >
             <option value="" style={{ background: '#ffffff', color: '#1c1e21' }}>
-              {t('facebook_background_none', 'None (plain text)')}
+              {t('facebook_background_none', 'なし（通常のテキスト）')}
             </option>
             {FACEBOOK_PRESETS.map((item) => {
               const bg = getPresetBackground(item.id);
@@ -108,7 +108,7 @@ export const FacebookSettings = () => {
           <div className="text-[12px] opacity-70 mt-[8px]">
             {t(
               'facebook_background_note',
-              'Unofficial list: the colors shown are approximate, an unsupported background is dropped (published as plain text)'
+              '非公式の一覧です。表示色は目安で、未対応の背景は通常のテキストとして投稿されます。'
             )}
           </div>
         </>

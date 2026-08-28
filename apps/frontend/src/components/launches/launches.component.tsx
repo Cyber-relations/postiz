@@ -444,7 +444,7 @@ export const LaunchesComponent = () => {
         }
       ) =>
       async () => {
-        const { url } = await (
+        const { url, err } = await (
           await fetch(
             `/integrations/social/${integration.identifier}?refresh=${integration.internalId}`,
             {
@@ -452,38 +452,136 @@ export const LaunchesComponent = () => {
             }
           )
         ).json();
+        if (err || typeof url !== 'string' || !url) {
+          toast.show('チャンネルを再接続できませんでした', 'warning');
+          return;
+        }
+        if (document.documentElement.dataset.toybacoEmbed) {
+          const toybacoWindow = window as Window & {
+            __toybacoConnectPopup?: Window | null;
+          };
+          const popup = window.open(
+            url,
+            'toybaco-connect',
+            'width=600,height=800'
+          );
+          if (!popup) {
+            toast.show(
+              'チャンネル再接続用のポップアップを開けませんでした。ブラウザのポップアップを許可して、もう一度お試しください。',
+              'warning'
+            );
+            return;
+          }
+          // 新規接続と同じsource検査へ通すため、refresh popupもWindowProxyを保存する。
+          toybacoWindow.__toybacoConnectPopup = popup;
+          return;
+        }
         window.location.href = url;
       },
-    []
+    [toast]
   );
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
-    if (search.get('msg')) {
-      toast.show(search.get('msg')!, 'success');
+
+    // OAuth 完了通知は同一オリジンかつ既知の形だけを受け、偽メッセージを表示しない。
+    // 埋め込み時のみ登録する。常時登録すると、非埋め込みのモバイル経路
+    // (コールバック画面が自前トーストを出したうえで opener にも送る)で
+    // 同じ文言のトーストが二重に出るため。
+    const toybacoWindow = window as Window & {
+      __toybacoConnectPopup?: Window | null;
+    };
+    const handleToybacoConnectMessage = (event: MessageEvent) => {
+      if (
+        event.origin !== window.location.origin ||
+        !toybacoWindow.__toybacoConnectPopup ||
+        event.source !== toybacoWindow.__toybacoConnectPopup ||
+        typeof event.data !== 'object' ||
+        event.data === null
+      ) {
+        return;
+      }
+      const data = event.data as {
+        type?: unknown;
+        outcome?: unknown;
+      };
+      // 自由文やbooleanではなく、許可した有限の結果だけを受け付ける。
+      if (
+        data.type !== 'toybaco-connect' ||
+        (data.outcome !== 'connected' &&
+          data.outcome !== 'review' &&
+          data.outcome !== 'precondition')
+      ) {
+        return;
+      }
+      toybacoWindow.__toybacoConnectPopup = null;
+      const customerMessage =
+        data.outcome === 'connected'
+          ? t('channel_added', 'チャンネルを追加しました')
+          : data.outcome === 'precondition'
+          ? t(
+              'connection_precondition_failed',
+              'チャンネルを接続するための条件を満たしていません'
+            )
+          : t(
+            'channel_connection_review',
+            'チャンネルの接続結果を確認してください'
+          );
+      toast.show(
+        customerMessage,
+        data.outcome === 'connected' ? 'success' : 'warning'
+      );
+      void mutate();
+    };
+    if (document.documentElement.dataset.toybacoEmbed) {
+      window.addEventListener('message', handleToybacoConnectMessage);
+    }
+
+    if (
+      search.get('connection') === 'review' ||
+      search.get('precondition') === 'true'
+    ) {
+      // 結果は型付きの固定値だけを扱い、query stringの自由文は表示しない。
+      const outcome =
+        search.get('precondition') === 'true' ? 'precondition' : 'review';
+      const customerMessage =
+        outcome === 'precondition'
+          ? t(
+              'connection_precondition_failed',
+              'チャンネルを接続するための条件を満たしていません'
+            )
+          : t(
+              'channel_connection_review',
+              'チャンネルの接続結果を確認してください'
+            );
+      toast.show(customerMessage, 'warning');
       window?.opener?.postMessage(
         {
-          msg: search.get('msg')!,
-          success: false,
+          type: 'toybaco-connect',
+          outcome,
         },
-        '*'
+        window.location.origin
       );
     }
     if (search.get('added')) {
       fireEvents('channel_added');
       window?.opener?.postMessage(
         {
-          msg: t('channel_added', 'Channel added'),
-          success: true,
+          type: 'toybaco-connect',
+          outcome: 'connected',
         },
-        '*'
+        window.location.origin
       );
     }
     if (window.opener) {
       window.close();
     }
-  }, []);
+
+    return () => {
+      window.removeEventListener('message', handleToybacoConnectMessage);
+    };
+  }, [fireEvents, mutate, search, t, toast]);
   if (isLoading || reload) {
     return (
       <div className="bg-newBgColorInner p-[20px] flex flex-1 flex-col gap-[15px] transition-all items-center justify-center">
@@ -554,7 +652,7 @@ export const LaunchesComponent = () => {
                           ? '/no-channels.svg'
                           : '/no-channels-colors.svg'
                       }
-                      alt="No channels"
+                      alt="チャンネル未接続"
                       className="mx-auto min-w-[100%]"
                     />
                     <div className="font-[600] text-[20px]">

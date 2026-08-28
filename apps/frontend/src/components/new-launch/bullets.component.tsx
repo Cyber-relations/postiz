@@ -12,7 +12,7 @@ export const Bullets: FC<{
   return (
     <div
       data-tooltip-id="tooltip"
-      data-tooltip-content="Bullets"
+      data-tooltip-content="箇条書き"
       onClick={bullet}
       className="select-none cursor-pointer rounded-[6px] w-[30px] h-[30px] bg-newColColor flex justify-center items-center"
     >

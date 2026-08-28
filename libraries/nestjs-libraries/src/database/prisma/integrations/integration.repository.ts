@@ -1,5 +1,15 @@
-import { PrismaRepository } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
+import {
+  PrismaRepository,
+  PrismaTransaction,
+} from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  toybacoMarkerIsClaimed,
+  toybacoParsePublishMarker,
+  toybacoParseWorkflowMarker,
+  toybacoStoredMarkerIsSafe,
+  toybacoWorkflowId,
+} from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
 import { createHash } from 'crypto';
 import dayjs from 'dayjs';
 import { Integration } from '@prisma/client';
@@ -17,7 +27,8 @@ export class IntegrationRepository {
     private _plugs: PrismaRepository<'plugs'>,
     private _exisingPlugData: PrismaRepository<'exisingPlugData'>,
     private _customers: PrismaRepository<'customer'>,
-    private _mentions: PrismaRepository<'mentions'>
+    private _mentions: PrismaRepository<'mentions'>,
+    private _transaction: PrismaTransaction
   ) {}
 
   getMentions(platform: string, q: string) {
@@ -595,15 +606,64 @@ export class IntegrationRepository {
     });
   }
 
-  deleteChannel(org: string, id: string) {
-    return this._integration.model.integration.update({
-      where: {
+  deleteChannelWithPosts(org: string, id: string) {
+    return this._transaction.model.$transaction(async (database: any) => {
+      const locked = (await database.$queryRawUnsafe(
+        'SELECT "id" FROM "Integration" WHERE "id" = $1 AND "organizationId" = $2 AND "deletedAt" IS NULL FOR UPDATE',
         id,
-        organizationId: org,
-      },
-      data: {
-        deletedAt: new Date(),
-      },
+        org
+      )) as Array<{ id: string }>;
+      if (locked.length !== 1) {
+        throw new ForbiddenException(
+          '削除対象のチャネルが見つかりません。'
+        );
+      }
+      const integration = locked[0];
+      const allPosts = (await database.$queryRawUnsafe(
+        'SELECT "id", "parentPostId", "group", "state"::text AS "state", "error" FROM "Post" WHERE "organizationId" = $1 AND "integrationId" = $2 AND "deletedAt" IS NULL FOR UPDATE',
+        org,
+        id
+      )) as Array<{
+        id: string;
+        parentPostId: string | null;
+        group: string;
+        state: string;
+        error: string | null;
+      }>;
+      if (
+        allPosts.some(
+          (post) =>
+            toybacoMarkerIsClaimed(post.error) ||
+            (!toybacoStoredMarkerIsSafe(post.state, post.error, post.id) &&
+              (!post.parentPostId || !!post.error))
+        )
+      ) {
+        throw new ForbiddenException('公開処理中の投稿を含むチャネルは削除できません。');
+      }
+      const workflowIds = new Set<string>();
+      for (const post of allPosts) {
+        const pending = toybacoParseWorkflowMarker(post.error || '');
+        const published = toybacoParsePublishMarker(post.error || '');
+        const current = pending || published;
+        if (current && pending?.operation !== 'CANCEL') {
+          workflowIds.add(
+            toybacoWorkflowId(post.id, current.generation, current.token)
+          );
+        }
+        if (pending?.previousWorkflowId) {
+          workflowIds.add(pending.previousWorkflowId);
+        }
+      }
+      const posts = allPosts.filter((post) => post.parentPostId === null);
+      await database.post.updateMany({
+        where: { organizationId: org, integrationId: id, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      await database.integration.update({
+        where: { id, organizationId: org, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      return { integration, posts, workflowIds: [...workflowIds] };
     });
   }
 

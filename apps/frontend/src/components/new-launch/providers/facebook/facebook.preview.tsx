@@ -112,7 +112,7 @@ export const FacebookPreview: FC<{
         .replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
           return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
         }) +
-      `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="This text will be cropped">` +
+      `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="この部分は切り取られます">` +
       newContent.slice(end).replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
         return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
       }) +
@@ -259,7 +259,7 @@ export const FacebookPreview: FC<{
       {renderContent.length > 1 && (
         <>
           <div className="flex items-center">
-            <div className="text-[14px] font-[700]">Most relevant</div>
+            <div className="text-[14px] font-[700]">関連度の高い順</div>
             <div>
               <svg
                 width="20"

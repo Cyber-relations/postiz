@@ -73,7 +73,7 @@ export const DatePicker: FC<{
           />
           <TimeInput
             onChange={changeDate('time')}
-            label="Pick time"
+            label="時刻を選択"
             classNames={{
               label: 'text-textColor py-[12px]',
               input:

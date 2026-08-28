@@ -48,7 +48,7 @@ export class IntegrationSchedulePostTool implements AgentToolInterface {
         },
       },
       description: `
-Use this when the user wants to create a draft, scheduled, or immediate social media post on their connected channels, based on the integrationSchema tool.
+Use this only to create a social media draft. Toybaco AI never schedules or publishes posts.
 Examples of the input shape:
 
 A single LinkedIn post with one comment
@@ -81,10 +81,8 @@ If validation fails, the result contains output.errors describing what to fix; t
                   'If the post has a link inside, we can ask the user if they want to add a short link'
                 ),
               type: z
-                .enum(['draft', 'schedule', 'now'])
-                .describe(
-                  'The type of the post, if we pass now, we should pass the current date also'
-                ),
+                .literal('draft')
+                .describe('Toybaco AI always creates a draft'),
               postsAndComments: z
                 .array(
                   z.object({
@@ -180,74 +178,54 @@ If validation fails, the result contains output.errors describing what to fix; t
             };
           }
 
-          if (platform.type !== 'draft') {
-            if (!validation.valid) {
-              return {
-                output: {
-                  errors: `${validation.name}: ${
-                    validation.settingsError || 'Please fix your settings'
-                  }, please fix it, and try integrationSchedulePostTool again.`,
-                },
-              };
-            }
-
-            if (validation.errors !== true) {
-              return {
-                output: {
-                  errors: `${validation.name}: ${validation.errors}, please fix it, and try integrationSchedulePostTool again.`,
-                },
-              };
-            }
-
-            if (validation.tooLong) {
-              return {
-                output: {
-                  errors: `${validation.name}: The maximum characters is ${validation.maximumCharacters}, please fix it, and try integrationSchedulePostTool again.`,
-                },
-              };
-            }
-          }
         }
 
-        for (const post of inputData.socialPost) {
+        const toybacoPosts = inputData.socialPost.map((post: any) => {
           const integration = integrations[post.integrationId];
-
           if (!integration) {
-            throw new Error('Integration not found');
+            throw new Error(
+              '連携先が見つかりません。画面を再読み込みしてください。'
+            );
           }
-
-          const output = await this._postsService.createPost(organizationId, {
-            date: post.date,
-            type: post.type as 'draft' | 'schedule' | 'now',
-            shortLink: post.shortLink,
-            tags: [],
-            posts: [
+          return {
+            __toybacoDate: post.date,
+            integration,
+            group: makeId(10),
+            settings: post.settings.reduce(
+              (acc: AllProvidersSettings, s: { key: string; value: any }) => ({
+                ...acc,
+                [s.key]: s.value,
+              }),
               {
-                integration,
-                group: makeId(10),
-                settings: post.settings.reduce(
-                  (acc: AllProvidersSettings, s: { key: string; value: any }) => ({
-                    ...acc,
-                    [s.key]: s.value,
-                  }),
-                  {
-                    __type: integration.providerIdentifier,
-                  } as AllProvidersSettings
-                ),
-                value: post.postsAndComments.map((p: any) => ({
-                  content: p.content,
-                  id: makeId(10),
-                  delay: 0,
-                  image: p.attachments.map((p: any) => ({
-                    id: makeId(10),
-                    path: p,
-                  })),
-                })),
-              },
-            ],
-          }, 'MCP');
-          finalOutput.push(...output);
-        }
+                __type: integration.providerIdentifier,
+              } as AllProvidersSettings
+            ),
+            value: post.postsAndComments.map((item: any) => ({
+              content: item.content,
+              id: makeId(10),
+              delay: 0,
+              image: item.attachments.map((attachment: any) => ({
+                id: makeId(10),
+                path: attachment,
+              })),
+            })),
+          };
+        });
+
+        const output = await this._postsService.createPost(
+          organizationId,
+          {
+            date: toybacoPosts[0]?.__toybacoDate || new Date().toISOString(),
+            type: 'draft',
+            shortLink: inputData.socialPost.some((post: any) => post.shortLink),
+            tags: [],
+            posts: toybacoPosts,
+          },
+          'MCP',
+          false,
+          'TOYBACO_AI_DRAFT'
+        );
+        finalOutput.push(...output);
 
         return {
           output: finalOutput,

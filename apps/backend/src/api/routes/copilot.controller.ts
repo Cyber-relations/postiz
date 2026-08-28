@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Logger,
   Controller,
   Get,
@@ -38,6 +39,11 @@ export class CopilotController {
   ) {}
   @Post('/chat')
   chatAgent(@Req() req: Request, @Res() res: Response) {
+    // 画面を隠すだけでは API を直接呼べてしまうため、ここでも止める。
+    // 接続先を東京の Bedrock に向けたら、この環境変数を外して有効化する。
+    if (process.env.TOYBACO_DISABLE_AI) {
+      throw new ForbiddenException('この機能は利用できません');
+    }
     if (
       process.env.OPENAI_API_KEY === undefined ||
       process.env.OPENAI_API_KEY === ''
@@ -64,6 +70,11 @@ export class CopilotController {
     @Res() res: Response,
     @GetOrgFromRequest() organization: Organization
   ) {
+    // 画面を隠すだけでは API を直接呼べてしまうため、ここでも止める。
+    // 接続先を東京の Bedrock に向けたら、この環境変数を外して有効化する。
+    if (process.env.TOYBACO_DISABLE_AI) {
+      throw new ForbiddenException('この機能は利用できません');
+    }
     if (
       process.env.OPENAI_API_KEY === undefined ||
       process.env.OPENAI_API_KEY === ''

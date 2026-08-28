@@ -125,7 +125,7 @@ const ContinueModal: FC<{
 
   useEffect(() => {
     modals.openModal({
-      title: 'Configure Channel',
+      title: 'チャンネルを設定',
       children: (close) => (
         <ModalContent
           {...props}

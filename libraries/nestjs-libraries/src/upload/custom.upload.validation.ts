@@ -6,14 +6,12 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { fileTypeFromBuffer } = require('file-type');
 
+// toybaco_publishable_media_v1: buffer検査も投稿可能形式だけを許可する。
 const ALLOWED_MIME_TYPES = new Set<string>([
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
-  'image/avif',
-  'image/bmp',
-  'image/tiff',
   'video/mp4',
 ]);
 

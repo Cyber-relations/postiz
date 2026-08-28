@@ -40,8 +40,8 @@ export const CommentBox: FC<{
     >
       <div className={clsx(type === 'input' && 'flex-1')}>
         <Component
-          label={type === 'textarea' ? 'Add comment' : ''}
-          placeholder={type === 'input' ? 'Add comment' : ''}
+          label={type === 'textarea' ? 'コメントを追加' : ''}
+          placeholder={type === 'input' ? 'コメントを追加' : ''}
           name="comment"
           disableForm={true}
           value={newComment}
@@ -53,7 +53,7 @@ export const CommentBox: FC<{
         onClick={changeIt}
         className={clsx(type === 'input' && 'mb-[27px]')}
       >
-        {value ? 'Update' : 'Add comment'}
+        {value ? '更新' : 'コメントを追加'}
       </Button>
     </div>
   );
@@ -86,8 +86,8 @@ export const EditableCommentComponent: FC<{
   const deleteCommentFunction = useCallback(async () => {
     if (
       await deleteDialog(
-        'Are you sure you want to delete this comment?',
-        'Yes, Delete'
+        'このコメントを削除してもよろしいですか？',
+        'はい、削除します'
       )
     ) {
       onDelete();
@@ -267,7 +267,7 @@ export const CommentComponent: FC<{
   }, []);
   return (
     <div className="relative flex gap-[20px] flex-col flex-1 rounded-[4px] border border-customColor6 bg-sixth p-[16px] pt-0">
-      <TopTitle title={`Comments for ${date.format('DD/MM/YYYY HH:mm')}`} />
+      <TopTitle title={`${date.format('YYYY/MM/DD HH:mm')} のコメント`} />
       <button
         onClick={closeAll}
         className="outline-none absolute end-[20px] top-[15px] mantine-UnstyledButton-root mantine-ActionIcon-root hover:bg-tableBorder cursor-pointer mantine-Modal-close mantine-1dcetaa"

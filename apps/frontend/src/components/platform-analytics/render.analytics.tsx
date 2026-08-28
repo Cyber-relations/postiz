@@ -13,6 +13,26 @@ interface AnalyticsDataItem {
   percentageChange?: number;
 }
 
+// API由来の指標名をそのまま表示すると、上流追加時に英語が顧客画面へ漏れる。
+// 提供中のInstagram/Threadsの既知集合だけを日本語化し、未知値は総称へ閉じる。
+const analyticsLabelJa = (label: string): string => {
+  const key = label.trim().toLowerCase().replace(/[ _-]+/g, ' ');
+  const labels: Record<string, string> = {
+    likes: 'いいね',
+    followers: 'フォロワー',
+    reach: 'リーチ',
+    'follower count': 'フォロワー数',
+    views: '閲覧数',
+    comments: 'コメント',
+    shares: 'シェア',
+    saves: '保存',
+    replies: '返信',
+    reposts: '再投稿',
+    quotes: '引用',
+  };
+  return labels[key] || '指標';
+};
+
 const TrendIndicator: FC<{ value: number; average?: boolean }> = ({
   value,
   average,
@@ -83,7 +103,7 @@ const AnalyticsCard: FC<{
               `}
             />
             <span className="text-[15px] font-medium text-newTableText">
-              {item.label}
+              {analyticsLabelJa(item.label)}
             </span>
           </div>
           {item.percentageChange !== undefined && (

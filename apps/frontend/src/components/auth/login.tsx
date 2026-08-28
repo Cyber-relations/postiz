@@ -33,6 +33,8 @@ export function Login() {
     billingEnabled,
     genericOauth,
   } = useVariables();
+  // トイバコ: OIDC が有効なら『トイバコIDでログイン』だけを見せる
+  const toybacoOidcOnly = Boolean(isGeneral && genericOauth);
   const resolver = useMemo(() => {
     return classValidatorResolver(LoginUserDto);
   }, []);
@@ -75,9 +77,12 @@ export function Login() {
               {t('sign_in', 'Sign In')}
             </h1>
           </div>
+          {/* トイバコ: トイバコID だけでログインするため、他の選択肢は出さない */}
+          {!toybacoOidcOnly && (
           <div className="text-[14px] mt-[32px] mb-[12px]">
             {t('continue_with', 'Continue With')}
           </div>
+          )}
           <div className="flex flex-col">
             {isGeneral && genericOauth ? (
               <OauthProvider />
@@ -91,6 +96,8 @@ export function Login() {
                 {billingEnabled && <WalletProvider />}
               </div>
             )}
+            {!toybacoOidcOnly && (
+            <>
             <div className="h-[20px] mb-[24px] mt-[24px] relative">
               <div className="absolute w-full h-[1px] bg-fifth top-[50%] -translate-y-[50%]" />
               <div
@@ -159,6 +166,8 @@ export function Login() {
                 </p>
               </div>
             </div>
+            </>
+            )}
           </div>
         </div>
       </form>

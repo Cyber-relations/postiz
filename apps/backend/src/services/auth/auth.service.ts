@@ -21,11 +21,12 @@ export class AuthService {
     private _emailService: EmailService,
     private _providerManager: AuthProviderManager
   ) {}
+  // toybaco_identity_boundary_v1: GENERIC は Chatwoot 同期済み行だけを使う。
   async canRegister(provider: string) {
-    if (
-      process.env.DISABLE_REGISTRATION !== 'true' ||
-      provider === Provider.GENERIC
-    ) {
+    if (provider === Provider.GENERIC) {
+      return false;
+    }
+    if (process.env.DISABLE_REGISTRATION !== 'true') {
       return true;
     }
 
@@ -91,6 +92,11 @@ export class AuthService {
       }
 
       return { addedOrg: false, jwt: await this.jwt(user) };
+    }
+
+    // GENERIC の自己登録/通常loginは、同期済み所属を通らないため常時拒否する。
+    if (provider === Provider.GENERIC) {
+      throw new Error('トイバコIDは投稿画面の入口から利用してください');
     }
 
     const user = await this.loginOrRegisterProvider(
@@ -300,9 +306,18 @@ export class AuthService {
     state?: string,
     stateCookie?: string
   ) {
-    // the mobile app passes redirect_uri and keeps no cookies, the web flow
-    // never passes it, so the state nonce is only enforced for the web flow
+    const normalizedProvider = String(provider).toUpperCase() as Provider;
+    const toybacoIdentity = normalizedProvider === Provider.GENERIC;
+
+    // GENERIC は開発時も例外にせず、専用入口で発行した state cookie を必須にする。
     if (
+      toybacoIdentity &&
+      (!state || !stateCookie || state !== stateCookie || redirectUri)
+    ) {
+      throw new Error('トイバコIDの確認情報が一致しません');
+    }
+    if (
+      !toybacoIdentity &&
       !process.env.NOT_SECURED &&
       !redirectUri &&
       (!state || state !== stateCookie)
@@ -310,27 +325,83 @@ export class AuthService {
       throw new Error('Invalid state');
     }
 
-    const providerInstance = this._providerManager.getProvider(provider);
-    const token = await providerInstance.getToken(code, redirectUri);
-    const user = await providerInstance.getUser(token);
-    if (!user) {
-      throw new Error('Invalid user');
-    }
-    const checkExists = await this._userService.getUserByProvider(
-      user.id,
-      provider as Provider
+    const providerInstance = this._providerManager.getProvider(
+      normalizedProvider
     );
-    if (checkExists) {
-      return { jwt: await this.jwt(checkExists) };
+    const token = await providerInstance.getToken(code, redirectUri);
+    const providerUser = await providerInstance.getUser(token);
+    if (!providerUser) {
+      throw new Error('トイバコIDで本人確認できませんでした');
     }
 
-    return { token };
+    const checkExists = await this._userService.getUserByProvider(
+      providerUser.id,
+      normalizedProvider
+    );
+    if (toybacoIdentity) {
+      const trusted = providerUser.organization;
+      if (
+        !checkExists ||
+        !checkExists.activated ||
+        checkExists.providerName !== Provider.GENERIC ||
+        checkExists.providerId !== providerUser.id ||
+        !trusted
+      ) {
+        throw new Error('トイバコIDで有効な所属を確認できませんでした');
+      }
+
+      // userinfo の org.id と一致する active membership をJWT発行直前に再読する。
+      const organizations = await this._organizationService.getOrgsByUserId(
+        checkExists.id
+      );
+      const organization = organizations.find(
+        (candidate) => candidate.id === trusted.id
+      );
+      const membership = organization?.users?.[0];
+      if (
+        !organization ||
+        organization.users.length !== 1 ||
+        !membership ||
+        membership.disabled ||
+        !['ADMIN', 'USER'].includes(membership.role) ||
+        membership.role !== trusted.role
+      ) {
+        throw new Error('トイバコIDで有効な所属を確認できませんでした');
+      }
+
+      return {
+        jwt: await this.jwt(checkExists, organization.id),
+        organizationId: organization.id,
+        token: undefined,
+      };
+    }
+
+    if (checkExists) {
+      return {
+        jwt: await this.jwt(checkExists),
+        organizationId: undefined,
+        token: undefined,
+      };
+    }
+    return { token, jwt: undefined, organizationId: undefined };
   }
 
-  private async jwt(user: User) {
-    if (user.password) {
-      delete user.password;
-    }
-    return AuthChecker.signJWT(user);
+  private async jwt(user: User, toybacoOrganizationId?: string) {
+    // 呼び出し元の Prisma object を破壊せず、password を token へ入れない。
+    const safeUser = { ...user };
+    delete safeUser.password;
+    const toybacoExpiresAt = Math.floor(Date.now() / 1000) + 10 * 60;
+    return AuthChecker.signJWT(
+      toybacoOrganizationId
+        ? {
+            ...safeUser,
+            toybacoIdentityVersion: 1,
+            // showorg/request ではなく、userinfo+DB一致からだけ決まる不変claim。
+            toybacoOrganizationId,
+            // stateless JWTを増設せず、Chatwoot logout連動が失敗しても10分で失効。
+            exp: toybacoExpiresAt,
+          }
+        : safeUser
+    );
   }
 }

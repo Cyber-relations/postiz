@@ -12,20 +12,109 @@ import { parseDataUrl } from '@gitroom/nestjs-libraries/upload/data.url';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { fileTypeFromBuffer } = require('file-type');
 
+// toybaco_publishable_media_v1: 投稿まで通る形式だけを保持する。
 const ALLOWED_MIME_TYPES = new Set<string>([
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
-  'image/avif',
-  'image/bmp',
-  'image/tiff',
   'video/mp4',
-  'audio/mpeg',
-  'audio/mp4',
-  'audio/wav',
-  'audio/ogg',
 ]);
+
+// toybaco_s3_credentials_start
+function toybacoResolveS3Options(
+  endpoint: string | undefined,
+  accountId: string | undefined,
+  accessKey: string | undefined,
+  secretKey: string | undefined
+) {
+  const normalizedEndpoint = endpoint?.trim();
+  const normalizedAccountId = accountId?.trim();
+  const normalizedAccessKey = accessKey?.trim();
+  const normalizedSecretKey = secretKey?.trim();
+  const hasAccessKey = Boolean(normalizedAccessKey);
+  const hasSecretKey = Boolean(normalizedSecretKey);
+
+  if (hasAccessKey !== hasSecretKey) {
+    throw new Error(
+      'S3 credentials are incomplete: access key and secret key must be set together.'
+    );
+  }
+
+  let isAwsS3Endpoint = false;
+  let resolvedEndpoint = normalizedEndpoint;
+  if (normalizedEndpoint) {
+    let parsedEndpoint: URL;
+    try {
+      parsedEndpoint = new URL(normalizedEndpoint);
+    } catch {
+      throw new Error('S3_ENDPOINT must be a valid HTTPS URL.');
+    }
+    if (
+      parsedEndpoint.protocol !== 'https:' ||
+      parsedEndpoint.username ||
+      parsedEndpoint.password ||
+      parsedEndpoint.pathname !== '/' ||
+      parsedEndpoint.port ||
+      parsedEndpoint.search ||
+      parsedEndpoint.hash
+    ) {
+      throw new Error('S3_ENDPOINT must be an origin-only HTTPS URL.');
+    }
+    const hostname = parsedEndpoint.hostname.toLowerCase();
+    const isAnyAwsS3Endpoint =
+      hostname === 's3.amazonaws.com' ||
+      /^s3(?:-fips)?(?:\.dualstack)?\.[a-z0-9-]+\.amazonaws\.com(?:\.cn)?$/.test(
+        hostname
+      ) ||
+      /^s3-[a-z0-9-]+\.amazonaws\.com$/.test(hostname);
+    if (
+      isAnyAwsS3Endpoint &&
+      parsedEndpoint.origin !== 'https://s3.ap-northeast-1.amazonaws.com'
+    ) {
+      throw new Error('AWS S3 endpoint must be the Tokyo regional endpoint.');
+    }
+    isAwsS3Endpoint =
+      parsedEndpoint.origin === 'https://s3.ap-northeast-1.amazonaws.com';
+    resolvedEndpoint = parsedEndpoint.origin;
+  }
+
+  if (!normalizedEndpoint && !normalizedAccountId) {
+    throw new Error('CLOUDFLARE_ACCOUNT_ID is required for R2 storage.');
+  }
+  if (
+    !normalizedEndpoint &&
+    !/^[a-f0-9]{32}$/i.test(normalizedAccountId || '')
+  ) {
+    throw new Error('CLOUDFLARE_ACCOUNT_ID must be a 32-character hexadecimal value.');
+  }
+  if (isAwsS3Endpoint && (hasAccessKey || hasSecretKey)) {
+    throw new Error(
+      'Static CLOUDFLARE credentials are forbidden for AWS S3; use the ECS Task Role.'
+    );
+  }
+  if (!isAwsS3Endpoint && (!hasAccessKey || !hasSecretKey)) {
+    throw new Error(
+      'Explicit credentials are required for R2 or a custom S3 endpoint.'
+    );
+  }
+
+  return {
+    endpoint:
+      resolvedEndpoint ||
+      `https://${normalizedAccountId}.r2.cloudflarestorage.com`,
+    credentialOptions:
+      !isAwsS3Endpoint && hasAccessKey && hasSecretKey
+        ? {
+            credentials: {
+              accessKeyId: normalizedAccessKey!,
+              secretAccessKey: normalizedSecretKey!,
+            },
+          }
+        : {},
+  };
+}
+// toybaco_s3_credentials_end
 
 class CloudflareStorage implements IUploadProvider {
   private _client: S3Client;
@@ -38,13 +127,17 @@ class CloudflareStorage implements IUploadProvider {
     private _bucketName: string,
     private _uploadUrl: string
   ) {
+    const toybacoS3 = toybacoResolveS3Options(
+      process.env.S3_ENDPOINT,
+      accountID,
+      accessKey,
+      secretKey
+    );
     this._client = new S3Client({
-      endpoint: `https://${accountID}.r2.cloudflarestorage.com`,
-      region,
-      credentials: {
-        accessKeyId: accessKey,
-        secretAccessKey: secretKey,
-      },
+      // toybaco_s3_tokyo_v3: AWSはTask Role、R2は明示キーで認証する。
+      endpoint: toybacoS3.endpoint,
+      region: process.env.S3_REGION?.trim() || region,
+      ...toybacoS3.credentialOptions,
       requestChecksumCalculation: 'WHEN_REQUIRED',
     });
 
@@ -128,7 +221,10 @@ class CloudflareStorage implements IUploadProvider {
       // Create the PutObjectCommand to upload the file to Cloudflare R2
       const command = new PutObjectCommand({
         Bucket: this._bucketName,
-        ACL: 'public-read',
+        // トイバコ: S3 は ACL 無効が既定。true のときはACLを送らない。
+        ...(process.env.S3_DISABLE_ACL === 'true'
+          ? {}
+          : { ACL: 'public-read' as const }),
         Key: `${id}.${extension}`,
         Body: file.buffer,
         ContentType: safeContentType,

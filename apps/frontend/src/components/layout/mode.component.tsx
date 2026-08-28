@@ -7,6 +7,20 @@ import EventEmitter from 'events';
 export const modeEmitter = new EventEmitter();
 
 const ModeComponent = () => {
+  // 埋め込み(受信箱の中)では受信箱と地色を揃えるため light にする。
+  // 上流の既定は dark で、切替ボタンを隠すだけだと暗いままになる。
+  //
+  // 判定を描画中に行うと、サーバー側(document が無いので dark)と
+  // ブラウザ側(iframe なので light)で結果が割れ、React の hydration が
+  // 食い違う。マウント後に state で持つ。
+  const [embedded, setEmbedded] = useState(false);
+  useEffect(() => {
+    // server marker が無い旧UAでも表示だけは iframe に合わせる。
+    // window.top 比較は認証・権限には使わない。
+    const serverMarked = document.documentElement.dataset.toybacoEmbed === '1';
+    const clientFramed = window.self !== window.top;
+    setEmbedded(serverMarked || clientFramed);
+  }, []);
   const [mode, setMode] = useCookie('mode', 'dark');
 
   const changeMode = useCallback(() => {
@@ -16,8 +30,9 @@ const ModeComponent = () => {
 
   useEffect(() => {
     document.body.classList.remove('dark', 'light');
-    document.body.classList.add(mode);
-  }, [mode]);
+    // 以前 dark を選んだ人の cookie が残っていても、埋め込み中は light にする
+    document.body.classList.add(embedded ? 'light' : mode);
+  }, [mode, embedded]);
   return (
     <div onClick={changeMode} className="select-none cursor-pointer">
       {mode === 'dark' ? (

@@ -55,6 +55,13 @@ export class NoAuthIntegrationsController {
       throw new Error('Integration not allowed');
     }
 
+    // toybaco_provider_allowlist_v1: OAuth開始時のproviderとcallbackを結ぶ。
+    const stateProvider = await ioRedis.get('provider:' + body.state);
+    if (!stateProvider || stateProvider !== integration) {
+      throw new Error('Invalid state');
+    }
+    await ioRedis.del('provider:' + body.state);
+
     const integrationProvider =
       this._integrationManager.getSocialIntegration(integration);
 
@@ -87,6 +94,18 @@ export class NoAuthIntegrationsController {
     const refresh = await ioRedis.get(`refresh:${body.state}`);
     if (refresh) {
       await ioRedis.del(`refresh:${body.state}`);
+      const current = await this._integrationService.getIntegrationByInternalId(
+        org.id,
+        refresh
+      );
+      const expectedProvider = current
+        ? this._integrationManager.getMigrationTarget(
+            current.providerIdentifier
+          ) || current.providerIdentifier
+        : undefined;
+      if (!current || expectedProvider !== integration) {
+        throw new Error('Integration not allowed');
+      }
     }
 
     const onboarding = await ioRedis.get(`onboarding:${body.state}`);
@@ -373,7 +392,11 @@ export class NoAuthIntegrationsController {
       organizationId,
       integrationId
     );
-    if (!integration || integration.internalId !== internalId) {
+    if (
+      !integration ||
+      integration.internalId !== internalId ||
+      integration.providerIdentifier !== provider
+    ) {
       throw new HttpException('Integration not found', 404);
     }
 

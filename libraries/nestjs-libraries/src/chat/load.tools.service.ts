@@ -56,8 +56,6 @@ export class LoadToolsService {
         - Schedule posts into the future, or now, adding texts, images and videos
         - List the posts scheduled between two dates (postsListTool)
         - Update the settings of a scheduled post or draft that was not published yet (postSettingsTool)
-        - Generate pictures for posts
-        - Generate videos for posts
         - Generate text for posts
         - Show global analytics about socials
         - List integrations (channels)

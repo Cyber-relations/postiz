@@ -299,7 +299,7 @@ export const AddOrEditWebhook: FC<{
         <div className="relative flex gap-[20px] flex-col flex-1 rounded-[4px] border border-customColor6 pt-0">
           <div>
             <Input
-              label="Title"
+              label="タイトル"
               translationKey="label_title"
               {...form.register('title')}
             />
@@ -309,7 +309,7 @@ export const AddOrEditWebhook: FC<{
               {...form.register('url')}
             />
             <Select
-              label="Should we sync the current last post?"
+              label="現在の最新投稿も取り込みますか？"
               translationKey="label_should_sync_last_post"
               {...form.register('syncLast', {
                 setValueAs: (value) => {
@@ -324,7 +324,7 @@ export const AddOrEditWebhook: FC<{
               ))}
             </Select>
             <Select
-              label="When should we post it?"
+              label="いつ投稿しますか？"
               translationKey="label_when_post"
               {...form.register('onSlot', {
                 setValueAs: (value) => value === 'true' || value === true,
@@ -337,7 +337,7 @@ export const AddOrEditWebhook: FC<{
               ))}
             </Select>
             <Select
-              label="Autogenerate content"
+              label="投稿内容を自動生成"
               translationKey="label_autogenerate_content"
               {...form.register('generateContent', {
                 setValueAs: (value) => value === 'true' || value === true,
@@ -371,23 +371,11 @@ export const AddOrEditWebhook: FC<{
                 />
               </>
             )}
-            <Select
-              label="Generate Picture?"
-              translationKey="label_generate_picture"
-              {...form.register('addPicture', {
-                setValueAs: (value) => value === 'true' || value === true,
-              })}
-            >
-              {optionsChoose.map((option) => (
-                <option key={String(option.value)} value={String(option.value)}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
+
             <Select
               value={allIntegrations.value}
               name="integrations"
-              label="Integrations"
+              label="連携先"
               translationKey="label_integrations"
               disableForm={true}
               onChange={changeIntegration}

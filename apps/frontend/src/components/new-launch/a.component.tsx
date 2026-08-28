@@ -36,7 +36,7 @@ export const AComponent: FC<{
   return (
     <div
       data-tooltip-id="tooltip"
-      data-tooltip-content="Link"
+      data-tooltip-content="リンク"
       onClick={mark}
       className="select-none cursor-pointer rounded-[6px] w-[30px] h-[30px] bg-newColColor flex justify-center items-center"
     >

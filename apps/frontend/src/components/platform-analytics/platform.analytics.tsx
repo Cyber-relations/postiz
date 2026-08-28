@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { useCallback, useMemo, useState } from 'react';
-import { capitalize, orderBy } from 'lodash';
+import { orderBy } from 'lodash';
 import clsx from 'clsx';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import SafeImage from '@gitroom/react/helpers/safe.image';
@@ -17,19 +17,9 @@ import { useVariables } from '@gitroom/react/helpers/variable.context';
 import useCookie from 'react-use-cookie';
 import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
-const allowedIntegrations = [
-  'facebook',
-  'instagram',
-  'instagram-standalone',
-  'linkedin-page',
-  'tiktok',
-  'tiktok-business',
-  'youtube',
-  'gmb',
-  'pinterest',
-  'threads',
-  'x',
-];
+// toybaco_provider_allowlist_v1: 分析画面の案内も製品提供集合と同一にする。
+const allowedIntegrations = ['instagram-standalone', 'threads'];
+const allowedIntegrationNames = ['Instagram', 'Threads'];
 export const PlatformAnalytics = () => {
   const fetch = useFetch();
   const t = useT();
@@ -162,7 +152,7 @@ export const PlatformAnalytics = () => {
         </div>
         <div className="text-[20px]">
           {t('supported', 'Supported:')}
-          {allowedIntegrations.map((p) => capitalize(p)).join(', ')}
+          {allowedIntegrationNames.join(', ')}
         </div>
         <Button onClick={() => router.push('/launches')}>
           {t(
@@ -213,7 +203,7 @@ export const PlatformAnalytics = () => {
               onClick={() => {
                 if (integration.refreshNeeded) {
                   toaster.show(
-                    'Please refresh the integration from the calendar',
+                    'カレンダーからチャンネルを再接続してください',
                     'warning'
                   );
                   return;

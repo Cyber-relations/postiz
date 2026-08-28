@@ -82,15 +82,15 @@ const MentionList: FC = (props: any) => {
     <div className="dropdown-menu bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto p-2">
       {props?.items?.none ? (
         <div className="flex items-center justify-center p-2 text-gray-500">
-          We don't have autocomplete for this social media
+          このSNSでは候補を自動表示できません
         </div>
       ) : props?.loading ? (
         <div className="flex items-center justify-center p-2 text-gray-500">
-          Loading...
+          読み込み中...
         </div>
       ) : props?.items ? (
         props.items.length === 0 ? (
-          <div className="p-2 text-gray-500 text-center">No results found</div>
+          <div className="p-2 text-gray-500 text-center">候補が見つかりません</div>
         ) : (
           props?.items?.map((item: any, index: any) => (
             <button
@@ -110,7 +110,7 @@ const MentionList: FC = (props: any) => {
           ))
         )
       ) : (
-        <div className="p-2 text-gray-500 text-center">Loading...</div>
+        <div className="p-2 text-gray-500 text-center">読み込み中...</div>
       )}
     </div>
   );

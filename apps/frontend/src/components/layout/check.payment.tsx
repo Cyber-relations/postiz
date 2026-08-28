@@ -49,11 +49,11 @@ export const CheckPaymentInner: FC<{
     }
     if (status === 1) {
       modal.open({
-        title: 'Invalid Payment',
+        title: 'お支払い方法を確認できません',
         onlyApprove: true,
-        approveLabel: 'OK',
+        approveLabel: '閉じる',
         description:
-          'We could not validate your payment method, please try again',
+          'お支払い方法を確認できませんでした。時間をおいてもう一度お試しください。',
       });
       setShowLoader(false);
     }

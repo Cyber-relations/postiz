@@ -96,6 +96,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
             <NewSubscription />
             <ContinueProvider />
             <div
+              data-toybaco-shell=""
               className={clsx(
                 'flex flex-col min-h-screen min-w-screen text-newTextColor p-[12px]',
                 jakartaSans.className
@@ -109,7 +110,10 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                   <AnnouncementBanner />
                   <div className="flex-1 flex gap-[8px]">
                     <Support />
-                    <div className="flex flex-col bg-newBgColorInner w-[80px] rounded-[12px]">
+                    <div
+                      data-toybaco-sidebar=""
+                      className="flex flex-col bg-newBgColorInner w-[80px] rounded-[12px]"
+                    >
                       <div
                         id="left-menu"
                         className={clsx(
@@ -123,15 +127,32 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex-1 bg-newBgLineColor rounded-[12px] overflow-hidden flex flex-col gap-[1px] blurMe">
-                      <div className="flex bg-newBgColorInner h-[80px] px-[20px] items-center">
-                        <div className="text-[24px] font-[600] flex flex-1">
+                    <div
+                      data-toybaco-content-frame=""
+                      className="flex-1 bg-newBgLineColor rounded-[12px] overflow-hidden flex flex-col gap-[1px] blurMe"
+                    >
+                      <div
+                        data-toybaco-header=""
+                        className="flex bg-newBgColorInner h-[80px] px-[20px] items-center"
+                      >
+                        <div
+                          data-toybaco-header-title=""
+                          className="text-[24px] font-[600] flex flex-1"
+                        >
                           <Title />
                         </div>
-                        <div className="flex gap-[20px] text-textItemBlur">
+                        <div
+                          data-toybaco-header-controls=""
+                          className="flex gap-[20px] text-textItemBlur"
+                        >
                           <StreakComponent />
                           <div className="w-[1px] h-[20px] bg-blockSeparator" />
-                          <OrganizationSelector />
+                          <span
+                            style={{ display: 'contents' }}
+                            data-toybaco-keep=""
+                          >
+                            <OrganizationSelector />
+                          </span>
                           <div className="hover:text-newTextColor">
                             <ModeComponent />
                           </div>
@@ -140,7 +161,21 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           <ChromeExtensionComponent />
                           <div className="w-[1px] h-[20px] bg-blockSeparator" />
                           <AttachToFeedbackIcon />
-                          <NotificationComponent />
+                          <span
+                            style={{ display: 'contents' }}
+                            data-toybaco-keep=""
+                          >
+                            <NotificationComponent />
+                          </span>
+                          <a
+                            data-toybaco-keep=""
+                            href={`https://github.com/Cyber-relations/postiz/tree/${process.env.NEXT_PUBLIC_VERSION || 'main'}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[12px] underline underline-offset-2 whitespace-nowrap"
+                          >
+                            ソースコード
+                          </a>
                         </div>
                       </div>
                       <div className="flex flex-1 gap-[1px]">{children}</div>

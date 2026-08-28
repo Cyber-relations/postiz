@@ -1,0 +1,48 @@
+{
+  "name": "トイバコ Postiz 品質ゲート",
+  "on": {
+    "pull_request": { "branches": ["main"] },
+    "push": { "branches": ["main"] }
+  },
+  "permissions": { "contents": "read" },
+  "env": { "TOYBACO_PUBLIC_PUBLISHER_CONTRACT": "toybaco_public_publisher_v1" },
+  "concurrency": {
+    "group": "toybaco-quality-${{ github.workflow }}-${{ github.ref }}",
+    "cancel-in-progress": true
+  },
+  "jobs": {
+    "quality": {
+      "name": "frozen install・build・typecheck",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 60,
+      "permissions": { "contents": "read" },
+      "steps": [
+        {
+          "name": "公開sourceを取得",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": { "persist-credentials": false, "fetch-depth": 1 }
+        },
+        {
+          "name": "Node 22.23.2を固定",
+          "uses": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "with": { "node-version": "22.23.2", "check-latest": false }
+        },
+        {
+          "name": "pnpm 10.6.1・依存関係を固定",
+          "shell": "bash",
+          "run": "set -Eeuo pipefail\ncorepack enable\ncorepack prepare pnpm@10.6.1 --activate >/dev/null\ntest \"$(node -p 'process.versions.node')\" = '22.23.2'\ntest \"$(pnpm --version)\" = '10.6.1'\nCI=true pnpm install --frozen-lockfile"
+        },
+        {
+          "name": "production build",
+          "shell": "bash",
+          "run": "set -Eeuo pipefail\nCI=true NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS='--max-old-space-size=4096' pnpm run build"
+        },
+        {
+          "name": "frontend・backend・orchestrator typecheck",
+          "shell": "bash",
+          "run": "set -Eeuo pipefail\nNODE_OPTIONS='--max-old-space-size=4096' pnpm exec tsc --noEmit --incremental false --pretty false -p apps/frontend/tsconfig.json\nNODE_OPTIONS='--max-old-space-size=4096' pnpm exec tsc --noEmit --incremental false --pretty false -p apps/backend/tsconfig.build.json\nNODE_OPTIONS='--max-old-space-size=4096' pnpm exec tsc --noEmit --incremental false --pretty false -p apps/orchestrator/tsconfig.build.json"
+        }
+      ]
+    }
+  }
+}

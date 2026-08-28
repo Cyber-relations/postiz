@@ -1,11 +1,25 @@
 import { Injectable } from '@nestjs/common';
 
+// toybaco_identity_boundary_v1: GENERIC だけが trusted org claim を持つ。
+export type AuthProviderOrganization = {
+  id: string;
+  externalId: string;
+  name: string;
+  role: 'ADMIN' | 'USER';
+};
+
+export type AuthProviderIdentity = {
+  email: string;
+  id: string;
+  organization?: AuthProviderOrganization;
+};
+
 export abstract class AuthProviderAbstract {
   abstract generateLink(query?: any): Promise<string> | string;
   abstract getToken(code: string, redirectUri?: string): Promise<string>;
   abstract getUser(
     providerToken: string
-  ): Promise<{ email: string; id: string }> | false;
+  ): Promise<AuthProviderIdentity> | false;
   async postRegistration(
     providerToken: string,
     orgId: string

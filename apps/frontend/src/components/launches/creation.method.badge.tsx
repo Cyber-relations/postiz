@@ -11,7 +11,7 @@ interface Props {
 }
 
 const tooltipFor = (m: string) =>
-  m === 'AUTOPOST' ? 'Auto-posted by system' : `Created via ${m}`;
+  m === 'AUTOPOST' ? 'システムによる自動投稿' : `${m}から作成`;
 
 export const CreationMethodBadge: FC<Props> = ({
   creationMethod,

@@ -179,11 +179,11 @@ export const InstagramAudioSelector: FC<{
             data-tooltip-id="tooltip"
             data-tooltip-content={t(
               'instagram_audio_facebook_login_only',
-              'Only available on Instagram with Facebook Login'
+              'Facebookログインで接続したInstagramのみ利用できます'
             )}
             className="h-[42px] px-[16px] inline-flex items-center cursor-not-allowed opacity-50 bg-newBgColorInner border-newTableBorder border rounded-[8px] text-[14px]"
           >
-            {t('instagram_add_audio', 'Add audio')}
+            {t('instagram_add_audio', '音源を追加')}
           </div>
         </div>
       </div>
@@ -218,7 +218,7 @@ export const InstagramAudioSelector: FC<{
           <div className="flex gap-[18px]">
             <div className="flex-1 flex flex-col gap-[6px]">
               <div className="text-[12px]">
-                {t('instagram_audio_volume', 'Audio volume')} (
+                {t('instagram_audio_volume', '音源の音量')} (
                 {value.audio_volume ?? 100})
               </div>
               <input
@@ -233,7 +233,7 @@ export const InstagramAudioSelector: FC<{
             </div>
             <div className="flex-1 flex flex-col gap-[6px]">
               <div className="text-[12px]">
-                {t('instagram_video_volume', 'Original video volume')} (
+                {t('instagram_video_volume', '元の動画の音量')} (
                 {value.video_volume ?? 100})
               </div>
               <input
@@ -254,7 +254,7 @@ export const InstagramAudioSelector: FC<{
             className="h-[42px] px-[16px] inline-flex items-center cursor-pointer bg-newBgColorInner border-newTableBorder border rounded-[8px] text-[14px]"
             onClick={() => setOpen(true)}
           >
-            {t('instagram_add_audio', 'Add audio')}
+            {t('instagram_add_audio', '音源を追加')}
           </div>
         </div>
       ) : (
@@ -270,9 +270,9 @@ export const InstagramAudioSelector: FC<{
                 setAudioType(e.target.value as 'music' | 'original_sound')
               }
             >
-              <option value="music">{t('instagram_music', 'Music')}</option>
+              <option value="music">{t('instagram_music', '音楽')}</option>
               <option value="original_sound">
-                {t('instagram_original_sound', 'Original sound')}
+                {t('instagram_original_sound', 'オリジナル音源')}
               </option>
             </Select>
             <div className="flex-1 h-[42px] bg-newBgColorInner border-newTableBorder border rounded-[8px] flex items-center">
@@ -280,7 +280,7 @@ export const InstagramAudioSelector: FC<{
                 className="h-full w-full bg-transparent outline-none px-[16px] text-[14px] text-textColor placeholder-textColor"
                 placeholder={t(
                   'instagram_search_audio',
-                  'Search audio (empty shows trending)'
+                  '音源を検索（未入力なら人気の音源を表示）'
                 )}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -293,17 +293,17 @@ export const InstagramAudioSelector: FC<{
                 setOpen(false);
               }}
             >
-              {t('cancel', 'Cancel')}
+              {t('cancel', 'キャンセル')}
             </div>
           </div>
           <div className="max-h-[250px] overflow-y-auto flex flex-col bg-newBgColorInner border-newTableBorder border rounded-[8px]">
             {loading ? (
               <div className="p-[12px] text-[14px] opacity-70">
-                {t('loading', 'Loading...')}
+                {t('loading', '読み込み中...')}
               </div>
             ) : !results.length ? (
               <div className="p-[12px] text-[14px] opacity-70">
-                {t('instagram_no_audio_found', 'No audio found')}
+                {t('instagram_no_audio_found', '音源が見つかりません')}
               </div>
             ) : (
               results.map((audio) => (
@@ -338,8 +338,8 @@ export const InstagramAudioSelector: FC<{
                       }}
                     >
                       {playingId === audio.id
-                        ? t('stop', 'Stop')
-                        : t('play', 'Play')}
+                        ? t('stop', '停止')
+                        : t('play', '再生')}
                     </div>
                   )}
                 </div>

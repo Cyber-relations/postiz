@@ -1,4 +1,11 @@
-import { Body, Controller, Param, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpException,
+  Param,
+  Post,
+  Res,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
@@ -71,12 +78,26 @@ export class EnterpriseController {
         throw new Error('Integration not allowed');
       }
 
+      // toybaco_provider_allowlist_v1: enterprise経路も同じrefresh境界を使う。
+      if (load.refreshId) {
+        const current =
+          await this._integrationService.getIntegrationByInternalId(
+            org.id,
+            load.refreshId
+          );
+        if (!current || current.providerIdentifier !== load.provider) {
+          throw new Error('Integration not allowed');
+        }
+      }
+
       const integrationProvider = this._integrationManager.getSocialIntegration(
         load.provider
       );
 
       const { codeVerifier, state, url } =
         await integrationProvider.generateAuthUrl();
+
+      await ioRedis.set('provider:' + state, load.provider, 'EX', 3600);
 
       if (load.refreshId) {
         await ioRedis.set(`refresh:${state}`, load.refreshId, 'EX', 3600);
@@ -92,37 +113,11 @@ export class EnterpriseController {
   }
 
   @Post('/delete-channel')
-  async deleteChannel(@Body('params') params: string) {
-    try {
-      const load = AuthService.verifyJWT(params) as {
-        apiKey: string;
-        id: string;
-      };
-
-      if (!load || !load.apiKey || !load.id) {
-        return { success: false };
-      }
-
-      const org = await this._organizationService.getOrgByApiKey(load.apiKey);
-
-      if (!org) {
-        return { success: false };
-      }
-
-      const isTherePosts = await this._integrationService.getPostsForChannel(
-        org.id,
-        load.id
-      );
-      if (isTherePosts.length) {
-        for (const post of isTherePosts) {
-          this._postsService.deletePost(org.id, post.group).catch(() => {});
-        }
-      }
-
-      await this._integrationService.deleteChannel(org.id, load.id);
-      return { success: true };
-    } catch (err) {
-      return { success: false };
-    }
+  deleteChannel() {
+    // toybaco_approval_flow_v5: enterprise削除経路はトイバコでは提供しない。
+    throw new HttpException(
+      'この操作は本部の管理画面から実行してください。',
+      403
+    );
   }
 }

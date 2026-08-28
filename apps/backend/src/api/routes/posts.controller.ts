@@ -1,16 +1,21 @@
 import {
+  ForbiddenException,
   Body,
   Controller,
   Delete,
   Get,
   HttpException,
+  HttpStatus,
   Param,
   Post,
   Put,
   Query,
   Res,
 } from '@nestjs/common';
-import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
+import {
+  PostsService,
+  toybacoCanMutatePost,
+} from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { Organization, User } from '@prisma/client';
 import { GetPostsDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.dto';
@@ -188,7 +193,21 @@ export class PostsController {
       rawBody?.posts || []
     );
 
-    const fail = (item: (typeof validation)[number], error: string) => {
+    const fail = (item: (typeof validation)[number], code: unknown) => {
+      // toybaco_validation_boundary_v1: provider/DTO由来の自由文は返さない。
+      const messages: Record<string, string> = {
+        TOYBACO_POST_CONTENT_REQUIRED:
+          '投稿内容または画像を1件以上入力してください。',
+        TOYBACO_POST_SETTINGS_INVALID: '投稿設定を確認してください。',
+        TOYBACO_POST_MEDIA_INVALID:
+          '投稿に利用できないメディアが含まれています。',
+        TOYBACO_POST_TOO_LONG: '投稿文が長すぎます。短くしてから保存してください。',
+      };
+      const error =
+        typeof code === 'string' &&
+        Object.prototype.hasOwnProperty.call(messages, code)
+          ? messages[code]
+          : '投稿内容を確認してください。';
       throw new PostValidationException({
         provider: item.identifier,
         name: item.name,
@@ -198,29 +217,40 @@ export class PostsController {
 
     for (const item of validation) {
       if (item.emptyContent) {
-        fail(
-          item,
-          'Your post should have at least one character or one image.'
-        );
+        fail(item, 'TOYBACO_POST_CONTENT_REQUIRED');
       }
     }
 
     if (rawBody?.type !== 'draft') {
       for (const item of validation) {
         if (!item.valid) {
-          fail(item, item.settingsError || 'Please fix your settings');
+          fail(item, 'TOYBACO_POST_SETTINGS_INVALID');
         }
         if (item.errors !== true) {
-          fail(item, item.errors as string);
+          fail(item, 'TOYBACO_POST_MEDIA_INVALID');
         }
         if (item.tooLong) {
-          fail(item, 'post is too long, please fix it');
+          fail(item, 'TOYBACO_POST_TOO_LONG');
         }
       }
     }
 
+    const toybacoIsUpdate = rawBody?.type === 'update';
+    const toybacoRole = toybacoAssertControllerMutation(
+      org,
+      toybacoIsUpdate ? 'DRAFT' : 'NEW',
+      toybacoIsUpdate ? 'content' : 'create',
+      toybacoCreateTargetState(rawBody?.type)
+    );
+
     const body = await this._postsService.mapTypeToPost(rawBody, org.id);
-    return this._postsService.createPost(org.id, body, 'WEB');
+    return this._postsService.createPost(
+      org.id,
+      body,
+      'WEB',
+      false,
+      toybacoRole
+    );
   }
 
   @Post('/generator/draft')
@@ -229,6 +259,16 @@ export class PostsController {
     @GetOrgFromRequest() org: Organization,
     @Body() body: CreateGeneratedPostsDto
   ) {
+    // 画面を隠すだけでは API を直接呼べてしまうため、ここでも止める。
+    // 接続先を東京の Bedrock に向けたら、この環境変数を外して有効化する。
+    if (process.env.TOYBACO_DISABLE_AI) {
+      throw new ForbiddenException('この機能は利用できません');
+    }
+    // 文案生成APIには画像生成の分岐も含まれる。メディアAPIを閉じても
+    // ここを直接呼ぶと外向きの画像生成へ到達するため、入力でも拒否する。
+    if ((body as { isPicture?: boolean }).isPicture) {
+      throw new ForbiddenException('画像生成機能は利用できません');
+    }
     return this._postsService.generatePostsDraft(org.id, body);
   }
 
@@ -239,7 +279,28 @@ export class PostsController {
     @Body() body: GeneratorDto,
     @Res({ passthrough: false }) res: Response
   ) {
+    // 画面を隠すだけでは API を直接呼べてしまうため、ここでも止める。
+    // 接続先を東京の Bedrock に向けたら、この環境変数を外して有効化する。
+    if (process.env.TOYBACO_DISABLE_AI) {
+      throw new ForbiddenException('この機能は利用できません');
+    }
+    // 文案生成APIには画像生成の分岐も含まれる。メディアAPIを閉じても
+    // ここを直接呼ぶと外向きの画像生成へ到達するため、入力でも拒否する。
+    if ((body as { isPicture?: boolean }).isPicture) {
+      throw new ForbiddenException('画像生成機能は利用できません');
+    }
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+    // toybaco_stream_now: 工程が終わるたびに、その場で顧客へ送る。
+    //
+    // no-transform: 応答をまとめて圧縮する仕組みに「この応答は触るな」と
+    //   伝える合図。これが無いと、小さな途中経過が圧縮の手元に溜まったまま
+    //   送り出されず、顧客の画面は最後まで無反応になる。
+    // X-Accel-Buffering: 手前の受付役にも同じことを伝える。受付役の設定でも
+    //   溜め込みを止めているが、設定が失われても効くよう二重にしておく。
+    res.setHeader('Cache-Control', 'no-transform');
+    res.setHeader('X-Accel-Buffering', 'no');
+
     try {
       for await (const event of this._agentGraphService.start(org.id, body)) {
         res.write(JSON.stringify(event) + '\n');
@@ -253,7 +314,7 @@ export class PostsController {
       const message =
         err instanceof HttpException
           ? err.message
-          : 'Something went wrong while generating your posts, please try again.';
+          : '投稿文を生成できませんでした。時間をおいてもう一度お試しください。';
       res.write(JSON.stringify({ name: 'error', error: true, message }) + '\n');
     }
 
@@ -265,7 +326,13 @@ export class PostsController {
     @GetOrgFromRequest() org: Organization,
     @Param('group') group: string
   ) {
-    return this._postsService.deletePost(org.id, group);
+    const toybacoRole = toybacoAssertControllerMutation(
+      org,
+      'UNKNOWN',
+      'delete',
+      'UNCHANGED'
+    );
+    return this._postsService.deletePost(org.id, group, toybacoRole);
   }
 
   @Put('/:id/date')
@@ -278,7 +345,32 @@ export class PostsController {
     @Body('action') action: 'schedule' | 'update' = 'update',
     @Body('republish') republish = false
   ) {
-    return this._postsService.changeDate(org.id, id, date, action, republish);
+    const toybacoRole = toybacoActorRole(org);
+    const toybacoAction =
+      action === 'schedule' ? 'schedule' : action === 'update' ? 'date' : '';
+    if (
+      !toybacoAction ||
+      !toybacoCanMutatePost(
+        toybacoRole,
+        'DRAFT',
+        toybacoAction,
+        action === 'schedule' ? 'QUEUE' : 'DRAFT'
+      )
+    ) {
+      throw new HttpException(
+        TOYBACO_APPROVAL_DENIED_MESSAGE,
+        HttpStatus.FORBIDDEN
+      );
+    }
+
+    return this._postsService.changeDate(
+      org.id,
+      id,
+      date,
+      action,
+      republish,
+      toybacoRole
+    );
   }
 
   @Post('/separate-posts')
@@ -288,4 +380,39 @@ export class PostsController {
   ) {
     return this._postsService.separatePosts(body.content, body.len);
   }
+}
+
+// toybaco_approval_flow_v5: requestの組織roleはDB解決済みの値だけを使う。
+const TOYBACO_APPROVAL_DENIED_MESSAGE =
+  'この操作は本部の管理者のみ実行できます。店舗担当者は下書きの作成・編集のみ可能です。';
+
+function toybacoActorRole(org: any): string {
+  const role = org?.users?.[0]?.role;
+  return role === 'USER' || role === 'ADMIN' || role === 'SUPERADMIN'
+    ? role
+    : 'UNKNOWN';
+}
+
+function toybacoCreateTargetState(type: unknown): string {
+  if (type === 'draft') return 'DRAFT';
+  if (type === 'schedule' || type === 'now') return 'QUEUE';
+  if (type === 'update') return 'DRAFT';
+  return 'UNKNOWN';
+}
+
+function toybacoAssertControllerMutation(
+  org: any,
+  currentState: string,
+  action: string,
+  targetState: string
+): string {
+  const role = toybacoActorRole(org);
+  if (toybacoCanMutatePost(role, currentState, action, targetState)) {
+    return role;
+  }
+
+  throw new HttpException(
+    TOYBACO_APPROVAL_DENIED_MESSAGE,
+    HttpStatus.FORBIDDEN
+  );
 }

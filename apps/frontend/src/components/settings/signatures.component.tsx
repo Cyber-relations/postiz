@@ -27,7 +27,7 @@ export const SignaturesComponent: FC<{
   const addSignature = useCallback(
     (data?: any) => () => {
       modal.openModal({
-        title: data ? 'Edit Signature' : 'Add Signature',
+        title: data ? '署名を編集' : '署名を追加',
         withCloseButton: true,
         children: <AddOrRemoveSignature data={data} reload={mutate} />,
       });
@@ -39,21 +39,17 @@ export const SignaturesComponent: FC<{
     (data: any) => async () => {
       if (
         await deleteDialog(
-          t(
-            'are_you_sure_you_want_to_delete',
-            `Are you sure you want to delete?`,
-            { name: data.content.slice(0, 15) + '...' }
-          )
+          `署名「${data.content.slice(0, 15)}…」を削除してもよろしいですか？`
         )
       ) {
         await fetch(`/signatures/${data.id}`, {
           method: 'DELETE',
         });
         mutate();
-        toaster.show('Signature deleted successfully', 'success');
+        toaster.show('署名を削除しました', 'success');
       }
     },
-    []
+    [fetch, mutate, toaster]
   );
 
   const t = useT();
@@ -93,7 +89,7 @@ export const SignaturesComponent: FC<{
                   </div>
                   <div className="flex flex-col justify-center relative me-[20px]">
                     <div className="text-center w-full absolute start-0 line-clamp-1 top-[50%] -translate-y-[50%]">
-                      {p.autoAdd ? 'Yes' : 'No'}
+                      {p.autoAdd ? t('yes', 'はい') : t('no', 'いいえ')}
                     </div>
                   </div>
                   {!!appendSignature && (
@@ -163,14 +159,14 @@ const AddOrRemoveSignature: FC<{
       });
       toast.show(
         data?.id
-          ? 'Signature updated successfully'
-          : 'Signature added successfully',
+          ? '署名を更新しました'
+          : '署名を追加しました',
         'success'
       );
       modal.closeCurrent();
       reload();
     },
-    [data, modal]
+    [data, fetch, modal, reload, toast]
   );
 
   const t = useT();
@@ -210,7 +206,7 @@ const AddOrRemoveSignature: FC<{
               onChange={(e) => {
                 form.setValue('content', e.target.value);
               }}
-              placeholder="Write your signature..."
+              placeholder="署名を入力してください..."
               autosuggestionsConfig={{
                 textareaPurpose: `Assist me in writing social media signature`,
                 chatApiConfigs: {},
@@ -219,7 +215,7 @@ const AddOrRemoveSignature: FC<{
           </div>
 
           <Select
-            label="Auto add signature?"
+            label="署名を自動追加しますか？"
             translationKey="label_auto_add_signature"
             {...form.register('autoAdd', {
               setValueAs: (value) => value === 'true',

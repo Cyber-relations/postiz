@@ -88,12 +88,18 @@ export const SettingsPopup: FC<{
     const arr = [];
     arr.push({ tab: 'global_settings', label: t('global_settings', 'Global Settings') });
     // Populate tabs based on user permissions
-    if (user?.tier?.team_members && isGeneral) {
-      arr.push({ tab: 'teams', label: t('teams', 'Teams') });
-    }
-    if (user?.tier?.webhooks) {
-      arr.push({ tab: 'webhooks', label: t('webhooks_1', 'Webhooks') });
-    }
+    // トイバコでは提供しないため出さない(teams)。
+    // 身元はトイバコID(受信箱)が源泉で、ここから招待や鍵の発行を
+    // させると実データが割れる。
+    // if (user?.tier?.team_members && isGeneral) {
+    // arr.push({ tab: 'teams', label: t('teams', 'Teams') });
+    // }
+    // トイバコでは提供しないため出さない(webhooks)。
+    // 身元はトイバコID(受信箱)が源泉で、ここから招待や鍵の発行を
+    // させると実データが割れる。
+    // if (user?.tier?.webhooks) {
+    // arr.push({ tab: 'webhooks', label: t('webhooks_1', 'Webhooks') });
+    // }
     if (user?.tier?.autoPost) {
       arr.push({ tab: 'autopost', label: t('auto_post', 'Auto Post') });
     }
@@ -103,13 +109,19 @@ export const SettingsPopup: FC<{
     if (user?.tier.current !== 'FREE') {
       arr.push({ tab: 'signatures', label: t('signatures', 'Signatures') });
     }
-    if (user?.tier?.public_api && isGeneral && showLogout) {
-      arr.push({ tab: 'api', label: t('developers', 'Developers') });
-    }
-    arr.push({ tab: 'approved_apps', label: t('approved_apps', 'Approved Apps') });
+    // トイバコでは提供しないため出さない(api)。
+    // 身元はトイバコID(受信箱)が源泉で、ここから招待や鍵の発行を
+    // させると実データが割れる。
+    // if (user?.tier?.public_api && isGeneral && showLogout) {
+    // arr.push({ tab: 'api', label: t('developers', 'Developers') });
+    // }
+    // トイバコでは提供しないため出さない(approved_apps)。
+    // 身元はトイバコID(受信箱)が源泉で、ここから招待や鍵の発行を
+    // させると実データが割れる。
+    // arr.push({ tab: 'approved_apps', label: t('approved_apps', 'Approved Apps') });
 
     return arr;
-  }, [user, isGeneral, showLogout, t]);
+  }, [user, t]);
 
   useEffect(() => {
     loadProfile();

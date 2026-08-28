@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Body,
   Controller,
   Delete,
@@ -54,10 +55,7 @@ const PUBLIC_API_ALLOWED_MIME = new Set<string>([
   'video/mp4',
 ]);
 import * as Sentry from '@sentry/nestjs';
-import {
-  socialIntegrationList,
-  IntegrationManager,
-} from '@gitroom/nestjs-libraries/integrations/integration.manager';
+import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 import { getValidationSchemas } from '@gitroom/nestjs-libraries/chat/validation.schemas.helper';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
 import { RefreshToken } from '@gitroom/nestjs-libraries/integrations/social.abstract';
@@ -66,6 +64,10 @@ import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/us
 import { SuperAdminGuard } from '@gitroom/backend/services/auth/super.admin.guard';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
+
+function toybacoRejectMediaGeneration(): void {
+  throw new ForbiddenException('この機能は利用できません');
+}
 
 @ApiTags('Public API')
 @Controller('/public/v1')
@@ -265,7 +267,13 @@ export class PublicIntegrationsController {
       ? (rawBody.creationMethod as 'CLI' | 'API')
       : 'API';
 
-    return this._postsService.createPost(org.id, body, creationMethod);
+    return this._postsService.createPost(
+      org.id,
+      body,
+      creationMethod,
+      false,
+      'PUBLIC_API_DISABLED'
+    );
   }
 
   @Delete('/posts/:id')
@@ -275,7 +283,11 @@ export class PublicIntegrationsController {
   ) {
     Sentry.metrics.count('public_api-request', 1);
     const getPostById = await this._postsService.getPost(org.id, id);
-    return this._postsService.deletePost(org.id, getPostById.group);
+    return this._postsService.deletePost(
+      org.id,
+      getPostById.group,
+      'PUBLIC_API_DISABLED'
+    );
   }
 
   @Delete('/posts/group/:group')
@@ -284,7 +296,11 @@ export class PublicIntegrationsController {
     @Param('group') group: string
   ) {
     Sentry.metrics.count('public_api-request', 1);
-    return this._postsService.deletePost(org.id, group);
+    return this._postsService.deletePost(
+      org.id,
+      group,
+      'PUBLIC_API_DISABLED'
+    );
   }
 
   @Get('/is-connected')
@@ -310,8 +326,13 @@ export class PublicIntegrationsController {
     @Query('group') group?: string
   ) {
     Sentry.metrics.count('public_api-request', 1);
+    const allowed = this._integrationManager.getAllowedSocialsIntegrations();
     return (await this._integrationService.getIntegrationsList(org.id))
-      .filter((integration) => !group || integration.customer?.id === group)
+      .filter(
+        (integration) =>
+          allowed.includes(integration.providerIdentifier) &&
+          (!group || integration.customer?.id === group)
+      )
       .map((integration) => ({
         id: integration.id,
         name: integration.name,
@@ -344,6 +365,17 @@ export class PublicIntegrationsController {
       throw new HttpException({ msg: 'Integration not allowed' }, 400);
     }
 
+    // toybaco_provider_allowlist_v1: public APIでもrefresh元を組織/providerへ固定。
+    if (refresh) {
+      const current = await this._integrationService.getIntegrationByInternalId(
+        org.id,
+        refresh
+      );
+      if (!current || current.providerIdentifier !== integration) {
+        throw new HttpException({ msg: 'Integration not allowed' }, 400);
+      }
+    }
+
     // A provider migrated via MIGRATE_PROVIDERS reconnects through its target
     // provider's OAuth: the callback lands on the target and the channel is
     // migrated in place (see migrateIntegration).
@@ -367,6 +399,13 @@ export class PublicIntegrationsController {
     try {
       const { codeVerifier, state, url } =
         await integrationProvider.generateAuthUrl();
+
+      await ioRedis.set(
+        'provider:' + state,
+        migrateTo || integration,
+        'EX',
+        3600
+      );
 
       if (refresh) {
         await ioRedis.set(`refresh:${state}`, refresh, 'EX', 3600);
@@ -408,12 +447,20 @@ export class PublicIntegrationsController {
     @GetOrgFromRequest() org: Organization,
     @Body() body: VideoDto
   ) {
+    // 画像・動画の生成は提供しない。顧客が投稿するのは実際の商品・施術・
+    // 物件の写真であり、AI で作った画像を使うと誤認表示になりかねない。
+    // toybaco_ai_media_permanent_block: 製品判断なので設定値に関係なく閉じる。
+    toybacoRejectMediaGeneration();
     Sentry.metrics.count('public_api-request', 1);
     return this._mediaService.generateVideo(org, body);
   }
 
   @Post('/video/function')
   videoFunction(@Body() body: VideoFunctionDto) {
+    // 画像・動画の生成は提供しない。顧客が投稿するのは実際の商品・施術・
+    // 物件の写真であり、AI で作った画像を使うと誤認表示になりかねない。
+    // toybaco_ai_media_permanent_block: 製品判断なので設定値に関係なく閉じる。
+    toybacoRejectMediaGeneration();
     Sentry.metrics.count('public_api-request', 1);
     return this._mediaService.videoFunction(
       body.identifier,
@@ -423,22 +470,12 @@ export class PublicIntegrationsController {
   }
 
   @Delete('/integrations/:id')
-  async deleteChannel(
-    @GetOrgFromRequest() org: Organization,
-    @Param('id') id: string
-  ) {
-    Sentry.metrics.count('public_api-request', 1);
-    const isTherePosts = await this._integrationService.getPostsForChannel(
-      org.id,
-      id
+  deleteChannel() {
+    // toybaco_approval_flow_v5: public APIからのチャネル削除は製品境界で無効。
+    throw new HttpException(
+      'この操作は本部の管理画面から実行してください。',
+      403
     );
-    if (isTherePosts.length) {
-      for (const post of isTherePosts) {
-        this._postsService.deletePost(org.id, post.group).catch(() => {});
-      }
-    }
-
-    return this._integrationService.deleteChannel(org.id, id);
   }
 
   @Get('/integration-settings/:id')
@@ -461,9 +498,9 @@ export class PublicIntegrationsController {
         (p: any) => p?.title === 'Verified'
       )?.value || false;
 
-    const integration = socialIntegrationList.find(
-      (p) => p.identifier === loadIntegration.providerIdentifier
-    )!;
+    const integration = this._integrationManager.getSocialIntegration(
+      loadIntegration.providerIdentifier
+    );
 
     if (!integration) {
       return {
@@ -508,7 +545,8 @@ export class PublicIntegrationsController {
       org.id,
       id,
       body.settings,
-      'API'
+      'API',
+      'PUBLIC_API_DISABLED'
     );
   }
 
@@ -519,7 +557,12 @@ export class PublicIntegrationsController {
     @Body() body: ChangePostStatusDto
   ) {
     Sentry.metrics.count('public_api-request', 1);
-    return this._postsService.changePostStatus(org.id, id, body.status);
+    return this._postsService.changePostStatus(
+      org.id,
+      id,
+      body.status,
+      'PUBLIC_API_DISABLED'
+    );
   }
 
   @Put('/posts/:id/release-id')
@@ -568,9 +611,9 @@ export class PublicIntegrationsController {
       throw new HttpException({ msg: 'Integration not found' }, 404);
     }
 
-    const integrationProvider = socialIntegrationList.find(
-      (p) => p.identifier === getIntegration.providerIdentifier
-    )!;
+    const integrationProvider = this._integrationManager.getSocialIntegration(
+      getIntegration.providerIdentifier
+    );
 
     if (!integrationProvider) {
       throw new HttpException({ msg: 'Integration provider not found' }, 404);

@@ -164,7 +164,7 @@ const Plug: FC<{
       </div>
       <div className="w-full max-w-[600px] overflow-y-auto pb-[10px] text-[12px] flex flex-col gap-[10px]">
         {!allowedIntegrations.length ? (
-          'No available accounts'
+          '利用できるアカウントがありません'
         ) : (
           <div
             className={clsx(
@@ -174,7 +174,7 @@ const Plug: FC<{
           >
             <div>{plug.description}</div>
             <Select
-              label="Delay"
+              label="投稿を遅らせる時間"
               hideErrors={true}
               {...register(`plug--${plug.identifier}--delay`)}
             >

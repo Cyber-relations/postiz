@@ -16,7 +16,7 @@ import UtmSaver from '@gitroom/helpers/utils/utm.saver';
 import { DubAnalytics } from '@gitroom/frontend/components/layout/dubAnalytics';
 import { FacebookComponent } from '@gitroom/frontend/components/layout/facebook.component';
 import { GoogleTagManagerComponent } from '@gitroom/frontend/components/layout/gtm.component';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import {
   cookieName,
   fallbackLng,
@@ -33,12 +33,16 @@ const jakartaSans = Plus_Jakarta_Sans({
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
+  // proxy がブラウザの frame 文脈から作った内部印だけを信頼する。
+  // 顧客が x-toybaco-embed を直接送っても proxy 側で必ず上書きされる。
+  const toybacoEmbed = requestHeaders.get('x-toybaco-embed') === '1';
   const language = cookieStore.get(cookieName)?.value || fallbackLng;
   const Plausible = !!process.env.STRIPE_PUBLISHABLE_KEY
     ? PlausibleProvider
     : Fragment;
   return (
-    <html>
+    <html data-toybaco-embed={toybacoEmbed ? '1' : undefined}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         {!!process.env.DATAFAST_WEBSITE_ID && (
@@ -52,7 +56,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       </head>
       <ChangeDirClient />
       <body
-        className={clsx(jakartaSans.className, 'dark text-primary !bg-primary')}
+        className={clsx(
+          jakartaSans.className,
+          'toybaco-font',
+          'dark text-primary !bg-primary'
+        )}
       >
         <VariableContextComponent
           storageProvider={

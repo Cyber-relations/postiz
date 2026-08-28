@@ -39,7 +39,7 @@ export const GeneralPreviewComponent: FC<{
         .replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
           return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
         }) +
-      `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="This text will be cropped">` +
+      `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="この部分は文字数上限のため切り取られます">` +
       newContent.slice(end).replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
         return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
       }) +
@@ -89,12 +89,12 @@ export const GeneralPreviewComponent: FC<{
             <div className="flex-1 flex flex-col gap-[4px]">
               <div className="flex">
                 <div className="h-[22px] text-[15px] font-[700]">
-                  {current === 'global' ? 'Global Edit' : integration?.name}
+                  {current === 'global' ? '全体編集' : integration?.name}
                 </div>
                 <div className="text-[15px] text-customColor26 mt-[1px] ms-[2px]">
                   <svg
                     viewBox="0 0 22 22"
-                    aria-label="Verified account"
+                    aria-label="認証済みアカウント"
                     role="img"
                     className="max-w-[20px] max-h-[20px] fill-current h-[1.25em]"
                     data-testid="icon-verified"

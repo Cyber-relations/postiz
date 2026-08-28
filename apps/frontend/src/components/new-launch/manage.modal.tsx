@@ -27,7 +27,6 @@ import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { capitalize } from 'lodash';
 import { SelectCustomer } from '@gitroom/frontend/components/launches/select.customer';
 import { CopilotPopup } from '@copilotkit/react-ui';
 import { DummyCodeComponent } from '@gitroom/frontend/components/new-launch/dummy.code.component';
@@ -43,6 +42,32 @@ import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
 import { useShortlinkPreference } from '@gitroom/frontend/components/settings/shortlink-preference.component';
 import dayjs from 'dayjs';
 import { Button } from '@gitroom/react/form/button';
+
+const TOYBACO_VALIDATION_MESSAGES = Object.freeze({
+  TOYBACO_POST_CONTENT_REQUIRED:
+    '投稿内容または画像を1件以上入力してください。',
+  TOYBACO_POST_SETTINGS_INVALID: '投稿設定を確認してください。',
+  TOYBACO_POST_MEDIA_INVALID:
+    '投稿に利用できないメディアが含まれています。',
+  TOYBACO_POST_TOO_LONG: '投稿文が長すぎます。短くしてから保存してください。',
+});
+
+function toybacoValidationMessage(code: unknown): string {
+  return typeof code === 'string' &&
+    Object.prototype.hasOwnProperty.call(TOYBACO_VALIDATION_MESSAGES, code)
+    ? TOYBACO_VALIDATION_MESSAGES[
+        code as keyof typeof TOYBACO_VALIDATION_MESSAGES
+      ]
+    : '投稿内容を確認してください。';
+}
+
+function toybacoProviderLabel(identifier: unknown): string {
+  return identifier === 'instagram-standalone' || identifier === 'instagram'
+    ? 'Instagram'
+    : identifier === 'threads'
+    ? 'Threads'
+    : '連携先';
+}
 
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
@@ -104,7 +129,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           <div className="relative">
             <SettingsIcon size={15} className="text-white" />
           </div>
-          <div>Settings</div>
+          <div>設定</div>
         </div>
       );
     }
@@ -314,12 +339,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
         for (const item of notEnoughChars) {
           toaster.show(
-            `${capitalize(item.identifier.split('-')[0])} (${item.name}):` +
-              ' ' +
-              t(
-                'post_needs_content_or_image',
-                'Your post should have at least one character or one image.'
-              ),
+            `${toybacoProviderLabel(item.identifier)}: ${toybacoValidationMessage(
+              item.toybacoErrorCode || 'TOYBACO_POST_CONTENT_REQUIRED'
+            )}`,
             'warning'
           );
           setLoading(false);
@@ -331,10 +353,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           for (const item of checkAllValid) {
             if (item.valid === false) {
               toaster.show(
-                `${capitalize(item.identifier.split('-')[0])} (${item.name}): ${
-                  item.settingsError ||
-                  t('please_fix_your_settings', 'Please fix your settings')
-                }`,
+                `${toybacoProviderLabel(item.identifier)}: ${toybacoValidationMessage(
+                  item.toybacoErrorCode || 'TOYBACO_POST_SETTINGS_INVALID'
+                )}`,
                 'warning'
               );
               focus(item.id, 'fix');
@@ -345,9 +366,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
             if (item.errors !== true) {
               toaster.show(
-                `${capitalize(item.identifier.split('-')[0])} (${item.name}): ${
-                  item.errors
-                }`,
+                `${toybacoProviderLabel(item.identifier)}: ${toybacoValidationMessage(
+                  item.toybacoErrorCode || 'TOYBACO_POST_MEDIA_INVALID'
+                )}`,
                 'warning'
               );
               focus(item.id, 'preview');
@@ -358,9 +379,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
             if (item.tooLong) {
               toaster.show(
-                `${item.name} (${item.identifier}) ${t(
-                  'post_is_too_long',
-                  'post is too long, please fix it'
+                `${toybacoProviderLabel(item.identifier)}: ${toybacoValidationMessage(
+                  item.toybacoErrorCode || 'TOYBACO_POST_TOO_LONG'
                 )}`,
                 'warning'
               );
@@ -633,7 +653,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 }
                 onClick={schedule('draft')}
               >
-                Save Set
+                セットを保存
               </button>
             )}
             {!addEditSets && (
