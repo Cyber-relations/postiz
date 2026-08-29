@@ -80,12 +80,23 @@ const TOYBACO_LOGOUT_COOKIES = [
   'toybaco_embed',
 ];
 
-function toybacoAuthUiRequiresInbox(rawPath: unknown) {
+function toybacoAuthUiRequiresInbox(
+  rawPath: unknown,
+  searchParams: URLSearchParams,
+  hasReturnCookie: boolean
+) {
   const pathname = toybacoCanonicalUiPath(rawPath);
+  const isGenericOidcReturn =
+    pathname === '/auth' &&
+    searchParams.get('provider')?.toUpperCase() === 'GENERIC' &&
+    Boolean(searchParams.get('code')) &&
+    Boolean(searchParams.get('state')) &&
+    hasReturnCookie;
   return (
     pathname !== null &&
     (pathname === '/auth' || pathname.startsWith('/auth/')) &&
-    pathname !== '/auth/logout'
+    pathname !== '/auth/logout' &&
+    !isGenericOidcReturn
   );
 }
 
@@ -194,7 +205,13 @@ export async function proxy(request: NextRequest) {
 
   // Postiz固有のlogin/register画面は描画せず、常に統一Chatwoot入口へ戻す。
   // logoutだけは下のcookie失効処理へ通すため例外にする。
-  if (toybacoAuthUiRequiresInbox(nextUrl.pathname)) {
+  if (
+    toybacoAuthUiRequiresInbox(
+      nextUrl.pathname,
+      nextUrl.searchParams,
+      request.cookies.has('toybaco_return')
+    )
+  ) {
     return NextResponse.redirect(new URL('/', appOrigin));
   }
 
