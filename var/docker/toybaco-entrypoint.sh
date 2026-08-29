@@ -2,6 +2,7 @@
 set -eu
 
 service_pids=''
+service_exit=''
 
 stop_services() {
   exit_code=$?
@@ -32,6 +33,22 @@ start_in() {
   service_pids="$service_pids $!"
 }
 
+wait_for_service_exit() {
+  # POSIX sh has no wait -n; keep services as direct children for signal/reap cleanup.
+  while [ -z "$service_exit" ]; do
+    for service_pid in $service_pids; do
+      if ! kill -0 "$service_pid" 2>/dev/null; then
+        set +e
+        wait "$service_pid"
+        service_exit=$?
+        set -e
+        return
+      fi
+    done
+    sleep 1
+  done
+}
+
 start_in /app/apps/backend \
   node --experimental-require-module ./dist/apps/backend/src/main.js
 start_in /app/apps/orchestrator \
@@ -41,10 +58,7 @@ start_in /app/apps/frontend \
 start_in /app \
   nginx -g 'daemon off; pid /tmp/nginx.pid;'
 
-set +e
-wait -n
-service_exit=$?
-set -e
+wait_for_service_exit
 
 # A long-lived service exiting cleanly is still a container failure.
 if [ "$service_exit" -eq 0 ]; then
