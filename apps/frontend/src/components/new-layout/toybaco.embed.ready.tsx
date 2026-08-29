@@ -18,20 +18,29 @@ export function ToybacoEmbedReady({
       embedded = window.self !== window.top;
       if (embedded) document.documentElement.dataset.toybacoEmbed = '1';
     }
-    // 認証画面やエラー画面のmountをREADYと誤認しない。実際の投稿shellが
-    // DOMに揃った時だけ受信箱へ準備完了を返す。
-    if (
-      !embedded ||
-      !appOrigin ||
-      window.parent === window ||
-      !document.querySelector('[data-toybaco-shell]')
-    ) {
-      return;
-    }
-    window.parent.postMessage(
-      { type: 'TOYBACO_POSTIZ_READY' },
-      appOrigin
-    );
+    if (!embedded || !appOrigin || window.parent === window) return;
+
+    // /user/self の取得後に投稿shellが描画される場合もある。認証画面や
+    // エラー画面はREADYと誤認せず、shellが揃った時だけ1回通知する。
+    const notifyParentIfReady = () => {
+      if (!document.querySelector('[data-toybaco-shell]')) return false;
+      window.parent.postMessage(
+        { type: 'TOYBACO_POSTIZ_READY' },
+        appOrigin
+      );
+      return true;
+    };
+    if (notifyParentIfReady()) return;
+
+    const observer = new MutationObserver(() => {
+      if (!notifyParentIfReady()) return;
+      observer.disconnect();
+    });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+    return () => observer.disconnect();
   }, [appOrigin]);
 
   return null;
