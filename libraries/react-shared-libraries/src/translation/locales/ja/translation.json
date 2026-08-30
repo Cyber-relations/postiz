@@ -892,5 +892,14 @@
   "set_deleted_successfully": "セットを削除しました",
   "sets_description": "投稿内容をセットとして保存し、繰り返し利用できます。",
   "add_a_set": "セットを追加",
-  "yes_delete_my_account": "はい、アカウントを削除します"
+  "yes_delete_my_account": "はい、アカウントを削除します",
+  "select_posting_channel": "投稿先チャンネルを選択してください",
+  "ai_chat_placeholder": "AIアシスタントにメッセージを入力…",
+  "ai_chat_error": "エラーが発生しました。もう一度お試しください。",
+  "ai_chat_stop": "生成を停止",
+  "ai_chat_regenerate": "回答を再生成",
+  "ai_chat_copy": "クリップボードにコピー",
+  "ai_chat_helpful": "役に立った",
+  "ai_chat_not_helpful": "役に立たなかった",
+  "ai_chat_copied": "コピーしました"
 }
