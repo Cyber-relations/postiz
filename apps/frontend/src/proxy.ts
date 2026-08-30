@@ -140,14 +140,18 @@ function expireToybacoProxyCookie(
   name: string,
   domain?: string
 ) {
-  response.cookies.set(name, '', {
-    path: '/',
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: true,
-    ...(domain ? { domain } : {}),
-    maxAge: 0,
-  });
+  response.headers.append(
+    'Set-Cookie',
+    [
+      `${name}=`,
+      'Path=/',
+      'Max-Age=0',
+      ...(domain ? [`Domain=${domain}`] : []),
+      'Secure',
+      'HttpOnly',
+      'SameSite=Lax',
+    ].join('; ')
+  );
 }
 
 // This function can be marked `async` if using `await` inside
@@ -303,6 +307,20 @@ export async function proxy(request: NextRequest) {
         sameSite: 'lax',
       });
     }
+  }
+
+  // 埋め込みsessionの期限切れ時もChatwootをiframe内へ描画せず、
+  // 既存の専用entryからトイバコIDへ再束縛する。
+  if (
+    request.method === 'GET' &&
+    toybacoEmbed &&
+    !authCookie &&
+    nextUrl.pathname === '/'
+  ) {
+    const entry = new URL('/api/auth/toybaco-entry', nextUrl.href);
+    entry.searchParams.set('return', '/launches?tb_embed=1');
+    entry.searchParams.set('tb_embed', '1');
+    return NextResponse.redirect(entry);
   }
 
   // Chatwoot logoutのfront-channel。host-only JWTと旧domain cookieを消し、

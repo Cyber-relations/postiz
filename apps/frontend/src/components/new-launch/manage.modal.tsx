@@ -677,7 +677,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     )}
                   >
                     {selectedIntegrations.length === 0
-                      ? t('check_circles_above', 'Check the circles above')
+                      ? t('select_posting_channel', '投稿先チャンネルを選択してください')
                       : dummy
                       ? t('create_output', 'Create output')
                       : !existingData?.integration
@@ -729,8 +729,22 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
           title: t('your_assistant', 'Your Assistant'),
           initial: t(
             'assistant_initial_message',
-            'Hi! I can help you to refine your social media posts.'
+            'こんにちは！SNS投稿の作成をお手伝いします。'
           ),
+          placeholder: t(
+            'ai_chat_placeholder',
+            'AIアシスタントにメッセージを入力…'
+          ),
+          error: t(
+            'ai_chat_error',
+            'エラーが発生しました。もう一度お試しください。'
+          ),
+          stopGenerating: t('ai_chat_stop', '生成を停止'),
+          regenerateResponse: t('ai_chat_regenerate', '回答を再生成'),
+          copyToClipboard: t('ai_chat_copy', 'クリップボードにコピー'),
+          thumbsUp: t('ai_chat_helpful', '役に立った'),
+          thumbsDown: t('ai_chat_not_helpful', '役に立たなかった'),
+          copied: t('ai_chat_copied', 'コピーしました'),
         }}
       />
     </div>
