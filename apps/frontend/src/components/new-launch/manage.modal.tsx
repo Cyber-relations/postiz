@@ -28,7 +28,7 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { SelectCustomer } from '@gitroom/frontend/components/launches/select.customer';
-import { CopilotPopup } from '@copilotkit/react-ui';
+import { CopilotPopup, useChatContext } from '@copilotkit/react-ui';
 import { DummyCodeComponent } from '@gitroom/frontend/components/new-launch/dummy.code.component';
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 import {
@@ -67,6 +67,46 @@ function toybacoProviderLabel(identifier: unknown): string {
     : identifier === 'threads'
     ? 'Threads'
     : '連携先';
+}
+
+function ToybacoCopilotButton() {
+  const { open, setOpen, icons } = useChatContext();
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={clsx('copilotKitButton', open && 'open')}
+        aria-label={open ? 'AIチャットを閉じる' : 'AIチャットを開く'}
+      >
+        <div className="copilotKitButtonIcon copilotKitButtonIconOpen">
+          {icons.openIcon}
+        </div>
+        <div className="copilotKitButtonIcon copilotKitButtonIconClose">
+          {icons.closeIcon}
+        </div>
+      </button>
+    </div>
+  );
+}
+
+function ToybacoCopilotHeader() {
+  const { setOpen, icons, labels } = useChatContext();
+  return (
+    <div className="copilotKitHeader">
+      <div>{labels.title}</div>
+      <div className="copilotKitHeaderControls">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          aria-label="AIチャットを閉じる"
+          className="copilotKitHeaderCloseButton"
+        >
+          {icons.headerCloseIcon}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export const ManageModal: FC<AddEditModalProps> = (props) => {
@@ -712,6 +752,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         </div>
       </div>
       <CopilotPopup
+        className="[&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
+        Button={ToybacoCopilotButton}
+        Header={ToybacoCopilotHeader}
         hitEscapeToClose={false}
         clickOutsideToClose={true}
         instructions={`
@@ -726,7 +769,7 @@ Post content can be added using the addPostContentFor{num} function.
 After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} function.
 `}
         labels={{
-          title: t('your_assistant', 'Your Assistant'),
+          title: t('your_assistant', 'AIアシスタント'),
           initial: t(
             'assistant_initial_message',
             'こんにちは！SNS投稿の作成をお手伝いします。'
