@@ -76,7 +76,10 @@ function ToybacoCopilotButton() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={clsx('copilotKitButton', open && 'open')}
+        className={clsx(
+          'copilotKitButton',
+          open ? 'open !hidden' : '!bottom-28'
+        )}
         aria-label={open ? 'AIチャットを閉じる' : 'AIチャットを開く'}
       >
         <div className="copilotKitButtonIcon copilotKitButtonIconOpen">
@@ -752,7 +755,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         </div>
       </div>
       <CopilotPopup
-        className="[&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
+        className="[&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0 [&_.copilotKitWindow]:!bottom-28"
         Button={ToybacoCopilotButton}
         Header={ToybacoCopilotHeader}
         hitEscapeToClose={false}
