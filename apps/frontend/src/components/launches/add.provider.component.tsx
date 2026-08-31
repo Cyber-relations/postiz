@@ -762,7 +762,12 @@ export const AddProviderComponent: FC<{
                     'text-center'
                   )}
                 >
-                  {item.name}
+                  {item.identifier === 'instagram-standalone'
+                    ? t(
+                        'instagram_standalone_channel',
+                        'Instagram\n（単独連携）'
+                      )
+                    : item.name}
                   {!!item.toolTip && !isMobile && (
                     <svg
                       width="15"
