@@ -317,7 +317,7 @@ export async function proxy(request: NextRequest) {
     !authCookie &&
     nextUrl.pathname === '/'
   ) {
-    const entry = new URL('/api/auth/toybaco-entry', nextUrl.href);
+    const entry = new URL('/toybaco/entry', nextUrl.href);
     entry.searchParams.set('return', '/launches?tb_embed=1');
     entry.searchParams.set('tb_embed', '1');
     return NextResponse.redirect(entry);
