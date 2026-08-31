@@ -41,7 +41,11 @@ import { TumblrProvider } from '@gitroom/nestjs-libraries/integrations/social/tu
 
 const TOYBACO_PRODUCT_PROVIDER_IDS = new Set([
   'instagram-standalone',
+  'facebook',
   'threads',
+  'x',
+  'tiktok',
+  'gmb',
 ]);
 
 // envは安全側へ機能を減らすためのもの。製品承認済みID以外、空要素、
@@ -104,9 +108,20 @@ const allSocialIntegrationList: Array<SocialAbstract & SocialProvider> = [
   // new MastodonCustomProvider(),
 ];
 
-// 直接importする上流コードもraw listを迂回路にできないようexport時点で絞る。
+const toybacoAllowedProviders = toybacoAllowedProviderIds();
+
+// APIや画面へ公開するproviderは製品提供集合だけに絞る。
 export const socialIntegrationList = allSocialIntegrationList.filter(
-  (provider) => toybacoAllowedProviderIds().includes(provider.identifier)
+  (provider) => toybacoAllowedProviders.includes(provider.identifier)
+);
+
+// standalone Instagramは基底のinstagram queueを共有する。画面へ通常版Instagramを
+// 追加せず、workerだけは必ず登録する。
+export const socialWorkerIntegrationList = allSocialIntegrationList.filter(
+  (provider) =>
+    toybacoAllowedProviders.includes(provider.identifier) ||
+    (provider.identifier === 'instagram' &&
+      toybacoAllowedProviders.includes('instagram-standalone'))
 );
 
 @Injectable()

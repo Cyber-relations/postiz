@@ -767,6 +767,15 @@ export const AddProviderComponent: FC<{
                         'instagram_standalone_channel',
                         'Instagram\n（単独連携）'
                       )
+                    : item.identifier === 'facebook'
+                    ? t('facebook_channel', 'Facebook')
+                    : item.identifier === 'tiktok'
+                    ? t('tiktok_channel', 'TikTok')
+                    : item.identifier === 'gmb'
+                    ? t(
+                        'google_business_profile_channel',
+                        'Google ビジネスプロフィール'
+                      )
                     : item.name}
                   {!!item.toolTip && !isMobile && (
                     <svg
