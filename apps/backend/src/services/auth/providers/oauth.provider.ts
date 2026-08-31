@@ -120,7 +120,7 @@ export class OauthProvider extends AuthProviderAbstract {
       scope: 'openid profile email',
       response_type: 'code',
       state,
-      redirect_uri: `${frontendUrl}/settings`,
+      return_to: `${frontendUrl}/settings`,
     });
 
     return `${authUrl}?${params.toString()}`;
