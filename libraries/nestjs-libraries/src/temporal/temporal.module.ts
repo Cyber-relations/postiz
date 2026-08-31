@@ -1,5 +1,6 @@
 import { TemporalModule } from 'nestjs-temporal-core';
-import { socialIntegrationList } from '@gitroom/nestjs-libraries/integrations/integration.manager';
+// toybaco_provider_allowlist_v1: standalone providerの共有queueもworkerへ登録する。
+import { socialWorkerIntegrationList } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 
 export const getTemporalModule = (
   isWorkers: boolean,
@@ -39,7 +40,7 @@ export const getTemporalModule = (
       ? {
           workers: [
             { identifier: 'main', maxConcurrentJob: undefined },
-            ...socialIntegrationList,
+            ...socialWorkerIntegrationList,
           ]
             .filter((f) => f.identifier.indexOf('-') === -1)
             .map((integration) => ({

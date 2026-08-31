@@ -18,8 +18,22 @@ import useCookie from 'react-use-cookie';
 import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 // toybaco_provider_allowlist_v1: 分析画面の案内も製品提供集合と同一にする。
-const allowedIntegrations = ['instagram-standalone', 'threads'];
-const allowedIntegrationNames = ['Instagram', 'Threads'];
+const allowedIntegrations = [
+  'instagram-standalone',
+  'facebook',
+  'threads',
+  'x',
+  'tiktok',
+  'gmb',
+];
+const allowedIntegrationNames = [
+  'Instagram',
+  'Facebook',
+  'Threads',
+  'X',
+  'TikTok',
+  'Google ビジネスプロフィール',
+];
 export const PlatformAnalytics = () => {
   const fetch = useFetch();
   const t = useT();
