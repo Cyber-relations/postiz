@@ -1158,6 +1158,8 @@ export class PostsService {
               ? 'Instagram'
               : integration.providerIdentifier === 'threads'
               ? 'Threads'
+              : integration.providerIdentifier === 'gmb'
+              ? 'Google ビジネスプロフィール'
               : '連携先',
           valid,
           settingsError,

@@ -36,12 +36,13 @@ const clientAndGmb = () => {
 };
 
 @Rules(
-  'Google My Business posts can have text content and optionally one image. Posts can be updates, events, or offers.'
+  'Google ビジネスプロフィールの投稿は本文と、任意で画像1枚です。通常のお知らせ、イベント、特典を送れます。'
 )
 export class GmbProvider extends SocialAbstract implements SocialProvider {
   override maxConcurrentJob = 3;
   identifier = 'gmb';
-  name = 'Google My Business';
+  // toybaco_gmb_ja_v1: 顧客向け表示名は現行呼称に統一する。
+  name = 'Google ビジネスプロフィール';
   isBetweenSteps = true;
   scopes = [
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -61,14 +62,14 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
   ): Promise<string | true> {
     // GMB posts can have text only, or text with one image
     if ((items?.length ?? 0) > 0 && (items?.[0]?.length ?? 0) > 1) {
-      return 'Google My Business posts can only have one image';
+      return 'Google ビジネスプロフィールの投稿に画像は1枚までです';
     }
 
     // Check for video - GMB doesn't support video in local posts
     if ((items?.length ?? 0) > 0 && (items?.[0]?.length ?? 0) > 0) {
       const media = items?.[0]?.[0];
       if ((media?.path?.indexOf?.('mp4') ?? -1) > -1) {
-        return 'Google My Business posts do not support video attachments';
+        return 'Google ビジネスプロフィールの投稿に動画は添付できません';
       }
     }
 
@@ -89,7 +90,7 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
     if (body.includes('UNAUTHENTICATED') || body.includes('invalid_grant')) {
       return {
         type: 'refresh-token',
-        value: 'Please re-authenticate your Google My Business account',
+        value: 'Google ビジネスプロフィールの接続をやり直してください',
       };
     }
 
@@ -416,7 +417,9 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
 
     // Build the local post request body
     const postBody: any = {
-      languageCode: 'en',
+      // toybaco_gmb_ja_v1: 上流は 'en' 固定。公式サンプルは地域付きだが、
+      // 同じ実装が language-only の 'en' で通るため 'ja' を使う。
+      languageCode: 'ja',
       summary: firstPost.message,
       topicType: settings?.topicType || 'STANDARD',
     };

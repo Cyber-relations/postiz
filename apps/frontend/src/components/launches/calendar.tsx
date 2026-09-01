@@ -1038,6 +1038,7 @@ const CalendarItem: FC<{
   );
   return (
     <div
+      data-toybaco-post-state={state}
       // @ts-ignore
       ref={dragRef}
       className={clsx(

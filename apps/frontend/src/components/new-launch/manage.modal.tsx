@@ -66,6 +66,8 @@ function toybacoProviderLabel(identifier: unknown): string {
     ? 'Instagram'
     : identifier === 'threads'
     ? 'Threads'
+    : identifier === 'gmb'
+    ? 'Google ビジネスプロフィール'
     : '連携先';
 }
 
