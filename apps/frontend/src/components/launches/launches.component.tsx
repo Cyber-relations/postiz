@@ -444,24 +444,13 @@ export const LaunchesComponent = () => {
         }
       ) =>
       async () => {
-        const { url, err } = await (
-          await fetch(
-            `/integrations/social/${integration.identifier}?refresh=${integration.internalId}`,
-            {
-              method: 'GET',
-            }
-          )
-        ).json();
-        if (err || typeof url !== 'string' || !url) {
-          toast.show('チャンネルを再接続できませんでした', 'warning');
-          return;
-        }
+        const toybacoWindow = window as Window & {
+          __toybacoConnectPopup?: Window | null;
+        };
+        let popup: Window | null = null;
         if (document.documentElement.dataset.toybacoEmbed) {
-          const toybacoWindow = window as Window & {
-            __toybacoConnectPopup?: Window | null;
-          };
-          const popup = window.open(
-            url,
+          popup = window.open(
+            'about:blank',
             'toybaco-connect',
             'width=600,height=800'
           );
@@ -474,9 +463,32 @@ export const LaunchesComponent = () => {
           }
           // 新規接続と同じsource検査へ通すため、refresh popupもWindowProxyを保存する。
           toybacoWindow.__toybacoConnectPopup = popup;
-          return;
         }
-        window.location.href = url;
+        try {
+          const { url, err } = await (
+            await fetch(
+              `/integrations/social/${integration.identifier}?refresh=${integration.internalId}`,
+              {
+                method: 'GET',
+              }
+            )
+          ).json();
+          if (err || typeof url !== 'string' || !url) {
+            popup?.close();
+            toybacoWindow.__toybacoConnectPopup = null;
+            toast.show('チャンネルを再接続できませんでした', 'warning');
+            return;
+          }
+          if (popup) {
+            popup.location.href = url;
+            return;
+          }
+          window.location.href = url;
+        } catch {
+          popup?.close();
+          toybacoWindow.__toybacoConnectPopup = null;
+          toast.show('チャンネルを再接続できませんでした', 'warning');
+        }
       },
     [toast]
   );

@@ -859,3 +859,127 @@ body.toybaco-font select {
   font-family: 'Plus Jakarta Sans', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans',
     'Noto Sans JP', 'Yu Gothic Medium', meiryo, sans-serif;
 }
+
+/* toybaco-pack-mock-calendar: 埋め込み投稿を LP .pack-mock のクロムに寄せる。
+   IA(週次カレンダー)は Postiz のまま。下書きカード+承認リストにはしない。
+   外部和文 Web フォント・LP ページの第三 navy・コーラル主ボタン・
+   生産アプリ枠の窓飾りは付けない。 */
+html[data-toybaco-embed] {
+  --toybaco-navy: #1F3A5F;
+  --toybaco-navy-deep: #163049;
+  --toybaco-offwhite: #FAF7F2;
+  --toybaco-surface: #FCFBF8;
+  --toybaco-ink: #24303F;
+  --toybaco-muted: #6B7684;
+  --toybaco-hairline: #E7E4DC;
+  --toybaco-wash: #E8EEF5;
+  --toybaco-wait-bg: #FDF2E3;
+  --toybaco-wait-fg: #B26A00;
+  --toybaco-done-bg: #E7F6EC;
+  --toybaco-done-fg: #0B7A35;
+}
+
+html[data-toybaco-embed],
+html[data-toybaco-embed] body,
+html[data-toybaco-embed] [data-toybaco-shell],
+html[data-toybaco-embed] [data-toybaco-content-frame] {
+  background: var(--toybaco-offwhite);
+  color: var(--toybaco-ink);
+}
+
+/* 受信箱側に画面名が無いので、埋め込みでもタイトル「投稿カレンダー」を出す。 */
+html[data-toybaco-embed] [data-toybaco-header] {
+  height: 48px;
+  min-height: 48px;
+  padding: 0 16px;
+  background: var(--toybaco-surface);
+  border-bottom: 1px solid var(--toybaco-hairline);
+}
+
+html[data-toybaco-embed] [data-toybaco-header-title] {
+  display: flex !important;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--toybaco-ink);
+}
+
+html[data-toybaco-embed] [data-toybaco-header-controls] {
+  color: var(--toybaco-muted);
+  gap: 12px;
+}
+
+/* toybaco-hide-source-offer: 埋め込みヘッダの「ソースコード」は顧客UIに出さない。
+   AGPL のソース提供は公開リポジトリと docs/brand.md。LICENSE/NOTICE は残す。 */
+html[data-toybaco-embed]
+  [data-toybaco-header-controls]
+  > a[href*='github.com/Cyber-relations/postiz'] {
+  display: none !important;
+}
+
+html[data-toybaco-embed] [data-toybaco-create-post] {
+  border-radius: 8px !important;
+  background: var(--toybaco-navy) !important;
+  color: #fff !important;
+}
+
+html[data-toybaco-embed] [data-toybaco-create-post]:hover {
+  background: var(--toybaco-navy-deep) !important;
+}
+
+html[data-toybaco-embed] [data-toybaco-create-post] svg {
+  display: none;
+}
+
+/* カレンダーの投稿カード: pack-mock .pchip 半径 9–11 */
+html[data-toybaco-embed] [data-toybaco-post-state] {
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--toybaco-surface);
+  border: 1px solid var(--toybaco-hairline);
+  box-shadow: 0 1px 3px rgba(31, 58, 95, 0.07);
+}
+
+html[data-toybaco-embed] [data-toybaco-post-state] > div:last-child {
+  border-radius: 0 0 10px 10px;
+}
+
+/* DRAFT の「下書き:」はピルに任せる */
+html[data-toybaco-embed] [data-toybaco-post-state='DRAFT'] .text-start:not(.w-full) {
+  font-size: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+html[data-toybaco-embed] [data-toybaco-post-state]::after {
+  display: inline-flex;
+  align-self: flex-start;
+  margin: 0 8px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+  border-radius: 999px;
+  padding: 1.5px 7px;
+}
+
+html[data-toybaco-embed] [data-toybaco-post-state='DRAFT']::after {
+  content: '承認待ち';
+  background: var(--toybaco-wait-bg);
+  color: var(--toybaco-wait-fg);
+}
+
+html[data-toybaco-embed] [data-toybaco-post-state='QUEUE']::after {
+  content: '予約済み';
+  background: var(--toybaco-wash);
+  color: var(--toybaco-navy);
+}
+
+html[data-toybaco-embed] [data-toybaco-post-state='PUBLISHED']::after {
+  content: '公開済み';
+  background: var(--toybaco-done-bg);
+  color: var(--toybaco-done-fg);
+}
+
+/* ドロップ枠の Postiz 紫を紺へ */
+html[data-toybaco-embed] .border-\[\#612BD3\] {
+  border-color: var(--toybaco-navy) !important;
+}

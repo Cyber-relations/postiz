@@ -24,16 +24,32 @@ const resolver = classValidatorResolver(ApiKeyDto);
 export const useAddProvider = (update?: () => void, invite?: boolean) => {
   const modal = useModals();
   const fetch = useFetch();
+  const toaster = useToaster();
   return useCallback(async () => {
-    const data = await (await fetch('/integrations')).json();
-    modal.openModal({
-      title: 'チャンネルを追加',
-      withCloseButton: true,
-      children: (
-        <AddProviderComponent invite={!!invite} update={update} {...data} />
-      ),
-    });
-  }, []);
+    try {
+      const response = await fetch('/integrations');
+      if (!response.ok) {
+        toaster.show(
+          '連携先一覧を取得できませんでした。もう一度お試しください。',
+          'warning'
+        );
+        return;
+      }
+      const data = await response.json();
+      modal.openModal({
+        title: 'チャンネルを追加',
+        withCloseButton: true,
+        children: (
+          <AddProviderComponent invite={!!invite} update={update} {...data} />
+        ),
+      });
+    } catch {
+      toaster.show(
+        '連携先一覧を取得できませんでした。もう一度お試しください。',
+        'warning'
+      );
+    }
+  }, [fetch, invite, modal, toaster, update]);
 };
 export const AddProviderButton: FC<{
   update?: () => void;
@@ -465,6 +481,38 @@ export const AddProviderComponent: FC<{
           return;
         };
         const gotoIntegration = async (externalUrl?: string) => {
+          const toybacoWindow = window as Window & {
+            __toybacoConnectPopup?: Window | null;
+          };
+          let toybacoPopup: Window | null = null;
+          // OAuth 先は iframe 表示を拒否するため、埋め込み中だけ別ウィンドウで接続する。
+          // fetch の後に window.open するとユーザー操作が切れ、Chrome がブロックする。
+          // クリックと同じティックで空窓を開き、取得後に location だけ差し替える。
+          if (
+            document.documentElement.dataset.toybacoEmbed &&
+            !invite &&
+            !isMobile
+          ) {
+            // noopener は「付けない」のが既定で opener が残る。
+            // 'noopener=no' のような書き方は規格に無く、字面を見て
+            // noopener 扱いにするブラウザがある。そうなると完了通知
+            // (opener への postMessage)が届かないので、指定しない。
+            toybacoPopup = window.open(
+              'about:blank',
+              'toybaco-connect',
+              'width=600,height=800'
+            );
+            if (!toybacoPopup) {
+              toaster.show(
+                'チャネル接続用のポップアップを開けませんでした。ブラウザのポップアップを許可して、もう一度お試しください。',
+                'warning'
+              );
+              return;
+            }
+            // 完了通知はこのWindowProxyから来たものだけを受理する。
+            toybacoWindow.__toybacoConnectPopup = toybacoPopup;
+          }
+
           // Mobile WebView: reuse the existing `externalUrl` param to
           // carry the `postiz://` deep link so the backend redirects
           // back to the iOS/Android app after OAuth completes, instead
@@ -478,75 +526,67 @@ export const AddProviderComponent: FC<{
           ]
             .filter(Boolean)
             .join('&');
-          const { url, err } = await (
-            await fetch(
-              `/integrations/social/${identifier}${params ? `?${params}` : ''}`
-            )
-          ).json();
-          if (err) {
+          const showConnectError = () => {
             toaster.show(
               t(
                 'could_not_connect_to_platform',
-                '連携先へ接続できませんでした'
+                'チャンネルを追加できませんでした'
               ),
               'warning'
             );
-            return;
-          }
-
-          if (invite) {
-            toaster.show(
-              t('invite_link_copied_one_hour', '招待リンクをコピーしました。有効期限は1時間です。'),
-              'success'
-            );
-            modal.closeAll();
-            copy(url);
-            return;
-          }
-
-          if (isMobile) {
-            // In the mobile WebView the OAuth provider (Google, Facebook,
-            // etc.) typically refuses in-WebView sign-in. Post the URL
-            // out to React Native so it can open the system browser;
-            // `window.open`/`location.href` aren't reliable here because
-            // RN WebView doesn't always route them through the native
-            // navigation intercept. The backend redirects back to the
-            // app via `postiz://` once OAuth completes.
-            const rn = (window as any).ReactNativeWebView;
-            if (rn && typeof rn.postMessage === 'function') {
-              rn.postMessage(JSON.stringify({ type: 'open-external', url }));
+          };
+          try {
+            const { url, err } = await (
+              await fetch(
+                `/integrations/social/${identifier}${params ? `?${params}` : ''}`
+              )
+            ).json();
+            // 再接続と同じ。backend が {err} を返さない欠落/空/非string URL でも
+            // about:blank を残さず閉じる。生の err 内容は顧客へ出さない。
+            if (err || typeof url !== 'string' || !url) {
+              toybacoPopup?.close();
+              toybacoWindow.__toybacoConnectPopup = null;
+              showConnectError();
               return;
             }
-            window.open(url, '_blank');
-            return;
-          }
 
-          // OAuth 先は iframe 表示を拒否するため、埋め込み中だけ別ウィンドウで接続する。
-          if (document.documentElement.dataset.toybacoEmbed) {
-            // noopener は「付けない」のが既定で opener が残る。
-            // 'noopener=no' のような書き方は規格に無く、字面を見て
-            // noopener 扱いにするブラウザがある。そうなると完了通知
-            // (opener への postMessage)が届かないので、指定しない。
-            const toybacoWindow = window as Window & {
-              __toybacoConnectPopup?: Window | null;
-            };
-            const popup = window.open(
-              url,
-              'toybaco-connect',
-              'width=600,height=800'
-            );
-            if (!popup) {
+            if (invite) {
               toaster.show(
-                'チャネル接続用のポップアップを開けませんでした。ブラウザのポップアップを許可して、もう一度お試しください。',
-                'warning'
+                t('invite_link_copied_one_hour', '招待リンクをコピーしました。有効期限は1時間です。'),
+                'success'
               );
+              modal.closeAll();
+              copy(url);
               return;
             }
-            // 完了通知はこのWindowProxyから来たものだけを受理する。
-            toybacoWindow.__toybacoConnectPopup = popup;
-            return;
+
+            if (isMobile) {
+              // In the mobile WebView the OAuth provider (Google, Facebook,
+              // etc.) typically refuses in-WebView sign-in. Post the URL
+              // out to React Native so it can open the system browser;
+              // `window.open`/`location.href` aren't reliable here because
+              // RN WebView doesn't always route them through the native
+              // navigation intercept. The backend redirects back to the
+              // app via `postiz://` once OAuth completes.
+              const rn = (window as any).ReactNativeWebView;
+              if (rn && typeof rn.postMessage === 'function') {
+                rn.postMessage(JSON.stringify({ type: 'open-external', url }));
+                return;
+              }
+              window.open(url, '_blank');
+              return;
+            }
+
+            if (toybacoPopup) {
+              toybacoPopup.location.href = url;
+              return;
+            }
+            window.location.href = url;
+          } catch {
+            toybacoPopup?.close();
+            toybacoWindow.__toybacoConnectPopup = null;
+            showConnectError();
           }
-          window.location.href = url;
         };
         if (isWeb3) {
           openWeb3();
