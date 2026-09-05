@@ -360,7 +360,6 @@ export const LaunchesComponent = () => {
   const t = useT();
   const [reload, setReload] = useState(false);
   const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
-  const [mode] = useCookie('mode', 'dark');
   const { isLoading, data: integrations, mutate } = useIntegrationList();
 
   const totalNonDisabledChannels = useMemo(() => {
@@ -608,6 +607,7 @@ export const LaunchesComponent = () => {
       <Onboarding />
       <CalendarWeekProvider integrations={sortedIntegrations}>
         <div
+          data-toybaco-channel-sidebar=""
           className={clsx(
             'flex relative flex-col',
             collapseMenu === '1' ? 'group sidebar w-[100px]' : 'w-[260px]'
@@ -658,20 +658,40 @@ export const LaunchesComponent = () => {
               {sortedIntegrations.length === 0 && collapseMenu === '0' && (
                 <div className="flex-1 max-h-[500px] justify-center items-center flex">
                   <div className="flex flex-col gap-[12px] text-center">
-                    <img
-                      src={
-                        mode === 'dark'
-                          ? '/no-channels.svg'
-                          : '/no-channels-colors.svg'
-                      }
-                      alt="チャンネル未接続"
-                      className="mx-auto min-w-[100%]"
-                    />
+                    <div
+                      data-toybaco-empty-channels=""
+                      className="flex justify-center items-center gap-[12px] mx-auto"
+                    >
+                      <img
+                        src="/icons/platforms/instagram.png"
+                        alt="Instagram"
+                        width={36}
+                        height={36}
+                        className="rounded-[8px]"
+                      />
+                      <img
+                        src="/icons/platforms/gmb.png"
+                        alt="Googleマップ"
+                        width={36}
+                        height={36}
+                        className="rounded-[8px]"
+                      />
+                      <img
+                        src="/icons/platforms/x.png"
+                        alt="X"
+                        width={36}
+                        height={36}
+                        className="rounded-[8px]"
+                      />
+                    </div>
                     <div className="font-[600] text-[20px]">
-                      {t('no_channels', 'No channels yet')}
+                      {t('no_channels', 'まだチャンネルがありません')}
                     </div>
                     <div className="text-[14px]">
-                      {t('connect_your_accounts')}
+                      {t(
+                        'connect_your_accounts',
+                        'Instagram、Googleマップ、X を連携して、予約投稿を始めましょう。'
+                      )}
                     </div>
                   </div>
                 </div>
@@ -697,7 +717,7 @@ export const LaunchesComponent = () => {
             )}
           </div>
         </div>
-        <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+        <div data-toybaco-calendar-main="" className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
           <Filters />
           <div className="flex-1 flex">
             <Calendar />

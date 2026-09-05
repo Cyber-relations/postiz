@@ -77,6 +77,7 @@ export const NewPost = () => {
   return (
     <button
       data-toybaco-create-post=""
+      aria-label="新しい投稿を作成"
       onClick={createAPost}
       className="text-white flex-1 pt-[12px] pb-[14px] ps-[16px] pe-[20px] group-[.sidebar]:p-0 min-h-[44px] max-h-[44px] rounded-[8px] bg-btnPrimary flex justify-center items-center gap-[5px] outline-none"
     >

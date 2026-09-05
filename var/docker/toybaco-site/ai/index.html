@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>AI自動応答 — 営業時間外も24時間対応 | トイバコ</title>
+<meta name="description" content="お店のFAQを学習したAIが、営業時間外や混雑時の問い合わせに一次応答。答えられない相談は人に引き継ぎ。プロプラン(月¥44,800)に月500件まで標準搭載。">
+<link rel="canonical" href="https://staging.toybaco.jp/ai/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="トイバコ">
+<meta property="og:title" content="AI自動応答 — 営業時間外も24時間対応 | トイバコ">
+<meta property="og:description" content="お店のFAQを学習したAIが、営業時間外や混雑時の問い合わせに一次応答。答えられない相談は人に引き継ぎ。プロプラン(月¥44,800)に月500件まで標準搭載。">
+<meta property="og:url" content="https://staging.toybaco.jp/ai/">
+<meta property="og:image" content="https://staging.toybaco.jp/assets/og.png?v=20260903c">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"トイバコ","url":"https://staging.toybaco.jp/","publisher":{"@type":"Organization","name":"株式会社サイバーリレーションズ","url":"https://cyber-relations.jp/","logo":"https://staging.toybaco.jp/assets/toybaco-mark-c4.png"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"トップ","item":"https://staging.toybaco.jp/"},{"@type":"ListItem","position":2,"name":"AI応答","item":"https://staging.toybaco.jp/ai/"}]}]}</script>
+<link rel="stylesheet" href="../assets/fonts/zenkaku.css?v=20260901a">
+<link rel="stylesheet" href="../assets/sub.css?v=20260901a">
+<style>
+/* 夜のダークバンド(トップの ai-band と同系) */
+.ai-band{background:linear-gradient(180deg, #0F151E 0%, #16233A 55%, #1F3A5F 100%); color:#fff; position:relative; overflow:hidden}
+.ai-band h2{color:#fff}
+.ai-band .sub2{color:rgba(255,255,255,.68)}
+.ai-band .eyebrow2{color:#FF9A8D}
+.ai-glow{position:absolute; border-radius:50%; filter:blur(90px); opacity:.32; pointer-events:none}
+.ai-glow.a{width:560px; height:560px; background:#FF6B5B; top:-240px; left:-160px; animation:aiDrift 17s ease-in-out infinite alternate}
+.ai-glow.b{width:640px; height:640px; background:#4A79B8; bottom:-300px; right:-180px; animation:aiDrift 21s ease-in-out infinite alternate-reverse}
+@keyframes aiDrift{to{transform:translate(70px, 44px) scale(1.14)}}
+.ai-moon{position:absolute; top:72px; right:max(7vw, 60px); width:86px; height:86px; opacity:.9; filter:drop-shadow(0 0 26px rgba(255,243,214,.45)); animation:moonFloat 7s ease-in-out infinite alternate; pointer-events:none}
+.ai-moon svg{width:100%; height:100%; transform:rotate(14deg)}
+@keyframes moonFloat{to{transform:translateY(-10px)}}
+.ai-star{position:absolute; width:5px; height:5px; border-radius:50%; background:#FFF3D6; opacity:.7; animation:twinkle 2.8s ease-in-out infinite; pointer-events:none}
+.ai-star.s1{top:120px; right:22vw; animation-delay:.4s}
+.ai-star.s2{top:66px; right:14vw; width:3.5px; height:3.5px; animation-delay:1.3s}
+.ai-star.s3{top:200px; right:9vw; width:4px; height:4px; animation-delay:2.1s}
+@keyframes twinkle{0%,100%{opacity:.25; transform:scale(.8)}50%{opacity:.9; transform:scale(1.25)}}
+@media (max-width:700px){.ai-moon{width:60px; height:60px; top:56px; right:20px}}
+@media (prefers-reduced-motion:reduce){.ai-moon,.ai-star,.ai-glow{animation:none}}
+.ai-demo{
+  max-width:27rem; margin:0 auto 32px; text-align:left;
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.13); border-radius:18px;
+  padding:18px 18px 14px; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+}
+.ai-time{text-align:center; font-size:.68rem; color:rgba(255,255,255,.45); font-weight:800; margin-bottom:11px}
+.ai-m{max-width:84%; padding:9px 14px; border-radius:13px; font-size:.83rem; line-height:1.75; margin-bottom:9px}
+.ai-m.in{background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15); width:fit-content}
+.ai-m.out{background:var(--coral); color:#fff; margin-left:auto; border-bottom-right-radius:4px; box-shadow:0 10px 26px rgba(255,107,91,.35)}
+.ai-meta{font-size:.66rem; color:#8BD7A9; font-weight:800; text-align:right}
+.ai-feats{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+.aif{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:15px 24px; min-width:190px}
+.aif b{display:block; font-size:1.35rem; font-weight:900; color:#FFD9D2; font-feature-settings:"tnum"}
+.aif span{font-size:.72rem; color:rgba(255,255,255,.62); font-weight:700}
+/* 3ステップ */
+.ai3{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:66rem; margin:0 auto; text-align:left; counter-reset:aistep}
+.ai3 .fcard{position:relative; padding-top:30px}
+.ai3 .fcard::before{counter-increment:aistep; content:counter(aistep);
+  position:absolute; top:-15px; left:24px; width:32px; height:32px; border-radius:11px;
+  background:var(--navy); color:#fff; font-weight:900; font-size:.95rem; display:grid; place-items:center;
+  box-shadow:0 6px 14px rgba(31,58,95,.3)}
+@media (max-width:980px){.ai3{grid-template-columns:1fr; max-width:30rem}}
+/* 5原則 */
+.ai5{max-width:46rem; margin:0 auto; background:#fff; border:1px solid var(--line-soft); border-radius:20px; padding:32px 36px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04),0 14px 34px rgba(30,42,56,.07)}
+/* 料金ミニカード */
+.aiprice{display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:52rem; margin:0 auto; text-align:left}
+.aip{background:#fff; border:1.5px solid var(--line-soft); border-radius:20px; padding:28px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04),0 14px 34px rgba(30,42,56,.07)}
+.aip.hot{border-color:var(--coral); box-shadow:0 3px 6px rgba(255,107,91,.08),0 22px 50px rgba(255,107,91,.16)}
+.aip h3{font-size:1.05rem; color:var(--navy); margin-bottom:4px}
+.aip .n{font-size:1.9rem; font-weight:900; color:var(--navy); font-feature-settings:"tnum"}
+.aip .n small{font-size:.76rem; color:var(--muted); font-weight:700}
+.aip p{font-size:.83rem; color:var(--muted); margin-top:8px; line-height:1.9}
+.aip .cap{display:inline-block; font-size:.7rem; font-weight:900; color:var(--coral); background:#FCE8E4; border-radius:999px; padding:2px 12px; margin-bottom:10px}
+@media (max-width:780px){.aiprice{grid-template-columns:1fr; max-width:30rem}}
+</style>
+<meta name="robots" content="noindex,nofollow,noarchive">
+</head>
+<body>
+<script>window.__p='../';</script>
+
+<div class="ribbon"></div>
+<header class="site">
+  <a class="logo" href="../index.html" aria-label="トイバコ"><img src="../assets/logo.webp" alt="トイバコ"></a>
+  <nav class="menu" id="siteMenu" aria-label="サイト内メニュー">
+    <a href="../features/">できること</a>
+    <a href="../posting/">投稿機能</a>
+    <a class="on" href="../ai/">AI応答</a>
+    <a href="../industries/">業界パック</a>
+    <a href="../pricing/">料金</a>
+    <a href="../start/">はじめ方</a>
+    <a class="login" href="https://app.staging.toybaco.jp">ログイン</a>
+    <a class="btn btn-coral btn-sm" href="../signup/" style="margin-left:6px">申し込む</a>
+  </nav>
+  <button class="nav-toggle" id="navToggle" aria-label="メニューを開く" aria-expanded="false"><i></i><i></i><i></i></button>
+</header>
+
+<main>
+<section class="phero">
+  <div class="wrap2">
+    <p class="crumbs"><a href="../index.html">トップ</a><span class="sep">/</span>AI応答</p>
+    <span class="eyebrow2"><span class="dots"><i></i><i></i><i></i><i></i></span>AI応答</span>
+    <h1>営業時間外も、<br>AI が24時間自動応答<span class="maru">。</span></h1>
+    <p class="lead">お店の情報と FAQ を学習した AI 応答エージェントが、営業時間外や混雑時の一次応答を担当。<strong>即答できる質問はその場で答え、難しい相談は人に引き継ぎます</strong>。プロプランに月500件まで標準搭載です。</p>
+    <div class="pstats reveal" style="--d:.2s">
+      <div class="pstat"><i style="background:var(--ch-amber)"></i><b>24時間</b><span>営業時間外も受け付け</span></div>
+      <div class="pstat"><i style="background:var(--coral)"></i><b>月500件</b><span>プロプランに標準搭載</span></div>
+      <div class="pstat"><i style="background:var(--ch-green)"></i><b>国内処理</b><span>会話は学習に使いません</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 夜のデモ(ダークバンド) -->
+<section class="sec ai-band">
+  <span class="ai-glow a" aria-hidden="true"></span>
+  <span class="ai-glow b" aria-hidden="true"></span>
+  <span class="ai-moon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M20.6 14.6A8.8 8.8 0 0 1 9.4 3.4a8.8 8.8 0 1 0 11.2 11.2z" fill="#FFF3D6"/></svg></span>
+  <span class="ai-star s1" aria-hidden="true"></span>
+  <span class="ai-star s2" aria-hidden="true"></span>
+  <span class="ai-star s3" aria-hidden="true"></span>
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>23:00 — 営業時間外</span>
+    <h2 class="reveal">23時の問い合わせにも、AI が即時回答<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">営業時間外の問い合わせに即答。会話は翌朝、スタッフの受信箱に引き継がれています。</p>
+    <div class="ai-demo reveal" style="--d:.14s" aria-hidden="true">
+      <div class="ai-time">23:04 — 営業時間外</div>
+      <div class="ai-m in">明日って当日予約できますか?あと駐車場ありますか?</div>
+      <div class="ai-m out">当日のご予約も、空きがあればご案内できます! 明日は 15:00 以降に空きがあります。駐車場は店舗裏に2台ぶんございます。ご希望の時間はありますか?</div>
+      <div class="ai-meta">AI が応答 · 0.8秒 — 会話は翌朝スタッフに引き継ぎ済み</div>
+    </div>
+    <div class="ai-feats reveal" style="--d:.2s">
+      <div class="aif"><b>24時間</b><span>営業時間外も一次応答</span></div>
+      <div class="aif"><b>月500件</b><span>プロプランに標準搭載</span></div>
+      <div class="aif"><b>お店の言葉</b><span>FAQ とメニューを学習</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 仕組み3ステップ -->
+<section class="sec">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>しくみ</span>
+    <h2 class="reveal">導入は3ステップ。セットアップは当社が代行<span class="maru">。</span></h2>
+    <div class="ai3" style="margin-top:40px">
+      <div class="fcard reveal" style="--d:0s">
+        <h3>お店の情報を学習</h3>
+        <p>営業時間・メニュー・よくある質問を AI に登録。<b>セットアップは AI 開発を本業とする当社が代行</b>します。学習はお店ごとの情報の範囲だけです。</p>
+      </div>
+      <div class="fcard reveal" style="--d:.08s">
+        <h3>AI が一次応答</h3>
+        <p>営業時間外や接客中の問い合わせに、AI が即答。<b>AI の返信であることはお客様に明示</b>され、答えられない相談は無理をしません。</p>
+      </div>
+      <div class="fcard reveal" style="--d:.16s">
+        <h3>人に引き継ぐ</h3>
+        <p>難しい相談・クレーム・込み入った予約変更は、会話ごと人の受信箱へ。<b>「AI は下書きだけ、送信は人」モード</b>も選べます。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5原則 -->
+<section class="sec tint">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>AIの扱い</span>
+    <h2 class="reveal">安心して任せられる、5つの設計ルール<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">AI の動作範囲・データの扱いは、次の5点を仕様として明示しています。</p>
+    <div class="ai5 reveal" style="--d:.14s">
+      <ul class="ck">
+        <li><b>使うかどうかは、お店が決める。</b>初期状態はオフ。オンにした範囲でだけ働きます</li>
+        <li><b>AI の返信であることを明示。</b>お客様はいつでも人への切り替えを求められます</li>
+        <li><b>会話を AI の学習に使わない。</b>会話内容は応答の生成にだけ使われます</li>
+        <li><b>処理も保管も日本国内。</b>会話データが海外のサーバーに出ることはありません</li>
+        <li><b>いつでも止められる。</b>設定をオフにすれば、その場で停止します</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 料金 -->
+<section class="sec">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>料金</span>
+    <h2 class="reveal">AI 応答つきで、月 ¥44,800<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">オプション課金の後づけではなく、プランに含まれています。応答数を使い切っても自動で追加課金されることはありません。</p>
+    <div class="aiprice">
+      <div class="aip hot reveal" style="--d:.1s">
+        <span class="cap">おすすめ</span>
+        <h3>プロ</h3>
+        <p class="n">¥44,800<small> /月(税別)</small></p>
+        <p>AI 応答エージェント <b>月500件</b>を標準搭載。スタンダードの全機能(全チャネル+SNS投稿+人数無制限)込み。AI セットアップ代行つき。</p>
+      </div>
+      <div class="aip reveal" style="--d:.18s">
+        <h3>プレミアム</h3>
+        <p class="n">¥98,000<small> /月(税別)</small></p>
+        <p>AI 応答 <b>月1,500件</b>+3店舗ぶんの箱+店舗横断レポート+専任サポート。多店舗をまとめて自動化したい企業に。</p>
+      </div>
+    </div>
+    <p class="note2 reveal" style="--d:.24s">応答件数は月ごとのフェアユース枠です。大きく超える見込みのある場合は個別にご相談ください。</p>
+  </div>
+</section>
+
+<section class="sec tint" style="padding:56px 0">
+  <div class="wrap2 center">
+    <p class="note2" style="font-size:.85rem; font-weight:700">関連ガイド:
+      <a href="../guide/after-hours-reply/" style="color:var(--navy)">営業時間外の問い合わせに自動返信する方法</a> ・
+      <a href="../guide/ai-reception-cost/" style="color:var(--navy)">店舗向けAI自動応答の費用相場と選び方</a>
+    </p>
+  </div>
+</section>
+
+<section class="sec close2" id="cta">
+  <div class="wrap2 center">
+    <img class="markimg reveal" src="../assets/toybaco-mark-c4.webp" alt="">
+    <p class="closing-pre reveal">「ありそうでなかった」を、あなたのお店に。</p>
+    <h2 class="reveal" style="--d:.05s">申し込みは3分、開通は最短当日<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.1s">相談無料・契約の縛りなし。接続作業は当社が代行します。</p>
+    <div class="acts reveal" style="--d:.15s">
+      <a class="btn btn-coral btn-lg" href="../signup/">今すぐはじめる</a>
+      <a class="btn btn-ghost btn-lg" href="#toybaco-staging-chat-preview" data-open-chat>チャットで相談する</a>
+      <a class="btn btn-ghost btn-lg" href="../pricing/">料金を見る</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site2">
+  <div class="fgrid">
+    <div class="fbrand">
+      <div class="fbrand-logo"><img src="../assets/toybaco-mark-c4.webp" alt="" width="38" height="38"><span>トイバコ</span></div>
+      <p>問い合わせも、投稿も。ひとつの箱に。<br>運営: 株式会社サイバーリレーションズ</p>
+    </div>
+    <div>
+      <h4>サービス</h4>
+      <ul>
+        <li><a href="../features/">できること</a></li>
+        <li><a href="../posting/">投稿機能</a></li>
+        <li><a href="../ai/">AI応答</a></li>
+        <li><a href="../industries/">業界パック</a></li>
+        <li><a href="../security/">セキュリティ</a></li>
+        <li><a href="../faq/">よくある質問</a></li>
+        <li><a href="../guide/">お役立ちガイド</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>ご利用の流れ</h4>
+      <ul>
+        <li><a href="../pricing/">料金</a></li>
+        <li><a href="../enterprise/">エンタープライズ</a></li>
+        <li><a href="../compare/">ツールの選び方</a></li>
+        <li><a href="../start/">はじめ方</a></li>
+        <li><a href="../signup/">お申し込み</a></li>
+        <li><a href="https://app.staging.toybaco.jp">ログイン</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>会社・規約</h4>
+      <ul>
+        <li><a href="../news/">お知らせ</a></li>
+        <li><a href="../partners/">パートナー募集</a></li>
+        <li><a href="https://cyber-relations.jp/" target="_blank" rel="noopener">運営会社</a></li>
+        <li><a href="../terms/">利用規約</a></li>
+        <li><a href="../privacy/">プライバシーポリシー</a></li>
+        <li><a href="../tokushoho/">特定商取引法に基づく表記</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="fcopy"><span>© 2026 株式会社サイバーリレーションズ — 福岡より</span><span class="fdots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
+</footer>
+
+<!-- 相談チャット: Chatwoot(トイバコの Web チャットそのもの) -->
+
+<script src="../assets/sub.js?v=20260901a"></script>
+
+<!-- toybaco_staging_site_v1: staging consultation is a preview only -->
+<button type="button" onclick="document.getElementById('toybaco-staging-chat-preview').showModal()" style="position:fixed;right:16px;bottom:16px;z-index:999;padding:12px 16px;border:0;border-radius:24px;background:#1F3A5F;color:#fff;font:inherit;font-size:13px;cursor:pointer">相談チャット（確認用）</button>
+<dialog id="toybaco-staging-chat-preview" aria-labelledby="toybaco-staging-chat-title" style="margin:auto;width:min(calc(100% - 2rem),28rem);padding:24px;border:1px solid #D0D8E1;border-radius:18px;color:#1F3A5F;background:#fff">
+  <h2 id="toybaco-staging-chat-title" style="font-size:1.15rem;margin-bottom:12px">相談チャットの確認用画面</h2>
+  <p style="line-height:1.8;margin-bottom:18px">この検証環境では相談チャットに接続していません。メッセージは送信されません。</p>
+  <form method="dialog"><button class="btn btn-coral" autofocus>閉じる</button></form>
+</dialog>
+</body>
+</html>

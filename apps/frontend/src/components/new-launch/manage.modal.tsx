@@ -39,6 +39,7 @@ import {
   DropdownArrowSmallIcon,
 } from '@gitroom/frontend/components/ui/icons';
 import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useShortlinkPreference } from '@gitroom/frontend/components/settings/shortlink-preference.component';
 import dayjs from 'dayjs';
 import { Button } from '@gitroom/react/form/button';
@@ -114,12 +115,57 @@ function ToybacoCopilotHeader() {
   );
 }
 
+// toybaco_posting_result_guard: HTTP拒否と応答不明を成功に見せない。
+async function toybacoCheckedPostRequest(
+  request: (url: string, options: RequestInit) => Promise<Response>,
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const response = await Promise.race([
+      request(url, { ...options, signal: controller.signal }),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          reject(new Error('TOYBACO_POST_RESULT_UNKNOWN'));
+        }, 30000);
+      }),
+    ]);
+    if (!response.ok) {
+      throw new Error(response.status === 401 || response.status === 403
+        ? 'TOYBACO_POST_NOT_ALLOWED'
+        : response.status >= 500
+        ? 'TOYBACO_POST_RESULT_UNKNOWN'
+        : 'TOYBACO_POST_REJECTED');
+    }
+    return response;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
-  const fetch = useFetch();
+  const uncheckedFetch = useFetch();
+  const fetch = useCallback(
+    (url: string, options: RequestInit = {}) => toybacoCheckedPostRequest(uncheckedFetch, url, options),
+    [uncheckedFetch]
+  );
+  const user = useUser();
+  const toybacoCanPublish = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+  const toybacoSaving = useRef(false);
+  const [toybacoSaveError, setToybacoSaveError] = useState('');
   const ref = useRef(null);
   const existingData = useExistingData();
+  const toybacoCanEditDraft = !!user && (toybacoCanPublish || !existingData.integration || existingData?.posts?.[0]?.state === 'DRAFT');
   const [loading, setLoading] = useState(false);
+  // 同期取得した保存ロックの解放を一か所にし、失敗・取消でも操作へ戻す。
+  const toybacoFinishSaving = useCallback(() => {
+    toybacoSaving.current = false;
+    setLoading(false);
+  }, []);
   const toaster = useToaster();
   const modal = useModals();
   const [showSettings, setShowSettings] = useState(false);
@@ -217,7 +263,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   );
 
   const askClose = useCallback(async () => {
-    if (!activateExitButton || dummy) {
+    if (!activateExitButton || dummy || toybacoSaving.current) {
       return;
     }
 
@@ -239,7 +285,11 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   }, [activateExitButton, dummy]);
 
   const deletePost = useCallback(async () => {
+    if (toybacoSaving.current || !toybacoCanEditDraft) return;
+    toybacoSaving.current = true;
     setLoading(true);
+    setToybacoSaveError('');
+    try {
     if (
       !(await deleteDialog(
         t(
@@ -257,11 +307,24 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     });
     mutate();
     modal.closeAll();
-    return;
-  }, [existingData, mutate, modal]);
+    } catch {
+      setToybacoSaveError('削除結果を確認できません。カレンダーを確認してから再操作してください。');
+    } finally {
+      toybacoFinishSaving();
+    }
+  }, [existingData, mutate, modal, fetch, t, toybacoCanEditDraft, toybacoFinishSaving]);
 
   const schedule = useCallback(
     (type: 'draft' | 'now' | 'schedule' | 'update') => async () => {
+      if (toybacoSaving.current) return;
+      if (!toybacoCanEditDraft || (!dummy && !addEditSets && type !== 'draft' && !toybacoCanPublish)) {
+        setToybacoSaveError('予約・公開済みの投稿の変更と公開は管理者が行います。');
+        return;
+      }
+      toybacoSaving.current = true;
+      setLoading(true);
+      setToybacoSaveError('');
+      try {
       let republish = false;
       if (
         (type === 'now' || type === 'schedule') &&
@@ -375,6 +438,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             body: JSON.stringify({ type, posts }),
           })
         ).json();
+
+        if (!Array.isArray(checkAllValid)) throw new Error('TOYBACO_POST_REJECTED');
 
         const focus = (id: string, where: 'fix' | 'preview') => {
           integrationById(id)?.ref?.current?.[where]?.();
@@ -527,17 +592,30 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           modal.closeAll();
         }
       }
+      } catch (error) {
+        const code = error instanceof Error ? error.message : '';
+        setToybacoSaveError(code === 'TOYBACO_POST_NOT_ALLOWED'
+          ? '保存する権限を確認できません。入力内容は残しています。管理者に確認してください。'
+          : code === 'TOYBACO_POST_REJECTED'
+          ? '保存できませんでした。入力内容は残しています。投稿先・本文・日時を確認してください。'
+          : '保存結果を確認できません。入力内容は残しています。重複を避けるため、カレンダーを確認してから再操作してください。');
+      } finally {
+        toybacoFinishSaving();
+      }
     },
-    [ref, repeater, tags, date, addEditSets, dummy, shortlinkPreferenceData]
+    [ref, repeater, tags, date, addEditSets, dummy, shortlinkPreferenceData, fetch, selectedIntegrations, existingData, mutate, modal, customClose, toaster, t, toybacoCanPublish, toybacoCanEditDraft, toybacoFinishSaving]
   );
 
   return (
-    <div className="w-full h-full flex-1 p-[40px] flex relative">
-      <div className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col">
-        <div className="flex-1 flex">
-          <div className="flex flex-col flex-1 border-e border-newBorder">
-            <div className="bg-newBgColor h-[65px] rounded-s-[20px] !rounded-b-[0] flex items-center gap-[12px] px-[20px] text-[20px] font-[600]">
-              {t('create_post_title', 'Create Post')}
+    <div data-toybaco-composer="" role="dialog" aria-modal="true" aria-labelledby="toybaco-composer-title" className="w-full h-full flex-1 p-[40px] flex relative">
+      <div data-toybaco-composer-panel="" className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col">
+        <div data-toybaco-composer-body="" className="flex-1 flex">
+          <div data-toybaco-composer-editor="" className="flex flex-col flex-1 border-e border-newBorder">
+            <div data-toybaco-composer-heading="" className="bg-newBgColor h-[65px] rounded-s-[20px] !rounded-b-[0] flex items-center gap-[12px] px-[20px] text-[20px] font-[600]">
+              <h2 id="toybaco-composer-title">{existingData.integration ? '投稿を編集' : '新しいお知らせ'}</h2>
+              <button type="button" data-toybaco-composer-close="" aria-label="投稿作成を閉じる" onClick={askClose} disabled={loading}>
+                <CloseIcon />
+              </button>
               <CreationMethodBadge
                 creationMethod={existingData?.posts?.[0]?.creationMethod}
                 size="sm"
@@ -551,20 +629,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   id="social-content"
                   className="gap-[32px] flex flex-col pe-[8px] pt-[20px] ps-[20px] absolute top-0 left-0 w-full h-full overflow-x-hidden overflow-y-scroll scrollbar scrollbar-thumb-newColColor scrollbar-track-newBgColorInner"
                 >
-                  <div className="flex w-full">
-                    <div className="flex flex-1">
-                      <PicksSocialsComponent toolTip={true} />
-                    </div>
-                    <div>
-                      {!dummy && (
-                        <SelectCustomer
-                          onChange={changeCustomer}
-                          integrations={integrations}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-1 gap-[6px] flex-col">
+                  <div data-toybaco-composer-content="" className="flex flex-1 gap-[6px] flex-col">
                     <div>{!existingData.integration && <SelectCurrent />}</div>
                     <div className="flex-1 flex">
                       {!hide && <EditorWrapper totalPosts={1} value="" />}
@@ -576,6 +641,20 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                         // current !== 'global' && 'hidden'
                       )}
                     />
+                  </div>
+                  <div data-toybaco-composer-channels="" className="flex w-full">
+                    <h3>投稿先</h3>
+                    <div className="flex flex-1">
+                      <PicksSocialsComponent toolTip={true} />
+                    </div>
+                    <div>
+                      {!dummy && (
+                        <SelectCustomer
+                          onChange={changeCustomer}
+                          integrations={integrations}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -625,12 +704,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               </div>
             </div>
           </div>
-          <div className="w-[580px] flex flex-col">
+          <div data-toybaco-composer-preview="" className="w-[580px] flex flex-col">
             <div className="bg-newBgColor h-[65px] rounded-e-[20px] !rounded-b-[0] flex items-center px-[20px] text-[20px] font-[600]">
               <div className="flex-1">{t('post_preview', 'Post Preview')}</div>
-              <div className="cursor-pointer">
-                <CloseIcon onClick={askClose} className="text-[#A3A3A3]" />
-              </div>
+
             </div>
             <div className="flex-1 relative">
               <Scrollable
@@ -642,7 +719,17 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             </div>
           </div>
         </div>
-        <div className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
+        <div data-toybaco-composer-footer="" aria-busy={loading} className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
+          {toybacoSaveError && <p data-toybaco-save-error="" role="alert">{toybacoSaveError}</p>}
+          {!dummy && !addEditSets && (
+            <p data-toybaco-approval-note="">
+              {toybacoCanPublish
+                ? '下書きを確認し、投稿先と日時を選んで予約してください。'
+                : toybacoCanEditDraft
+                ? 'スタッフは下書きを保存できます。公開は管理者が確認してから行います。'
+                : '予約・公開済みの投稿の変更は管理者に依頼してください。'}
+            </p>
+          )}
           <div className="flex-1 flex ps-[20px] gap-[8px]">
             {!dummy && (
               <TagsComponent
@@ -659,9 +746,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <RepeatComponent repeat={repeater} onChange={setRepeater} />
             )}
           </div>
-          <div className="pe-[20px] flex items-center justify-end gap-[8px]">
-            {existingData?.integration && (
+          <div data-toybaco-composer-actions="" className="pe-[20px] flex items-center justify-end gap-[8px]">
+            {existingData?.integration && toybacoCanEditDraft && (
               <button
+                disabled={loading}
                 onClick={deletePost}
                 className="cursor-pointer flex text-[#FF3F3F] gap-[8px] items-center text-[15px] font-[600]"
               >
@@ -675,7 +763,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             {!addEditSets && (
               <button
                 disabled={
-                  selectedIntegrations.length === 0 || loading || locked
+                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft
                 }
                 onClick={schedule('draft')}
                 className="relative cursor-pointer disabled:cursor-not-allowed px-[20px] h-[44px] bg-btnSimple justify-center items-center flex rounded-[8px] text-[15px] font-[600]"
@@ -694,18 +782,18 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <button
                 className="text-white text-[15px] font-[600] min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
                 disabled={
-                  selectedIntegrations.length === 0 || loading || locked
+                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft
                 }
                 onClick={schedule('draft')}
               >
                 セットを保存
               </button>
             )}
-            {!addEditSets && (
+            {!addEditSets && (dummy || toybacoCanPublish) && (
               <div className="group cursor-pointer relative">
                 <button
                   disabled={
-                    selectedIntegrations.length === 0 || loading || locked
+                    selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft
                   }
                   onClick={schedule('schedule')}
                   className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
@@ -728,7 +816,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       : !existingData?.integration
                       ? t('add_to_calendar', 'Add to calendar')
                       : existingData?.posts?.[0]?.state === 'DRAFT'
-                      ? t('schedule', 'Schedule')
+                      ? '承認して予約'
                       : t('update', 'Update')}
                   </div>
                   {!dummy && (
@@ -742,7 +830,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   <button
                     onClick={schedule('now')}
                     disabled={
-                      selectedIntegrations.length === 0 || loading || locked
+                      selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft
                     }
                     className="rounded-[8px] z-[300] disabled:cursor-not-allowed disabled:opacity-80 hidden group-hover:flex absolute bottom-[100%] -left-[12px] p-[12px] w-[206px] bg-newBgColorInner"
                   >

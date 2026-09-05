@@ -410,7 +410,7 @@ div div .set-font-family {
 }
 
 .col-calendar:hover:before {
-  content: 'Date passed';
+  content: '過去の日付';
   color: var(--color-text);
   position: absolute;
   left: 50%;
@@ -827,7 +827,7 @@ html[data-toybaco-embed] [data-toybaco-header-title] {
   display: none;
 }
 
-/* 組織選択・通知・AGPLソース提示は必要なので、keep 印のない直下要素だけを隠す。 */
+/* 組織選択・通知・実行中の版のソースリンクを残し、keep 印のない直下要素だけを隠す。 */
 html[data-toybaco-embed]
   [data-toybaco-header-controls]
   > *:not([data-toybaco-keep]) {
@@ -872,7 +872,7 @@ html[data-toybaco-embed] {
   --toybaco-ink: #24303F;
   --toybaco-muted: #6B7684;
   --toybaco-hairline: #E7E4DC;
-  --toybaco-wash: #E8EEF5;
+  --toybaco-wash: #E9EFF6;
   --toybaco-wait-bg: #FDF2E3;
   --toybaco-wait-fg: #B26A00;
   --toybaco-done-bg: #E7F6EC;
@@ -908,14 +908,6 @@ html[data-toybaco-embed] [data-toybaco-header-controls] {
   gap: 12px;
 }
 
-/* toybaco-hide-source-offer: 埋め込みヘッダの「ソースコード」は顧客UIに出さない。
-   AGPL のソース提供は公開リポジトリと docs/brand.md。LICENSE/NOTICE は残す。 */
-html[data-toybaco-embed]
-  [data-toybaco-header-controls]
-  > a[href*='github.com/Cyber-relations/postiz'] {
-  display: none !important;
-}
-
 html[data-toybaco-embed] [data-toybaco-create-post] {
   border-radius: 8px !important;
   background: var(--toybaco-navy) !important;
@@ -926,8 +918,10 @@ html[data-toybaco-embed] [data-toybaco-create-post]:hover {
   background: var(--toybaco-navy-deep) !important;
 }
 
-html[data-toybaco-embed] [data-toybaco-create-post] svg {
-  display: none;
+html[data-toybaco-embed] [data-toybaco-create-post] svg { display: none; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar].sidebar [data-toybaco-create-post] svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 /* カレンダーの投稿カード: pack-mock .pchip 半径 9–11 */
@@ -943,43 +937,167 @@ html[data-toybaco-embed] [data-toybaco-post-state] > div:last-child {
   border-radius: 0 0 10px 10px;
 }
 
-/* DRAFT の「下書き:」はピルに任せる */
-html[data-toybaco-embed] [data-toybaco-post-state='DRAFT'] .text-start:not(.w-full) {
-  font-size: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-html[data-toybaco-embed] [data-toybaco-post-state]::after {
+/* 状態は実DOMにも置き、読み上げや一覧でも同じ意味を伝える。 */
+html[data-toybaco-embed] [data-toybaco-post-status] {
   display: inline-flex;
   align-self: flex-start;
   margin: 0 8px 8px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1.4;
   border-radius: 999px;
   padding: 1.5px 7px;
 }
 
-html[data-toybaco-embed] [data-toybaco-post-state='DRAFT']::after {
-  content: '承認待ち';
+html[data-toybaco-embed] [data-toybaco-post-state='DRAFT'] [data-toybaco-post-status] {
   background: var(--toybaco-wait-bg);
   color: var(--toybaco-wait-fg);
 }
 
-html[data-toybaco-embed] [data-toybaco-post-state='QUEUE']::after {
-  content: '予約済み';
+html[data-toybaco-embed] [data-toybaco-post-state='QUEUE'] [data-toybaco-post-status] {
   background: var(--toybaco-wash);
   color: var(--toybaco-navy);
 }
 
-html[data-toybaco-embed] [data-toybaco-post-state='PUBLISHED']::after {
-  content: '公開済み';
+html[data-toybaco-embed] [data-toybaco-post-state='PUBLISHED'] [data-toybaco-post-status] {
   background: var(--toybaco-done-bg);
   color: var(--toybaco-done-fg);
+}
+
+html[data-toybaco-embed] [data-toybaco-post-state='ERROR'] [data-toybaco-post-status] {
+  background: #FFF0ED;
+  color: #B42318;
 }
 
 /* ドロップ枠の Postiz 紫を紺へ */
 html[data-toybaco-embed] .border-\[\#612BD3\] {
   border-color: var(--toybaco-navy) !important;
+}
+/* toybaco-shipping-posting: LPの面・文字サイズ・右パネルを実データ用に広げる。 */
+html[data-toybaco-embed] [data-toybaco-calendar-main] {
+  min-width: 0;
+  padding: 16px;
+  background: var(--toybaco-surface);
+}
+html[data-toybaco-embed] [data-toybaco-calendar-main] > div:first-child {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+html[data-toybaco-embed] [data-toybaco-calendar-main] > div:first-child > div { max-width: 100%; flex-wrap: wrap; }
+html[data-toybaco-embed] [data-toybaco-calendar-main] .min-w-\[200px\] { min-width: 0; flex: 1; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar] {
+  width: 196px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--toybaco-hairline);
+}
+html[data-toybaco-embed] [data-toybaco-channel-sidebar].sidebar { width: 80px; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar] button { white-space: nowrap; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar] [data-toybaco-create-post] { padding: 10px 12px; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar] [data-toybaco-create-post] > div { text-align: center; }
+html[data-toybaco-embed] [data-toybaco-calendar-grid] {
+  gap: 1px;
+  border: 1px solid var(--toybaco-hairline);
+  border-radius: 9px;
+  background: var(--toybaco-hairline);
+}
+html[data-toybaco-embed] [data-toybaco-calendar-grid='week'] {
+  grid-template-columns: 60px repeat(7, minmax(104px, 1fr));
+}
+html[data-toybaco-embed] [data-toybaco-calendar-grid='month'] {
+  grid-template-columns: repeat(7, minmax(104px, 1fr));
+}
+html[data-toybaco-embed] [data-toybaco-calendar-grid] > div { background: var(--toybaco-surface); }
+html[data-toybaco-embed] [data-toybaco-calendar-grid] > .sticky { background: var(--toybaco-offwhite); border-radius: 0; }
+html[data-toybaco-embed] [data-toybaco-post-content] { background: var(--toybaco-surface); align-items: flex-start; min-width: 0; }
+html[data-toybaco-embed] [data-toybaco-post-content] > .flex-1 { min-width: 0; }
+html[data-toybaco-embed] [data-toybaco-post-content] .line-clamp-1 {
+  position: static;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-line-clamp: 2;
+}
+html[data-toybaco-embed] [data-toybaco-post-actions] { background: var(--toybaco-offwhite); color: var(--toybaco-muted); }
+html[data-toybaco-embed] :is(button, [role='button'], a, input, textarea, select):focus-visible {
+  outline: 2px solid #FF6B5B;
+  outline-offset: 3px;
+}
+html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] {
+  justify-content: flex-end;
+  overflow: hidden;
+  background: rgba(31, 58, 95, .12);
+}
+html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] > div {
+  flex: 0 1 auto;
+  width: min(960px, 86vw);
+  max-width: 100%;
+  height: 100dvh;
+}
+html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] > div > div,
+html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] > div > div > div {
+  width: 100% !important;
+  height: 100%;
+  min-width: 0;
+}
+html[data-toybaco-embed] [data-toybaco-composer] { padding: 0; min-width: 0; }
+html[data-toybaco-embed] [data-toybaco-composer-panel] {
+  min-width: 0;
+  border-radius: 0;
+  border-left: 1px solid var(--toybaco-hairline);
+  background: var(--toybaco-offwhite);
+  box-shadow: -16px 0 40px rgba(31, 58, 95, .14);
+}
+html[data-toybaco-embed] [data-toybaco-composer-body] { min-height: 0; }
+html[data-toybaco-embed] [data-toybaco-composer-editor] { min-width: 0; }
+html[data-toybaco-embed] [data-toybaco-composer-heading],
+html[data-toybaco-embed] [data-toybaco-composer-preview] > div:first-child {
+  flex-shrink: 0;
+  height: 56px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--toybaco-hairline);
+  border-radius: 0;
+  background: var(--toybaco-offwhite);
+  font-size: 16px;
+}
+html[data-toybaco-embed] [data-toybaco-composer-heading] h2 { font-size: 16px; font-weight: 800; }
+html[data-toybaco-embed] [data-toybaco-composer-close] {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: 1px solid var(--toybaco-hairline);
+  border-radius: 50%;
+  color: var(--toybaco-muted);
+  flex-shrink: 0;
+}
+html[data-toybaco-embed] [data-toybaco-composer] #social-content { gap: 16px; padding: 16px; }
+html[data-toybaco-embed] [data-toybaco-composer-content] { flex: 0 0 auto; min-height: 220px; }
+html[data-toybaco-embed] [data-toybaco-composer-channels] { gap: 12px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid var(--toybaco-hairline); }
+html[data-toybaco-embed] [data-toybaco-composer-channels] > h3 { width: 100%; font-size: 14px; font-weight: 700; }
+html[data-toybaco-embed] [data-toybaco-composer-preview] { width: 38%; min-width: 280px; }
+html[data-toybaco-embed] [data-toybaco-composer-footer] { height: auto; flex-shrink: 0; flex-wrap: wrap; gap: 12px; padding: 12px 16px; background: var(--toybaco-offwhite); }
+html[data-toybaco-embed] [data-toybaco-composer-footer] > div { padding: 0; }
+html[data-toybaco-embed] [data-toybaco-composer-actions] { flex-wrap: wrap; width: 100%; gap: 8px; }
+html[data-toybaco-embed] [data-toybaco-composer] .bg-\[\#612BD3\],
+html[data-toybaco-embed] [data-toybaco-composer] .bg-\[\#D82D7E\] { background: var(--toybaco-navy); }
+html[data-toybaco-embed] [data-toybaco-composer] [data-toybaco-approval-note] { width: 100%; font-size: 13px; line-height: 1.6; color: var(--toybaco-muted); }
+html[data-toybaco-embed] [data-toybaco-composer] [data-toybaco-save-error] { width: 100%; padding: 10px 12px; border-radius: 8px; background: #FFF0ED; color: #B42318; font-size: 14px; }
+@media (max-width: 1100px) {
+  html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] > div { width: 100%; }
+}
+@media (max-width: 767px) {
+  html[data-toybaco-embed] [data-toybaco-channel-sidebar] { width: 150px; }
+  html[data-toybaco-embed] [data-toybaco-channel-sidebar].sidebar { width: 64px; }
+  html[data-toybaco-embed] [data-toybaco-channel-sidebar] > div { padding: 10px; }
+  html[data-toybaco-embed] [data-toybaco-calendar-main] { padding: 10px; }
+  html[data-toybaco-embed] [data-toybaco-composer-body] { display: block; overflow-y: auto; }
+  html[data-toybaco-embed] [data-toybaco-composer-editor] { min-height: 460px; height: 60dvh; border-right: 0; }
+  html[data-toybaco-embed] [data-toybaco-composer-preview] { width: 100%; min-width: 0; height: 400px; border-top: 1px solid var(--toybaco-hairline); }
+  html[data-toybaco-embed] [data-toybaco-composer-footer] { max-height: 40dvh; overflow-y: auto; }
+  html[data-toybaco-embed] [data-toybaco-composer-actions] > button,
+  html[data-toybaco-embed] [data-toybaco-composer-actions] > .group { flex: 1 1 auto; }
+  html[data-toybaco-embed] [data-toybaco-composer-actions] > .group > button { width: 100%; min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] { animation: none; transition: none; }
 }

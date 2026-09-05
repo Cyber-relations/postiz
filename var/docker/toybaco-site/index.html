@@ -1,0 +1,2735 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<!-- toybaco-plans:title:start --><title>トイバコ | 問い合わせ・SNS投稿・AI応答をひとつに 月¥9,800から</title><!-- toybaco-plans:title:end -->
+<!-- toybaco-plans:description:start --><meta name="description" content="問い合わせ・SNS予約投稿・AI応答をひとつに。トイバコは月¥9,800から。機能と利用人数・AI応答枠はプランにより異なります。"><!-- toybaco-plans:description:end -->
+<link rel="canonical" href="https://staging.toybaco.jp/">
+<meta property="og:url" content="https://staging.toybaco.jp/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="トイバコ">
+<!-- toybaco-plans:og_title:start --><meta property="og:title" content="トイバコ | 問い合わせ・SNS投稿・AI応答をひとつに 月¥9,800から"><!-- toybaco-plans:og_title:end -->
+<!-- toybaco-plans:og_description:start --><meta property="og:description" content="問い合わせ・SNS予約投稿・AI応答をひとつに。トイバコは月¥9,800から。機能と利用人数・AI応答枠はプランにより異なります。"><!-- toybaco-plans:og_description:end -->
+<meta property="og:image" content="https://staging.toybaco.jp/assets/og.png?v=20260903c">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/toybaco-mark-c4.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"トイバコ","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"中小店舗のための問い合わせ受信箱+SNS予約投稿ツール","offers":[{"@type":"Offer","name":"ライト","price":"9800","priceCurrency":"JPY"},{"@type":"Offer","name":"スタンダード","price":"29800","priceCurrency":"JPY"},{"@type":"Offer","name":"プロ","price":"44800","priceCurrency":"JPY"}],"provider":{"@type":"Organization","name":"株式会社サイバーリレーションズ","address":{"@type":"PostalAddress","addressLocality":"福岡市","addressRegion":"福岡県"}}}</script>
+<link rel="stylesheet" href="assets/fonts/zenkaku.css?v=20260831">
+<style>
+/* ============================================================
+   トイバコ ヒーロープロトタイプ
+   「サイトそのものが、動くおもちゃ箱」— 物理演算ヒーロー検証用
+   ブランド: 白地 / ネイビー #1F3A5F / コーラル #FF6B5B / 4色チップ
+   ============================================================ */
+:root{
+  --navy:#1F3A5F; --navy-deep:#16273E; --coral:#FF6B5B; --coral-deep:#E85948;
+  --ink:#1E2A38; --muted:#5D6B7A; --line-soft:#E3E8EE;
+  --ch-green:#2FA35C; --ch-blue:#4A79B8; --ch-pink:#E05C7A; --ch-amber:#F09A3E;
+  --marker:#FFE193;
+  --spring:cubic-bezier(.3,1.45,.4,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
+  color:var(--ink); line-height:1.9; font-size:15.5px;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  background:
+    radial-gradient(42rem 26rem at 88% 6%, rgba(240,154,62,.05), transparent 60%),
+    #FCFCFA;
+}
+/* ゆっくり漂う色雲(背景の呼吸) */
+.glow{
+  position:fixed; pointer-events:none; z-index:0; border-radius:50%;
+  will-change:transform;
+}
+.glow.a{
+  width:72rem; height:48rem; top:-16rem; left:-18rem;
+  background:radial-gradient(closest-side, rgba(255,107,91,.095), transparent 72%);
+  animation:glowA 37s ease-in-out infinite alternate;
+}
+.glow.b{
+  width:78rem; height:52rem; bottom:-18rem; right:-16rem;
+  background:radial-gradient(closest-side, rgba(31,58,95,.1), transparent 72%);
+  animation:glowB 47s ease-in-out infinite alternate;
+}
+@keyframes glowA{to{transform:translate3d(7rem,3.5rem,0) scale(1.14)}}
+@keyframes glowB{to{transform:translate3d(-6rem,-4.5rem,0) scale(1.12)}}
+@media (prefers-reduced-motion:reduce){.glow{animation:none}}
+/* 方眼マットの床(下半分にだけ現れる) */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:radial-gradient(rgba(31,58,95,.085) 1.2px, transparent 1.2px);
+  background-size:24px 24px;
+  -webkit-mask-image:linear-gradient(180deg, transparent 40%, #000 76%);
+  mask-image:linear-gradient(180deg, transparent 40%, #000 76%);
+}
+/* 紙の微細ノイズ */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:5; opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .12 0 0 0 0 .16 0 0 0 0 .22 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{background:var(--coral); color:#fff}
+a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible{
+  outline:3px solid var(--coral); outline-offset:2px; border-radius:6px}
+
+/* ---------- ヘッダー ---------- */
+.ribbon{position:fixed;top:0;left:0;right:0;height:3px;z-index:40;background:linear-gradient(90deg,
+  var(--ch-green) 0 28%,var(--ch-blue) 28% 52%,var(--ch-pink) 52% 76%,var(--ch-amber) 76% 100%)}
+header.site{
+  position:fixed;top:3px;left:0;right:0;z-index:30;
+  display:flex;align-items:center;gap:26px;
+  padding:14px max(22px, 3.2vw);
+}
+.logo img{height:34px;display:block}
+nav.menu{display:flex;align-items:center;gap:22px;margin-left:auto;
+  background:rgba(252,251,248,.72); border:1px solid rgba(227,232,238,.8); border-radius:999px;
+  padding:6px 8px 6px 20px; backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+  transition:background .3s ease, border-color .3s ease}
+header.site.scrolled nav.menu{background:transparent; border-color:transparent; backdrop-filter:none; -webkit-backdrop-filter:none}
+nav.menu a{
+  text-decoration:none;font-size:.88rem;font-weight:700;color:var(--ink);
+  padding:4px 2px;border-bottom:2px solid transparent;transition:.18s;
+}
+nav.menu a:hover{color:var(--navy);border-bottom-color:var(--coral)}
+nav.menu a.login{color:var(--muted)}
+nav.menu a.login:hover{color:var(--navy)}
+.nav-toggle{display:none; margin-left:auto; width:44px; height:44px; border:none; background:transparent;
+  cursor:pointer; border-radius:12px; position:relative}
+.nav-toggle i{position:absolute; left:11px; top:50%; margin-top:-1.2px; width:22px; height:2.4px;
+  background:var(--navy); border-radius:2px; transition:transform .25s var(--spring), opacity .2s}
+.nav-toggle i:nth-child(1){transform:translateY(-7px)}
+.nav-toggle i:nth-child(3){transform:translateY(7px)}
+.nav-toggle[aria-expanded="true"] i:nth-child(1){transform:rotate(45deg)}
+.nav-toggle[aria-expanded="true"] i:nth-child(2){opacity:0}
+.nav-toggle[aria-expanded="true"] i:nth-child(3){transform:rotate(-45deg)}
+header.site.scrolled{
+  background:rgba(252,252,250,.92); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line-soft);
+}
+.btn{
+  display:inline-block;text-decoration:none;cursor:pointer;border:none;
+  font-family:inherit;font-weight:700;letter-spacing:.02em;border-radius:12px;
+  transition:transform .18s var(--spring),box-shadow .2s,background .2s;
+  pointer-events:auto;
+}
+.btn:active{transform:scale(.96)}
+.btn:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.btn-coral{background:var(--coral);color:#fff;box-shadow:0 4px 14px rgba(255,107,91,.32)}
+.btn-coral:hover{background:var(--coral-deep);transform:translateY(-2px);box-shadow:0 14px 34px rgba(255,107,91,.35)}
+.btn-ghost{background:rgba(255,255,255,.7);color:var(--navy);border:1.5px solid #C7D2DE;backdrop-filter:blur(4px)}
+.btn-ghost:hover{border-color:var(--navy);transform:translateY(-2px)}
+.btn-sm{padding:9px 20px;font-size:.86rem;border-radius:9px}
+header.site .btn-sm{border-radius:999px; padding:9px 22px}
+.btn-lg{padding:17px 34px;font-size:1.02rem;border-radius:14px}
+.btn-lg.btn-ghost{padding:15.5px 30px}
+
+/* ---------- ヒーローセクション ---------- */
+.hero-sec{position:relative; min-height:min(100dvh, 1150px); z-index:1;
+  display:grid; grid-template-columns:minmax(30rem,37rem) minmax(0,1fr); grid-template-rows:1fr auto;
+  align-items:center; column-gap:clamp(30px,3.2vw,64px);
+  padding:100px max(22px,3.5vw) 30px}
+.hero-movie-wrap{
+  grid-column:2; grid-row:1; width:100%; border-radius:26px; overflow:hidden;
+  border:1px solid rgba(231,228,220,.55); background:#FAF7F2;
+  box-shadow:0 22px 60px rgba(31,58,95,.07);
+}
+.hero-movie-wrap #heroMovie{aspect-ratio:16/9}
+#scene{
+  position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; display:block;
+  opacity:0; transition:opacity .8s ease .1s;
+  touch-action:none; cursor:default;
+}
+#scene.on{opacity:1}
+#scene.grab{cursor:grab}
+#scene.grabbing{cursor:grabbing}
+
+/* ---------- コピー ---------- */
+.copy{
+  position:relative; z-index:10; grid-column:1; grid-row:1; text-align:left;
+}
+.copy > *{opacity:0; transform:translateY(16px);
+  animation:rise .7s var(--spring) forwards}
+.mega-badge{
+  display:inline-flex; align-items:center; gap:10px;
+  background:linear-gradient(100deg, #FA5A47 0%, #F97F35 55%, #E08A1F 100%);
+  color:#fff; text-shadow:0 1px 2px rgba(90,35,0,.28); font-size:clamp(.95rem, 1.05vw, 1.12rem); font-weight:900; letter-spacing:.03em;
+  padding:13px 24px; border-radius:999px; margin-bottom:26px;
+  box-shadow:0 6px 16px rgba(255,107,91,.38), 0 20px 46px rgba(255,107,91,.28);
+  position:relative; overflow:hidden;
+}
+.mega-badge svg{width:20px; height:20px; flex:none}
+.mega-badge sup{font-size:.58em; opacity:.92; margin:-6px 0 0 1px}
+.mega-badge small{font-weight:800; font-size:.72em; opacity:.96; letter-spacing:.05em; border-left:1.5px solid rgba(255,255,255,.45); padding-left:10px; margin-left:2px}
+.mega-badge::after{
+  content:""; position:absolute; top:-4px; bottom:-4px; width:54px; left:-90px;
+  background:linear-gradient(100deg, transparent, rgba(255,255,255,.7), transparent);
+  transform:skewX(-22deg); animation:shine 3.6s ease-in-out infinite;
+}
+@keyframes shine{0%,58%{left:-90px}82%,100%{left:calc(100% + 50px)}}
+@media (prefers-reduced-motion:reduce){.mega-badge::after{animation:none; opacity:0}}
+.legal-note{font-size:.62rem; color:var(--muted); line-height:1.7; margin:12px 0 0; max-width:36em}
+.kicker{animation-delay:.05s}
+.copy h1{animation-delay:.14s}
+.copy .lead{animation-delay:.26s}
+.copy .actions{animation-delay:.36s}
+.copy .checks{animation-delay:.46s}
+@keyframes rise{to{opacity:1;transform:none}}
+.kicker{
+  display:inline-flex;align-items:center;font-size:.74rem;font-weight:700;letter-spacing:.22em;
+  color:var(--coral);margin-bottom:16px;
+}
+.kicker .dots{display:inline-flex;gap:4px;margin-right:10px}
+.kicker .dots i{width:6px;height:6px;border-radius:50%}
+.copy h1{
+  font-weight:900;color:var(--navy);letter-spacing:.01em;
+  font-size:clamp(2.1rem, 4.9vw, 4.05rem); line-height:1.32; margin-bottom:22px;
+  text-wrap:balance;
+}
+.copy h1 .nw{white-space:nowrap}
+.maru{
+  color:var(--coral); display:inline-block; pointer-events:auto; cursor:pointer;
+  transition:transform .2s var(--spring);
+}
+.maru:hover{transform:scale(1.25)}
+.maru.jump{animation:maruJump .55s var(--spring)}
+@keyframes maruJump{
+  0%{transform:translateY(0) scale(1)}
+  30%{transform:translateY(-.34em) scale(1.15,.9)}
+  55%{transform:translateY(.02em) scale(.92,1.08)}
+  75%{transform:translateY(-.08em) scale(1.04,.97)}
+  100%{transform:translateY(0) scale(1)}
+}
+.mk{position:relative;padding:0 2px}
+.mk i{
+  position:absolute; left:-1%; right:-1%; top:58%; bottom:6%; z-index:-1;
+  background:var(--marker); border-radius:3px;
+  transform:scaleX(0); transform-origin:left center;
+  transition:transform .45s cubic-bezier(.6,.05,.2,1);
+}
+.mk.lit i{transform:scaleX(1)}
+.lead{font-size:1.03rem;max-width:29em;margin:0 0 26px;color:var(--ink)}
+.lead strong{color:var(--navy)}
+.actions{display:flex;gap:14px;flex-wrap:wrap}
+.checks{display:flex;gap:8px 18px;flex-wrap:wrap;margin-top:18px;font-size:.8rem;font-weight:700}
+.checks span::before{content:"✓ ";color:#1F8A4B;font-weight:900}
+
+/* ---------- 受信箱バッジ(3D追従) ---------- */
+#badge{
+  position:absolute; z-index:12; left:0; top:0; pointer-events:none;
+  display:flex; align-items:center; gap:7px;
+  background:#fff; border:1px solid var(--line-soft); border-radius:999px;
+  padding:7px 14px 7px 9px; box-shadow:0 2px 4px rgba(30,42,56,.06),0 12px 30px rgba(30,42,56,.14);
+  font-size:.82rem; font-weight:700; color:var(--ink);
+  opacity:0; transition:opacity .4s;
+  will-change:transform;
+}
+#badge.on{opacity:1}
+#badge .n{
+  display:inline-grid; place-items:center; min-width:24px; height:24px;
+  padding:0 6px; border-radius:999px; background:var(--coral); color:#fff;
+  font-size:.8rem; font-weight:900;
+}
+#badge.pop .n{animation:pop .45s var(--spring)}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.45)}100%{transform:scale(1)}}
+
+/* ---------- ヒント ---------- */
+#hint{
+  position:absolute; z-index:12; left:0; top:0; pointer-events:none;
+  background:var(--navy); color:#fff; font-size:.78rem; font-weight:700;
+  padding:8px 16px; border-radius:999px; letter-spacing:.04em;
+  box-shadow:0 10px 26px rgba(31,58,95,.3);
+  opacity:0; transform:translateY(6px); transition:opacity .5s,transform .5s var(--spring);
+  will-change:transform;
+}
+#hint::after{
+  content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%);
+  border:6px solid transparent; border-top-color:var(--navy);
+}
+#hint.on{opacity:1; transform:translateY(0)}
+
+/* ---------- HUD(右下) ---------- */
+.hud{
+  position:absolute; right:calc(max(18px,2.4vw) + 94px); bottom:max(18px,3vh); z-index:20;
+  display:flex; gap:10px; align-items:center;
+}
+.hud .tool{
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(255,255,255,.85); backdrop-filter:blur(8px);
+  border:1px solid var(--line-soft); border-radius:999px;
+  padding:10px 16px; font-family:inherit; font-size:.8rem; font-weight:700; color:var(--navy);
+  cursor:pointer; box-shadow:0 2px 4px rgba(30,42,56,.05),0 10px 26px rgba(30,42,56,.1);
+  transition:transform .18s var(--spring), box-shadow .2s;
+}
+.hud .tool:hover{transform:translateY(-2px);box-shadow:0 4px 8px rgba(30,42,56,.06),0 16px 34px rgba(30,42,56,.16)}
+.hud .tool:active{transform:scale(.95)}
+.hud .tool svg{width:16px;height:16px;flex:none}
+.hud .tool.muted .wave{opacity:0}
+.hud .tool .wave{transition:opacity .2s}
+
+/* ---------- 数字の帯(下端の余白を信頼要素に) ---------- */
+.stat-band{
+  grid-column:1 / -1; grid-row:2; width:100%; margin:30px 0 0; z-index:11;
+  display:flex; gap:14px; flex-wrap:wrap; align-items:stretch;
+  pointer-events:none;
+  opacity:0; transform:translateY(14px);
+  animation:rise .7s var(--spring) .6s forwards;
+}
+.stat-band .st{
+  flex:1 1 0; min-width:200px;
+  display:flex; flex-direction:column; gap:5px; white-space:nowrap; position:relative;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+  border:1px solid rgba(227,232,238,.9); border-radius:18px; padding:20px 26px 19px 32px;
+  box-shadow:0 3px 7px rgba(30,42,56,.06), 0 20px 44px rgba(30,42,56,.12);
+}
+.stat-band .st i{width:6px; height:calc(100% - 36px); border-radius:99px; position:absolute; left:14px; top:18px}
+.stat-band .st b{font-size:2rem;font-weight:900;color:var(--navy);letter-spacing:.01em;line-height:1.1}
+.stat-band .st b em{font-style:normal;font-size:1rem;font-weight:700;color:var(--muted)}
+.stat-band .st span{font-size:.85rem;color:var(--muted);font-weight:700}
+.scene-spacer{display:none}
+@media (min-width:981px) and (max-height:740px){.stat-band{display:none}}
+
+/* ---------- フォールバック ---------- */
+#fallback{
+  position:absolute; inset:0; z-index:2; display:none;
+  align-items:center; justify-content:center;
+}
+#fallback.on{display:flex}
+#fallback img{width:min(430px,70vw);opacity:.96}
+
+/* ---------- レスポンシブ ---------- */
+@media (max-width:980px){
+  nav.menu{
+    position:fixed; top:64px; right:14px; left:auto; margin:0;
+    flex-direction:column; align-items:stretch; gap:4px;
+    background:#fff; border:1px solid var(--line-soft); border-radius:18px;
+    padding:14px; min-width:220px;
+    box-shadow:0 6px 16px rgba(31,58,95,.12), 0 30px 70px rgba(31,58,95,.25);
+    opacity:0; transform:translateY(-8px) scale(.98); pointer-events:none; visibility:hidden;
+    transition:opacity .2s ease, transform .25s var(--spring), visibility 0s linear .3s;
+  }
+  nav.menu.open{opacity:1; transform:none; pointer-events:auto; visibility:visible;
+    transition:opacity .2s ease, transform .25s var(--spring), visibility 0s}
+  nav.menu a{padding:10px 12px; border-bottom:none; border-radius:10px; font-size:.92rem}
+  nav.menu a:hover{background:rgba(31,58,95,.06); border-bottom:none}
+  nav.menu .btn{text-align:center; margin-top:6px}
+  .nav-toggle{display:grid}
+  header.site{
+    background:rgba(252,252,250,.92); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .hero-sec{height:auto; min-height:100dvh}
+  .hud{position:static; justify-content:center; margin:0 0 26px; padding:0 18px}
+  .hero-sec{grid-template-columns:1fr; padding-top:92px; row-gap:6px}
+  .copy{grid-column:1}
+  .hero-movie-wrap{grid-column:1; grid-row:auto; margin-top:20px}
+  .stat-band{grid-row:auto}
+  .copy h1{font-size:clamp(1.95rem,8vw,2.6rem)}
+  .lead{font-size:.95rem}
+  .scene-spacer{display:block;height:47dvh}
+  .stat-band{
+    position:relative; left:0; right:0; bottom:0; margin:0 18px 20px;
+    display:grid; grid-template-columns:1fr 1fr; gap:14px 10px; align-items:start;
+    background:rgba(255,255,255,.92); backdrop-filter:blur(10px);
+    border:1px solid var(--line-soft); border-radius:18px; padding:18px 20px;
+    box-shadow:0 2px 4px rgba(30,42,56,.04),0 14px 36px rgba(30,42,56,.1);
+    animation-delay:.3s;
+  }
+  .stat-band .st{flex-direction:column; align-items:flex-start; gap:3px; white-space:normal}
+  .stat-band .st i{display:none}
+  .stat-band .st b{font-size:1.18rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .copy > *{animation:none;opacity:1;transform:none}
+  .mk i{transition:none}
+}
+
+/* ============================================================
+   本編セクション(スクロール以降)
+   ============================================================ */
+.page{position:relative; z-index:2}
+.sec{padding:100px 0; position:relative}
+.sec.tint{background:rgba(255,255,255,.72)}
+.wrap2{max-width:74rem; margin:0 auto; padding:0 max(24px,4vw)}
+.center{text-align:center}
+.eyebrow2{
+  display:inline-flex; align-items:center; font-size:.74rem; font-weight:700;
+  letter-spacing:.08em; color:var(--coral); margin-bottom:16px;
+}
+.eyebrow2 .dots{display:inline-flex; gap:4px; margin-right:10px}
+.eyebrow2 .dots i{width:6px; height:6px; border-radius:50%}
+.eyebrow2 .dots i:nth-child(1){background:var(--ch-green)}
+.eyebrow2 .dots i:nth-child(2){background:var(--ch-blue)}
+.eyebrow2 .dots i:nth-child(3){background:var(--ch-pink)}
+.eyebrow2 .dots i:nth-child(4){background:var(--ch-amber)}
+.sec h2{
+  font-size:clamp(1.7rem,3.2vw,2.5rem); font-weight:900; color:var(--navy);
+  line-height:1.5; margin-bottom:18px; text-wrap:balance;
+}
+.sub2{color:var(--muted); max-width:46em; font-size:1rem; margin-bottom:46px}
+.center .sub2{margin-inline:auto}
+/* ---- 左右交互(zigzag): モックの開いた側に見出しを置く ---- */
+.tour-col,.post-col,.pack-col,.app-wrap,.pcal-wrap,.pack-mock{min-width:0}
+.zhead{text-align:left; margin-bottom:20px}
+.zhead .eyebrow2{margin-bottom:13px}
+.zhead h2{font-size:clamp(1.42rem, 1vw + 1.02rem, 1.92rem); font-weight:900; color:var(--navy); line-height:1.62; margin-bottom:10px; text-wrap:balance}
+.zhead .sub2{font-size:.9rem; line-height:2; margin:0; max-width:none}
+#posting,#packs{overflow-x:clip}
+@media (min-width:1181px){
+  /* モックの中身は縮めない: カラムが足りない分は外側(閉じた側)へ断ち切りで逃がす */
+  .tour-grid .app, .posting-grid .app, .packs-grid .app{min-width:880px}
+  .posting-grid .pcal-wrap{order:-1; display:flex; justify-content:flex-end}
+  .posting-grid .pcal-wrap .app{width:100%}
+}
+@media (max-width:1180px){
+  .zhead{text-align:center; margin-bottom:16px}
+}
+.reveal{opacity:0; transform:translateY(26px);
+  transition:opacity .6s ease, transform .75s var(--spring); transition-delay:var(--d,0s)}
+.reveal.in{opacity:1; transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+.ghost-link{margin-top:36px}
+/* ツアー前後は余白を詰めて呼吸を揃える */
+#pains.sec{padding-bottom:52px}
+#features.sec{padding-top:64px}
+#steps.sec{padding-top:64px}
+
+/* ---- 課題: 散らかった通知が整列する ---- */
+.pain-board{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:64rem; margin:0 auto}
+.pain-note{
+  position:relative; text-align:left; background:#fff; border:1px solid var(--line-soft);
+  border-radius:16px; padding:20px 22px;
+  box-shadow:0 2px 4px rgba(30,42,56,.05),0 12px 30px rgba(30,42,56,.08);
+  transform:rotate(var(--rot,0deg)) translate(var(--tx,0), var(--ty,0));
+  transition:transform .9s var(--spring), box-shadow .3s ease;
+  transition-delay:calc(var(--i,0)*70ms);
+}
+.pain-board.in .pain-note{transform:none}
+.pain-note h3{display:flex; align-items:center; gap:10px; font-size:.98rem; color:var(--navy); margin-bottom:8px; line-height:1.5}
+.pain-note h3>span+*{min-width:0}
+.pain-note h3{text-wrap:balance}
+.nw{white-space:nowrap}
+.pain-note p{font-size:.86rem; color:var(--muted); line-height:1.8}
+.app2{width:30px; height:30px; border-radius:9px; flex:none; display:grid; place-items:center}
+.app2 svg{width:17px; height:17px}
+.badge-notif{
+  position:absolute; top:-11px; right:14px; display:flex; gap:5px;
+}
+.badge-notif span{
+  background:var(--coral); color:#fff; font-size:.68rem; font-weight:900;
+  padding:3px 8px; border-radius:999px; box-shadow:0 4px 10px rgba(255,107,91,.4);
+  animation:badgePulse 3.2s ease-in-out infinite;
+}
+.badge-notif span:nth-child(2){animation-delay:.4s}
+.badge-notif span:nth-child(3){animation-delay:.8s}
+@keyframes badgePulse{0%,100%{transform:none}6%{transform:scale(1.16)}12%{transform:none}}
+.pain-note:hover{box-shadow:0 4px 8px rgba(30,42,56,.08),0 24px 48px rgba(30,42,56,.14); border-color:#D8D2C6}
+@media (prefers-reduced-motion:reduce){.badge-notif span{animation:none}}
+
+/* ============================================================
+   プロダクトツアー(スクロール駆動・本物級モック)
+   ============================================================ */
+.tour{position:relative}
+/* sticky はビューポートに比例させない: 中身の高さのまま、画面中央(小さい画面では上寄り)に粘る */
+.tour-sticky{position:sticky; top:max(14px, calc(50vh - 342px)); min-height:0; display:flex; flex-direction:column; justify-content:flex-start; padding:34px 0 10px; overflow:hidden}
+.tour-triggers{position:relative; z-index:-1}
+/* シーン切替の歩幅は px 固定。縦長ウィンドウでもスクロール距離が膨らまない */
+.tour-triggers .trg{height:420px}
+.tour-triggers .trg:nth-child(3){height:520px}
+.tour-triggers .trg:last-child{height:220px}
+/* 縦に大きいビューポートでは sticky 演出をやめ、普通の1セクション+自動進行にする
+   (背景だけの領域・空走スクロールを作らない) */
+@media (min-height:1200px){
+  .tour-sticky{position:static; padding:24px 0 8px}
+  .tour-triggers{display:none}
+}
+.tour-grid{display:grid; grid-template-columns:minmax(300px,24rem) minmax(0,67.5rem); justify-content:center; gap:clamp(28px,2.6vw,48px); align-items:center; max-width:104rem; margin:0 auto; padding:0 0 0 max(24px,3vw); width:100%}
+.tour-steps{display:grid; gap:8px}
+.tstep{
+  display:flex; gap:13px; padding:13px 16px; border-radius:14px; text-align:left;
+  opacity:.42; transition:opacity .35s ease, background .35s ease, transform .35s var(--spring);
+}
+.tstep b{font-size:.78rem; font-weight:900; color:var(--coral); letter-spacing:.08em; padding-top:2px}
+.tstep h4{font-size:.95rem; color:var(--navy); margin-bottom:2px}
+.tstep p{font-size:.76rem; color:var(--muted); line-height:1.7}
+.tstep.on{opacity:1; background:#fff; box-shadow:0 2px 4px rgba(30,42,56,.05),0 12px 30px rgba(30,42,56,.09); transform:translateX(4px)}
+
+/* ---- アプリシェル(実UI準拠: Chatwoot v4 + toybaco-brand.css) ---- */
+.app-wrap{position:relative}
+.app{
+  /* 実アプリの値: surface #FCFBF8 / 地 #FAF7F2 / 罫線 #E7E5DE / 墨 #24303F / 補助 #6B7684 */
+  --ab:#FCFBF8; --af:#FAF7F2; --al:#E7E4DC; --at:#24303F; --am:#6B7684;
+  --anavy:#1F3A5F; --awash:#E9EFF6; --acoral:#FF6B5B;
+  position:relative; background:var(--ab); border-radius:16px; overflow:hidden;
+  border:1px solid var(--al);
+  box-shadow:0 3px 8px rgba(31,58,95,.07),0 40px 90px rgba(31,58,95,.17);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  font-size:13px; line-height:1.6; color:var(--at); text-align:left;
+  height:clamp(500px, 62vh, 620px);
+  transition:background .6s ease, border-color .6s ease;
+}
+.app *{transition-property:background,color,border-color,opacity,transform; transition-duration:.4s}
+/* 実アプリのダーク(toybaco-brand.css .dark の blue スケール実値) */
+.app.night{--ab:#121A26; --af:#0F151E; --al:#22304A; --at:#D6E4F2; --am:#8EA6C0;
+  --anavy:#4A76A6; --awash:#1F3046}
+.app-titlebar{
+  display:flex; align-items:center; gap:12px; padding:9px 16px;
+  border-bottom:1px solid var(--al); background:var(--ab);
+}
+.app-titlebar .dots3{display:flex; gap:6px}
+.app-titlebar .dots3 i{width:10px; height:10px; border-radius:50%; background:var(--al)}
+.app-titlebar .dots3 i:nth-child(1){background:#FF6B5B}
+.app-titlebar .dots3 i:nth-child(2){background:#F09A3E}
+.app-titlebar .dots3 i:nth-child(3){background:#2FA35C}
+.app-search{
+  flex:1; max-width:330px; margin:0 auto; background:var(--af); border-radius:8px;
+  padding:4px 12px; font-size:.72rem; color:var(--am); text-align:center;
+}
+.app-clock{font-size:.72rem; font-weight:700; color:var(--am); display:flex; align-items:center; gap:6px}
+.app-clock .moon{display:none}
+.night .app-clock .moon{display:inline}
+.app-ava{width:24px; height:24px; border-radius:50%; background:var(--anavy); color:#fff; display:grid; place-items:center; font-size:.62rem; font-weight:900}
+.app-body{display:grid; grid-template-columns:168px 226px 1fr 196px; height:calc(100% - 43px); position:relative}
+
+/* サイドバー(Chatwoot v4 一次ナビ。「投稿」「ご契約内容」は実際に注入される項目) */
+.app-nav{border-right:1px solid var(--al); background:var(--af); padding:10px 8px; display:flex; flex-direction:column; gap:2px}
+.nav-acct{display:flex; align-items:center; gap:8px; padding:6px 8px 12px; font-weight:800; font-size:.78rem}
+.nav-acct img{width:22px}
+.nav-item{
+  display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:9px;
+  font-size:.76rem; font-weight:600; color:var(--am);
+}
+.nav-item svg{width:15px; height:15px; flex:none}
+.nav-item.on{background:var(--awash); color:var(--anavy); font-weight:800}
+.night .nav-item.on{color:#BBD3EE}
+.nav-item .navdot{margin-left:auto; background:var(--anavy); color:#fff; font-size:.6rem; font-weight:900; border-radius:999px; padding:0 7px}
+.nav-foot{margin-top:auto; display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:.7rem; color:var(--am)}
+.nav-foot .app-ava{width:20px; height:20px; font-size:.56rem}
+
+/* 会話リスト */
+.app-side{border-right:1px solid var(--al); display:flex; flex-direction:column; background:var(--ab)}
+.side-head{display:flex; align-items:center; gap:8px; padding:11px 14px 7px; font-weight:800; font-size:.82rem}
+.side-head .cnt{
+  background:var(--anavy); color:#fff; font-size:.62rem; font-weight:900;
+  border-radius:999px; padding:1px 7px; margin-left:auto;
+}
+.side-head .cnt.pop{animation:pop .5s var(--spring)}
+.side-tabs{display:flex; gap:2px; padding:0 10px 8px; border-bottom:1px solid var(--al)}
+.side-tabs span{font-size:.68rem; font-weight:700; color:var(--am); padding:3px 9px; border-radius:7px}
+.side-tabs span.on{background:var(--awash); color:var(--anavy)}
+.convs{overflow:hidden; flex:1}
+.conv{
+  display:flex; gap:9px; padding:10px 12px; border-bottom:1px solid var(--al);
+  align-items:flex-start; position:relative;
+}
+.conv.sel{background:var(--awash); box-shadow:inset 2.5px 0 0 var(--anavy)}
+.cava{
+  width:30px; height:30px; border-radius:50%; flex:none; display:grid; place-items:center;
+  color:#fff; font-size:.66rem; font-weight:900; position:relative;
+}
+.cava .chip{
+  position:absolute; right:-4px; bottom:-4px; width:15px; height:15px; border-radius:5px;
+  display:grid; place-items:center; border:1.5px solid var(--ab);
+}
+.cava .chip svg{width:8.5px; height:8.5px}
+.conv .cc{min-width:0; flex:1}
+.conv .cn{display:flex; align-items:baseline; gap:6px}
+.conv .cn b{font-size:.76rem}
+.conv .cn small{margin-left:auto; font-size:.62rem; color:var(--am); flex:none}
+.conv .cp{display:block; font-size:.68rem; color:var(--am); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.conv .und{position:absolute; right:11px; bottom:12px; width:7px; height:7px; border-radius:50%; background:var(--anavy)}
+.conv.newin{max-height:0; opacity:0; padding-top:0; padding-bottom:0; overflow:hidden;
+  transition:max-height .5s var(--spring), opacity .4s ease .15s, padding .5s var(--spring)}
+.conv.newin.shown{max-height:70px; opacity:1; padding-top:10px; padding-bottom:10px; background:#FFF6EE}
+.night .conv.newin.shown{background:#1C2637}
+.conv.newin.shown.settle{background:transparent; transition:background 1.2s ease .8s}
+
+/* チャット */
+.app-main{position:relative; overflow:hidden; background:var(--af)}
+.chat-empty{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  color:var(--am); font-size:.76rem; opacity:1; transition:opacity .3s;
+}
+.chat-empty .ce-ic{font-size:1.5rem; margin-bottom:6px; opacity:.6}
+.chat{position:absolute; inset:0; display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity .45s ease}
+.chat.open{opacity:1}
+.app-main:has(.chat.open) .chat-empty{opacity:0}
+.chat-head{
+  display:flex; align-items:center; gap:9px; padding:9px 14px; background:var(--ab);
+  border-bottom:1px solid var(--al);
+}
+.chat-head b{font-size:.82rem}
+.tagchip{
+  font-size:.62rem; font-weight:900; border-radius:999px; padding:2.5px 9px;
+  background:#E7F6EC; color:#0B7A35;
+}
+.night .tagchip{background:#173226; color:#7ED8A2}
+.resolve-btn{
+  margin-left:auto; display:inline-flex; align-items:center; gap:5px;
+  background:#2E9E63; color:#fff; font-size:.68rem; font-weight:800;
+  border-radius:8px; padding:5px 12px;
+}
+.tagchip.assign{
+  background:var(--awash); color:var(--anavy);
+  opacity:0; transform:scale(.6); transition:opacity .3s, transform .45s var(--spring);
+}
+.night .tagchip.assign{color:#BBD3EE}
+.tagchip.assign.shown{opacity:1; transform:scale(1)}
+.msgs{flex:1; padding:14px 18px; display:flex; flex-direction:column; gap:9px; overflow:hidden}
+.m{max-width:72%; padding:8px 13px; border-radius:13px; font-size:.76rem; line-height:1.7}
+.m.in{align-self:flex-start; background:var(--ab); border:1px solid var(--al); border-bottom-left-radius:4px;
+  box-shadow:0 1px 2px rgba(31,58,95,.04)}
+.m.out{align-self:flex-end; background:var(--anavy); color:#fff; border-bottom-right-radius:4px}
+.night .m.out{color:#F2F7FD}
+.m.hiddenm{display:none}
+.m.popin{animation:mpop .45s var(--spring)}
+@keyframes mpop{0%{opacity:0; transform:translateY(10px) scale(.92)}100%{opacity:1; transform:none}}
+/* Chatwoot のアクティビティ(システム)メッセージは中央の小さいグレー */
+.mmeta{font-size:.64rem; color:var(--am); font-weight:600; display:flex; align-items:center; gap:5px}
+.mmeta.center{align-self:center}
+.mmeta.right{align-self:flex-end}
+.mmeta .ok{color:#238A50; font-weight:900}
+.mmeta.hiddenm{display:none}
+.ai-think{
+  align-self:flex-start; display:none; align-items:center; gap:7px;
+  font-size:.68rem; font-weight:700; color:var(--am);
+}
+.ai-think.shown{display:flex}
+.ai-think .sp{width:13px; height:13px; border-radius:50%;
+  border:2px solid var(--al); border-top-color:var(--anavy); animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-badge{
+  display:inline-flex; align-items:center; gap:4px; font-size:.6rem; font-weight:900;
+  background:var(--anavy); color:#fff; border-radius:999px; padding:2px 8px;
+}
+.composer{
+  margin:0 14px 12px; background:var(--ab); border:1px solid var(--al); border-radius:11px;
+  position:relative; box-shadow:0 2px 6px rgba(31,58,95,.05);
+}
+.composer .ctabs{display:flex; gap:2px; padding:7px 10px 0; font-size:.66rem; font-weight:700; color:var(--am)}
+.composer .ctabs span{padding:3px 10px; border-radius:7px}
+.composer .ctabs span.on{background:var(--awash); color:var(--anavy)}
+.composer .crow{display:flex; align-items:center; gap:10px; padding:7px 12px 9px}
+.composer .ph{color:var(--am); font-size:.74rem; flex:1; white-space:nowrap; overflow:hidden}
+.composer .ph .caret{display:inline-block; width:1.5px; height:12px; background:var(--acoral);
+  vertical-align:-2px; margin-left:1px; animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.composer .tools{display:flex; gap:8px; color:var(--am); font-size:.8rem}
+.composer .sendb{
+  background:var(--anavy); color:#fff; font-size:.68rem; font-weight:800; border:none;
+  border-radius:8px; padding:6px 13px; font-family:inherit; white-space:nowrap;
+}
+.slash-pop{
+  position:absolute; left:10px; bottom:calc(100% + 8px); width:250px;
+  background:var(--ab); border:1px solid var(--al); border-radius:12px; padding:6px;
+  box-shadow:0 14px 34px rgba(31,58,95,.18);
+  opacity:0; transform:translateY(8px) scale(.96); pointer-events:none;
+  transition:opacity .25s, transform .35s var(--spring); z-index:5;
+}
+.slash-pop.shown{opacity:1; transform:none}
+.slash-pop .sp-h{font-size:.6rem; font-weight:900; color:var(--am); letter-spacing:.1em; padding:4px 8px}
+.slash-pop .sp-i{font-size:.72rem; font-weight:600; padding:6px 9px; border-radius:8px; display:flex; gap:7px; align-items:baseline}
+.slash-pop .sp-i b{color:var(--anavy); font-size:.68rem}
+.slash-pop .sp-i small{color:var(--am); font-weight:500; font-size:.64rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.slash-pop .sp-i.hl{background:var(--awash)}
+
+/* 右パネル(Chatwoot: 会話の操作+連絡先情報) */
+.app-info{border-left:1px solid var(--al); background:var(--ab); padding:12px; font-size:.7rem; overflow:hidden}
+.ci-h{font-size:.62rem; font-weight:900; letter-spacing:.08em; color:var(--am); margin:2px 0 8px}
+.ci-block{padding-bottom:12px; border-bottom:1px solid var(--al); margin-bottom:12px}
+.ci-row{display:flex; align-items:center; gap:8px; padding:4px 0}
+.ci-row .k{color:var(--am); width:4.2em; flex:none}
+.ci-row .ava-s{width:20px; height:20px; border-radius:50%; background:var(--anavy); color:#fff; display:grid; place-items:center; font-size:.56rem; font-weight:900}
+.ci-label{display:inline-flex; align-items:center; gap:4px; background:var(--awash); color:var(--anavy); font-size:.64rem; font-weight:700; border-radius:999px; padding:2px 9px}
+.night .ci-label{color:#BBD3EE}
+.ci-contact{display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; padding:4px 0 0}
+.ci-contact .ci-ava{width:40px; height:40px; border-radius:50%; background:#03B952; color:#fff; display:grid; place-items:center; font-weight:900; font-size:.85rem}
+.ci-contact b{font-size:.78rem}
+.ci-contact small{color:var(--am)}
+
+/* 投稿パネル(実挙動: サイドバーの右側に iframe パネルが被さる) */
+.post-panel{
+  position:absolute; top:0; bottom:0; right:0; left:168px; z-index:6;
+  background:var(--af); border-left:1px solid var(--al);
+  display:flex; flex-direction:column;
+  opacity:0; transform:translateX(24px); pointer-events:none;
+  transition:opacity .4s ease, transform .5s cubic-bezier(.3,.8,.3,1);
+}
+.postview .post-panel{opacity:1; transform:none}
+.pp-load{
+  position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; gap:12px;
+  align-items:center; justify-content:center; background:var(--af);
+  color:var(--am); font-size:.74rem;
+  transition:opacity .35s ease;
+}
+.pp-load .sp2{width:26px; height:26px; border-radius:50%; border:3px solid #E8E2D8; border-top-color:#1F3A5F; animation:spin 1s linear infinite}
+.post-panel.loaded .pp-load{opacity:0; pointer-events:none}
+.pp-close{position:absolute; top:8px; right:12px; z-index:3; width:26px; height:26px; border-radius:50%;
+  border:1px solid var(--al); background:var(--ab); color:var(--am); display:grid; place-items:center; font-size:.8rem}
+.pp-body{flex:1; display:flex; flex-direction:column; opacity:0; transition:opacity .4s ease .1s}
+.post-panel.loaded .pp-body{opacity:1}
+.pp-head{display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--al); background:var(--ab)}
+.pp-head b{font-size:.8rem}
+.pp-head .pp-new{margin-left:auto; background:var(--anavy); color:#fff; font-size:.68rem; font-weight:800; border-radius:8px; padding:5px 13px}
+.pp-cols{flex:1; display:flex; gap:12px; padding:12px 14px}
+.pv-comp{
+  flex:1.2; background:#FFFDF9; border:1px solid #E8E2D8; border-radius:12px; padding:13px;
+  display:flex; flex-direction:column; gap:9px;
+  box-shadow:0 2px 6px rgba(31,58,95,.05);
+}
+.pv-comp .pv-h{font-size:.72rem; font-weight:800}
+.pv-text{background:#F7F3EC; border-radius:9px; padding:9px 12px; font-size:.73rem; line-height:1.7}
+.pv-media{display:flex; gap:8px; align-items:center}
+.pv-thumb{width:46px; height:46px; border-radius:8px;
+  background:linear-gradient(135deg,#FFD9A8,#FF9A8B 55%,#C86DD7); position:relative; overflow:hidden}
+.pv-thumb::after{content:"✂️"; position:absolute; inset:0; display:grid; place-items:center; font-size:1rem}
+.pv-chips{display:flex; gap:6px; flex-wrap:wrap}
+.pv-chips .pvc{display:inline-flex; align-items:center; gap:5px; font-size:.64rem; font-weight:700;
+  border:1.5px solid #E8E2D8; border-radius:999px; padding:3px 10px; color:var(--at)}
+.pv-chips .pvc i{width:13px; height:13px; border-radius:4px; display:grid; place-items:center}
+.pv-chips .pvc i svg{width:8px; height:8px}
+.pv-chips .pvc.on{border-color:#1F3A5F; background:#E9EFF6}
+.pv-foot{display:flex; align-items:center; gap:9px; margin-top:auto}
+.pv-when{font-size:.66rem; font-weight:700; color:var(--am)}
+.pv-btn{margin-left:auto; background:#1F3A5F; color:#fff; border:none; font-family:inherit;
+  font-size:.68rem; font-weight:800; border-radius:8px; padding:6px 14px}
+.pv-note{font-size:.6rem; color:var(--am)}
+.pv-queue{flex:1; display:flex; flex-direction:column; gap:7px}
+.pv-queue .q-h{font-size:.66rem; font-weight:900; color:var(--am); letter-spacing:.06em}
+.qcard{
+  display:flex; align-items:center; gap:8px; background:#FFFDF9; border:1px solid #E8E2D8;
+  border-radius:10px; padding:8px 11px; font-size:.68rem; font-weight:600; color:var(--at);
+  opacity:0; transform:translateX(-26px) scale(.94);
+  transition:opacity .35s ease, transform .5s var(--spring);
+  box-shadow:0 2px 6px rgba(31,58,95,.04);
+}
+.qcard.shown{opacity:1; transform:none}
+.qcard i{width:21px; height:21px; border-radius:6px; display:grid; place-items:center; flex:none}
+.qcard i svg{width:11px; height:11px}
+.qcard small{margin-left:auto; color:var(--am); font-weight:700; font-size:.6rem; flex:none; white-space:nowrap}
+.qcard .approve{background:#FDF2E3; color:#B26A00; font-size:.58rem; font-weight:900; border-radius:999px; padding:1px 7px; flex:none}
+.qcard .qk{color:#2E9E63; font-weight:900}
+
+/* ゴーストカーソル */
+.ghost{
+  position:absolute; left:50%; top:70%; z-index:40; width:20px; pointer-events:none;
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.3));
+  transition:left .6s cubic-bezier(.35,.7,.3,1), top .6s cubic-bezier(.35,.7,.3,1), opacity .3s;
+  opacity:0;
+}
+.ghost.on{opacity:1}
+.ghost::after{
+  content:""; position:absolute; left:-9px; top:-9px; width:36px; height:36px; border-radius:50%;
+  background:rgba(255,107,91,.35); transform:scale(0); opacity:0;
+}
+.ghost.clicked::after{animation:gclick .45s ease-out}
+@keyframes gclick{0%{transform:scale(.2); opacity:1}100%{transform:scale(1.6); opacity:0}}
+
+/* 通知トースト */
+.toast{
+  position:absolute; top:14px; right:14px; z-index:30; width:240px;
+  background:rgba(255,255,255,.96); backdrop-filter:blur(8px);
+  border:1px solid var(--line-soft); border-radius:13px; padding:10px 13px;
+  box-shadow:0 16px 40px rgba(30,42,56,.22);
+  display:flex; gap:9px; align-items:flex-start;
+  opacity:0; transform:translateY(-14px) scale(.95);
+  transition:opacity .3s, transform .45s var(--spring);
+  font-size:.72rem; text-align:left;
+}
+.toast.shown{opacity:1; transform:none}
+.toast i{width:26px; height:26px; border-radius:8px; background:#06C755; flex:none; display:grid; place-items:center}
+.toast i svg{width:14px; height:14px}
+.toast b{display:block; font-size:.72rem}
+.toast span{color:var(--muted); font-size:.66rem}
+
+@media (max-width:1180px){
+  .tour-grid{grid-template-columns:1fr; gap:18px}
+  .tour-steps{grid-auto-flow:column; grid-auto-columns:minmax(150px,1fr); overflow-x:auto; gap:6px; padding-bottom:4px}
+  .tstep{padding:10px 12px}
+  .tstep p{display:none}
+  .app{height:480px; font-size:11.5px}
+  .app-body{grid-template-columns:44px 190px 1fr}
+  .app-info{display:none}
+}
+@media (max-width:700px){
+  .app-body{grid-template-columns:40px 1fr}
+  .app-side{display:none}
+  .app{height:430px}
+  .tour-triggers .trg{height:80vh}
+}
+
+/* ---- 双方向チャネル図 ---- */
+.flowmap{display:grid; grid-template-columns:1fr 64px auto 64px 1fr; gap:14px; align-items:center; max-width:66rem; margin:0 auto}
+.ch-col{display:grid; gap:12px}
+.ch-chip{
+  display:flex; align-items:center; gap:11px; background:#fff;
+  border:1px solid var(--line-soft); border-radius:13px; padding:11px 15px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04),0 10px 24px rgba(30,42,56,.06);
+  font-size:.88rem; font-weight:700; color:var(--ink); text-align:left;
+  transition:transform .2s var(--spring), box-shadow .2s ease;
+}
+.ch-chip:hover{transform:translateY(-2px); box-shadow:0 4px 8px rgba(30,42,56,.05),0 16px 32px rgba(30,42,56,.1)}
+.ch-chip i{width:30px; height:30px; border-radius:10px; flex:none; display:grid; place-items:center}
+.ch-chip i svg{width:17px; height:17px}
+.ch-chip small{display:block; font-size:.7rem; color:var(--muted); font-weight:500; line-height:1.4}
+.flow-line{
+  height:112%; min-height:260px; width:100%; opacity:0; transition:opacity .8s ease .3s;
+  background-image:radial-gradient(circle, rgba(31,58,95,.35) 2.2px, transparent 2.6px);
+  background-size:18px 14px; background-position:0 50%;
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image:linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  animation:flowX 1.1s linear infinite;
+}
+.in .flow-line{opacity:.7}
+@keyframes flowX{to{background-position:18px 50%}}
+@media (prefers-reduced-motion:reduce){.flow-line{animation:none}}
+.flow-box{
+  background:linear-gradient(168deg,#D9B98C,#C9A272);
+  border-radius:22px; padding:34px 30px; text-align:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 3px 6px rgba(30,42,56,.08), 0 22px 48px rgba(122,90,48,.28);
+}
+.flow-box img{width:min(200px,38vw); margin:0 auto 10px}
+.flow-box span{display:block; font-size:.78rem; font-weight:900; color:#5D452B; letter-spacing:.12em}
+
+/* ---- 投稿機能セクション(ツアーと同構図・同シェル) ---- */
+.posting-grid{display:grid; grid-template-columns:minmax(0,67.5rem) minmax(300px,24rem); justify-content:center; gap:clamp(28px,2.6vw,48px); align-items:center; max-width:104rem; margin:0 auto; padding:0 max(24px,3vw) 0 0; width:100%}
+.post-points{display:grid; gap:8px}
+.ppoint{
+  display:flex; gap:13px; padding:14px 16px; border-radius:14px; text-align:left;
+  background:#fff; box-shadow:0 2px 4px rgba(30,42,56,.05),0 12px 30px rgba(30,42,56,.08);
+}
+.ppoint b{font-size:.78rem; font-weight:900; color:var(--coral); letter-spacing:.08em; padding-top:2px}
+.ppoint h4{font-size:.93rem; color:var(--navy); margin-bottom:2px}
+.ppoint p{font-size:.76rem; color:var(--muted); line-height:1.7}
+/* アプリシェル内: 投稿カレンダー画面 */
+.pcal-wrap{position:relative}
+.pbody{grid-template-columns:168px 1fr}
+.pcal-main{position:relative; display:flex; flex-direction:column; background:var(--af); overflow:hidden}
+.pcal-week{font-size:.72rem; color:var(--am); font-weight:700}
+.pp-new{
+  margin-left:auto; background:var(--anavy); color:#fff; font-size:.68rem; font-weight:800;
+  border-radius:8px; padding:5px 13px; transition:transform .2s var(--spring);
+}
+.pp-new.hit{transform:scale(.93)}
+.pcal-days{display:grid; grid-template-columns:repeat(7,1fr); background:var(--ab); border-bottom:1px solid var(--al)}
+.pcal-days span{padding:7px 0 6px; text-align:center; font-size:.64rem; font-weight:800; color:var(--am); border-right:1px solid var(--al)}
+.pcal-days span:last-child{border-right:none}
+.pcal-days span b{display:block; font-size:.88rem; color:var(--at); font-weight:800; margin-top:1px}
+.pcal-days span.today{color:#E85948}
+.pcal-days span.today b{color:#E85948}
+.pcal-grid{flex:1; display:grid; grid-template-columns:repeat(7,1fr)}
+.pcal-cell{border-right:1px solid var(--al); padding:8px 6px; display:flex; flex-direction:column; gap:6px; min-height:0}
+.pcal-cell:last-child{border-right:none}
+.pcal-cell.today{background:#FFF6EE}
+.night .pcal-cell.today{background:#1C2637}
+.pchip{
+  background:var(--ab); border:1px solid var(--al); border-radius:9px; padding:6px 7px;
+  font-size:.62rem; font-weight:700; line-height:1.5;
+  display:flex; flex-direction:column; gap:3px;
+  box-shadow:0 1px 3px rgba(31,58,95,.07);
+}
+.pchip .pc-top{display:flex; align-items:center; gap:3px}
+.pchip .pc-top small{margin-left:auto; color:var(--am); font-weight:800; font-size:.58rem}
+.pchip i{width:15px; height:15px; border-radius:5px; display:grid; place-items:center; flex:none}
+.pchip i svg{width:9px; height:9px}
+.pchip .pc-t{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.pchip em{font-style:normal; font-size:.56rem; font-weight:900; border-radius:999px; padding:1.5px 7px; align-self:flex-start}
+.pchip em.ok{background:#E7F6EC; color:#0B7A35}
+.pchip em.sch{background:var(--awash); color:var(--anavy)}
+.pchip em.wait{background:#FDF2E3; color:#B26A00}
+.pchip.done{opacity:.68}
+.pchip.newp{opacity:0; transform:translateY(10px) scale(.92); transition:opacity .35s, transform .5s var(--spring)}
+.pchip.newp.shown{opacity:1; transform:none}
+/* 作成パネル(カレンダーの上に右からスライド) */
+.pcal-comp{
+  position:absolute; top:43px; right:0; bottom:0; width:44%; z-index:4;
+  background:var(--ab); border-left:1px solid var(--al);
+  box-shadow:-20px 0 44px rgba(31,58,95,.14);
+  padding:13px 15px; display:flex; flex-direction:column; gap:10px;
+  transform:translateX(105%); transition:transform .5s cubic-bezier(.3,.8,.3,1);
+  text-align:left;
+}
+.pcal-comp.open{transform:none}
+.pc-h{font-size:.76rem; font-weight:800; display:flex; align-items:center}
+.pc-close{margin-left:auto; width:24px; height:24px; border:1px solid var(--al); border-radius:50%;
+  display:grid; place-items:center; color:var(--am); font-size:.75rem}
+.pc-text{background:var(--af); border-radius:9px; padding:9px 11px; font-size:.73rem; line-height:1.75; min-height:58px}
+.pc-text .pc-ph{color:var(--am); opacity:.7}
+.pc-chips{display:flex; gap:6px; flex-wrap:wrap}
+.pc-chips .pvc{display:inline-flex; align-items:center; gap:5px; font-size:.62rem; font-weight:700;
+  border:1.5px solid var(--al); border-radius:999px; padding:3px 10px; color:var(--at);
+  transition:border-color .25s, background .25s}
+.pc-chips .pvc i{width:13px; height:13px; border-radius:4px; display:grid; place-items:center}
+.pc-chips .pvc i svg{width:8px; height:8px}
+.pc-chips .pvc.on{border-color:var(--anavy); background:var(--awash)}
+.pc-foot{display:flex; align-items:center; margin-top:auto; gap:8px}
+.pc-foot .pv-when{font-size:.66rem}
+@media (max-width:1180px){
+  .posting-grid{grid-template-columns:1fr; gap:18px}
+  .post-points{grid-auto-flow:column; grid-auto-columns:minmax(180px,1fr); overflow-x:auto; gap:8px}
+  .ppoint p{display:none}
+}
+@media (max-width:700px){
+  .pcal-comp{width:70%}
+  .pbody{grid-template-columns:44px 1fr}
+  .pcal-wrap .nav-acct, .pcal-wrap .nav-item{font-size:0; gap:0; justify-content:center}
+  .pcal-wrap .nav-item svg{width:16px; height:16px}
+  .pcal-wrap .navdot{display:none}
+}
+
+/* ---- 業界パック(選ぶと受信箱が着せ替わる) ---- */
+.packs-grid{display:grid; grid-template-columns:minmax(300px,24rem) minmax(0,67.5rem); justify-content:center; gap:clamp(26px,2.4vw,44px); align-items:center; max-width:104rem; margin:0 auto; padding:0 0 0 max(24px,3vw); width:100%}
+.pack-list{display:flex; flex-direction:column; gap:5px}
+.pack-btn{
+  display:flex; align-items:center; gap:11px; padding:7.5px 14px; border-radius:11px;
+  border:none; background:transparent; font-family:inherit; font-size:.84rem; font-weight:700;
+  color:var(--muted); cursor:pointer; text-align:left; width:100%;
+  transition:background .2s ease, color .2s ease, transform .18s var(--spring), box-shadow .2s ease;
+}
+.pack-btn svg{width:17px; height:17px; flex:none}
+.pack-btn:hover{background:#fff; color:var(--navy); transform:translateX(3px);
+  box-shadow:0 2px 4px rgba(30,42,56,.05),0 10px 24px rgba(30,42,56,.08)}
+.pack-btn.on{
+  background:var(--navy); color:#fff; transform:translateX(4px);
+  box-shadow:0 4px 10px rgba(31,58,95,.2),0 14px 30px rgba(31,58,95,.28);
+}
+.pack-btn:focus-visible{outline:3px solid var(--coral); outline-offset:2px}
+/* モック内 */
+.pbody2{grid-template-columns:168px 210px 1fr 200px}
+.labchip{background:#FDE8EC; color:#B12A50}
+.mmeta.center{text-align:center; justify-content:center}
+.canned-box{
+  margin:0 14px 8px; background:var(--ab); border:1px solid var(--al); border-radius:11px;
+  padding:8px 10px; box-shadow:0 2px 6px rgba(31,58,95,.05);
+}
+.cb-h{font-size:.6rem; font-weight:900; letter-spacing:.08em; color:var(--am); margin-bottom:5px}
+.cb-i{display:flex; gap:8px; align-items:baseline; padding:4px 6px; border-radius:7px; font-size:.7rem}
+.cb-i:hover{background:var(--awash)}
+.cb-i b{color:var(--anavy); font-weight:800; font-size:.66rem; flex:none}
+.cb-i small{color:var(--am); font-weight:500; font-size:.63rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cb-more{font-size:.6rem; color:var(--am); font-weight:700; padding:3px 6px 0}
+.plabel{display:flex; align-items:center; gap:8px; padding:4.5px 0; font-size:.72rem; font-weight:700}
+.plabel i{width:9px; height:9px; border-radius:3px; flex:none}
+.pack-counts{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px}
+.pack-counts .pcnt{background:var(--af); border-radius:9px; padding:8px 4px; text-align:center}
+.pack-counts .pcnt b{display:block; font-size:1.05rem; font-weight:900; color:var(--anavy)}
+.pack-counts .pcnt span{font-size:.54rem; font-weight:800; color:var(--am); letter-spacing:0; white-space:nowrap}
+.pack-note2{font-size:.64rem; color:var(--am); line-height:1.7}
+/* 着せ替えの入場アニメ */
+.penter{animation:packIn .5s var(--spring) both; animation-delay:calc(var(--i,0)*70ms)}
+@keyframes packIn{from{opacity:0; transform:translateX(-12px)}to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){.penter{animation:none}}
+@media (max-width:1180px){
+  .packs-grid{grid-template-columns:1fr; gap:16px}
+  .pack-list{flex-direction:row; overflow-x:auto; padding-bottom:6px; gap:6px}
+  .pack-btn{white-space:nowrap; flex:none; width:auto; padding:8px 14px}
+  .pack-btn:hover,.pack-btn.on{transform:none}
+  .pbody2{grid-template-columns:168px 1fr}
+  .pack-mock .app-side{display:none}
+}
+@media (max-width:700px){
+  .pbody2{grid-template-columns:1fr}
+  .pack-mock .app-nav{display:none}
+  .pack-mock .app-info{display:none}
+}
+
+/* ---- はじめ方 ---- */
+/* 申し込んだ日、実際に起こることのタイムライン */
+.dayline{max-width:80rem; margin:0 auto; position:relative; text-align:left}
+.dl-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:36px; position:relative}
+.dl-grid::before{ /* 進行線(下地) */
+  content:""; position:absolute; left:2%; right:2%; top:52px; height:0;
+  border-top:2px dashed var(--line-soft);
+}
+.dl-prog{ /* 進行線(コーラルが走る) */
+  position:absolute; left:2%; top:51px; height:2px; width:66.5%;
+  background:linear-gradient(90deg, var(--coral), #FF9A8D); border-radius:2px;
+  transform:scaleX(0); transform-origin:left center; transition:transform 1.7s cubic-bezier(.25,.9,.3,1) .35s;
+}
+.dayline.in .dl-prog{transform:scaleX(1)}
+.dl-node{position:relative; display:flex; flex-direction:column}
+.dl-time{
+  font-size:1.05rem; font-weight:900; color:var(--navy); letter-spacing:.06em;
+  font-feature-settings:"tnum"; margin-bottom:11px;
+}
+.dl-time small{font-size:.8rem; color:var(--coral); font-weight:900; margin-left:8px; letter-spacing:.1em}
+.dl-dot{
+  width:14px; height:14px; border-radius:50%; background:var(--coral); border:3px solid #fff;
+  box-shadow:0 0 0 2px var(--coral), 0 4px 10px rgba(255,107,91,.4); margin:0 0 18px 2px;
+}
+.dl-card{
+  background:var(--ab,#FCFBF8); border:1px solid #E7E4DC; border-radius:13px; overflow:hidden;
+  box-shadow:0 2px 5px rgba(31,58,95,.06),0 18px 40px rgba(31,58,95,.1);
+  font-size:12px; line-height:1.6; color:#24303F; margin-bottom:16px;
+  flex:1 1 auto; display:flex; flex-direction:column;
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  transition:transform .25s var(--spring), box-shadow .25s ease;
+}
+.dl-card .dlc-body{flex:1}
+.dl-node:hover .dl-card{transform:translateY(-4px); box-shadow:0 4px 8px rgba(31,58,95,.08),0 26px 54px rgba(31,58,95,.15)}
+.dlc-bar{display:flex; gap:6px; padding:11px 14px; border-bottom:1px solid #EEEAE2; background:#FAF7F2}
+.dlc-bar i{width:8px; height:8px; border-radius:50%; background:#E4DFD6}
+.dlc-bar i:nth-child(1){background:#F6B8B0}.dlc-bar i:nth-child(2){background:#F3D9A6}.dlc-bar i:nth-child(3){background:#BFD9BE}
+.dlc-body{padding:19px 22px}
+/* ミニ決済 */
+.pay-row1{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px}
+.pay-row1 span{font-weight:800; font-size:.95rem}
+.pay-row1 b{font-size:1.25rem; font-weight:900; color:var(--navy)}
+.pay-row1 b small{font-size:.72rem; color:#6B7684; font-weight:700}
+.pay-field{background:#fff; border:1px solid #E7E4DC; border-radius:10px; padding:10px 14px; font-size:.8rem; color:#6B7684; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+.pay-field b{color:#24303F; font-weight:700; letter-spacing:.08em}
+.pay-go{background:var(--navy); color:#fff; text-align:center; font-weight:800; font-size:.88rem; border-radius:10px; padding:11px}
+/* ミニ開通メール */
+.ml-from{display:flex; align-items:center; gap:9px; margin-bottom:9px}
+.ml-from i{width:32px; height:32px; border-radius:8px; background:var(--navy); color:#fff; font-style:normal; font-weight:900; font-size:.72rem; display:grid; place-items:center; flex:none}
+.ml-from b{display:block; font-size:.88rem}
+.ml-from small{font-size:.73rem; color:#6B7684}
+.ml-from em{margin-left:auto; font-style:normal; font-size:.73rem; color:#6B7684}
+.ml-subj{font-weight:800; font-size:.92rem; margin-bottom:7px}
+.ml-body{font-size:.8rem; color:#6B7684; line-height:1.8}
+/* ミニ受信箱 */
+.ib-conv{display:flex; gap:9px; align-items:flex-start; padding-bottom:10px; border-bottom:1px solid #EEEAE2; margin-bottom:10px}
+.ib-conv .cava-s{width:32px; height:32px; border-radius:50%; color:#fff; font-size:.8rem; font-weight:800; display:grid; place-items:center; flex:none}
+.ib-conv b{font-size:.88rem}
+.ib-conv small{font-size:.73rem; color:#6B7684; margin-left:8px}
+.ib-conv p{font-size:.82rem; color:#3D4A59; margin-top:3px}
+.ib-out{
+  background:#1F3A5F; color:#fff; border-radius:10px 10px 3px 10px; padding:7px 11px;
+  font-size:.78rem; line-height:1.7; margin:0 0 9px 18%;
+}
+.ib-reply{font-size:.8rem; color:#6B7684; display:flex; align-items:center; gap:6px; justify-content:flex-end}
+.ib-reply .ok2{color:#1F8A4B; font-weight:900}
+.ib-reply b{color:var(--anavy,#1F3A5F); font-weight:800}
+.dl-node h3{font-size:1.12rem; color:var(--navy); margin-bottom:7px}
+.dl-node > p{font-size:.92rem; color:var(--muted); line-height:1.85}
+
+/* ---- 料金 ---- */
+.price-h{font-size:clamp(1.5rem,2.9vw,2.2rem)!important}
+.compare2{max-width:46rem; margin:0 auto 54px; background:#fff; border:1px solid var(--line-soft); border-radius:18px; padding:24px 28px; box-shadow:0 2px 4px rgba(30,42,56,.04),0 12px 30px rgba(30,42,56,.06); text-align:left}
+.compare2 h3{font-size:.92rem; color:var(--navy); margin-bottom:16px}
+.compare2 .crow{display:grid; grid-template-columns:11em 1fr auto; gap:12px; align-items:center; margin-bottom:10px; font-size:.84rem; font-weight:700}
+.compare2 .cbar{height:13px; border-radius:999px; background:#E9EDF2; overflow:hidden}
+.compare2 .cbar i{display:block; height:100%; width:0; border-radius:999px; background:#B9C4D1; transition:width 1.1s cubic-bezier(.25,.9,.3,1) .2s}
+.compare2 .crow.toy .cbar i{background:var(--coral); transition-delay:.45s}
+.compare2.in .cbar i{width:var(--w)}
+.compare2 .note2{font-size:.72rem; color:var(--muted); font-weight:500; margin-top:10px}
+/* スタッフ数スライダー(アカウント課金との差を体験する) */
+.calc-head{display:flex; align-items:center; gap:18px; margin-bottom:18px; flex-wrap:wrap}
+.calc-head h3{margin:0; font-size:1rem}
+.calc-head h3 b{color:var(--coral); font-size:1.35rem; font-feature-settings:"tnum"; padding:0 2px}
+.calc-head input[type=range]{
+  flex:1; min-width:180px; height:22px; cursor:pointer;
+  -webkit-appearance:none; appearance:none; background:transparent;
+}
+.calc-head input[type=range]::-webkit-slider-runnable-track{height:7px; border-radius:999px; background:linear-gradient(90deg, var(--coral) var(--fill,28%), #E2E8EF var(--fill,28%))}
+.calc-head input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:19px; height:19px; border-radius:50%; margin-top:-6px;
+  background:var(--coral); border:3px solid #fff; cursor:grab;
+  box-shadow:0 0 0 1.5px var(--coral), 0 4px 10px rgba(255,107,91,.45);
+}
+.calc-head input[type=range]::-moz-range-track{height:7px; border-radius:999px; background:linear-gradient(90deg, var(--coral) var(--fill,28%), #E2E8EF var(--fill,28%))}
+.calc-head input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:50%; background:var(--coral); border:3px solid #fff; box-shadow:0 0 0 1.5px var(--coral), 0 4px 10px rgba(255,107,91,.45)}
+.compare2 .cval{font-feature-settings:"tnum"; min-width:8.5em; text-align:right}
+.compare2 .cbar i{transition:width .55s cubic-bezier(.25,.9,.3,1)}
+.compare2.in .cbar i{transition:width .55s cubic-bezier(.25,.9,.3,1)}
+.calc-diff{margin-top:14px; font-size:.9rem; font-weight:800; color:var(--navy)}
+.calc-diff b{color:#E8503F; font-size:1.2rem; font-feature-settings:"tnum"}
+.calc-diff span{display:block; font-size:.76rem; color:var(--muted); font-weight:700; margin-top:2px}
+.plans2{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; max-width:70rem; margin:0 auto; text-align:left; align-items:stretch}
+.plan2{
+  background:#fff; border:1.5px solid var(--line-soft); border-radius:20px; padding:28px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04),0 14px 34px rgba(30,42,56,.07);
+  display:flex; flex-direction:column; position:relative;
+  transition:transform .2s var(--spring), box-shadow .25s ease;
+}
+.plan2:hover{transform:translateY(-4px); box-shadow:0 4px 8px rgba(30,42,56,.05),0 24px 48px rgba(30,42,56,.12)}
+.plan2.hot{border-color:var(--coral); box-shadow:0 3px 6px rgba(255,107,91,.08),0 22px 50px rgba(255,107,91,.16)}
+.plan2.hot:hover{box-shadow:0 4px 8px rgba(255,107,91,.1),0 28px 58px rgba(255,107,91,.22)}
+.plan2 .rec{
+  position:absolute; top:-13px; left:50%; transform:translateX(-50%);
+  background:var(--coral); color:#fff; font-size:.72rem; font-weight:900;
+  padding:4px 16px; border-radius:999px; box-shadow:0 6px 14px rgba(255,107,91,.4); white-space:nowrap;
+}
+.plan2 h3{font-size:1.1rem; color:var(--navy); display:flex; align-items:center; gap:9px}
+.plan2 h3::before{content:""; width:10px; height:10px; border-radius:4px; flex:none}
+.plan2:nth-child(1) h3::before{background:var(--ch-green)}
+.plan2:nth-child(2) h3::before{background:var(--ch-blue)}
+.plan2:nth-child(3) h3::before{background:var(--coral)}
+.plan2 .pfor{font-size:.78rem; color:var(--muted); margin:6px 0 14px; line-height:1.7; min-height:2.6em}
+.plan2 .pprice{margin-bottom:16px}
+.plan2 .pprice b{font-size:2.1rem; font-weight:900; color:var(--navy); letter-spacing:-.02em; font-feature-settings:"tnum"}
+.plan2 .pprice span{font-size:.78rem; color:var(--muted); font-weight:700}
+.plan2 ul{list-style:none; display:grid; gap:8px; font-size:.85rem; margin-bottom:22px}
+.plan2 ul li{padding-left:22px; position:relative; line-height:1.65}
+.plan2 ul li::before{content:"✓"; position:absolute; left:0; color:#1F8A4B; font-weight:900}
+.plan2 ul li.ai::before{color:var(--coral)}
+.plan2 ul li.no{color:#66717E}
+.plan2 ul li.no::before{content:"−"; color:#98A3B0}
+.plan2 ul li.ai b{color:var(--coral)}
+.plan2 .btn{margin-top:auto; text-align:center; padding:13px 20px; font-size:.9rem}
+.prem-band{
+  max-width:70rem; margin:22px auto 0; border-radius:22px; position:relative; overflow:hidden;
+  background:linear-gradient(120deg, #131F2E 0%, #1C3355 52%, #27466E 100%);
+  border:1.5px solid rgba(240,193,105,.55);
+  padding:30px 36px; display:flex; gap:20px; align-items:center; flex-wrap:wrap;
+  color:#fff; text-align:left;
+  box-shadow:0 4px 10px rgba(19,31,46,.25), 0 26px 60px rgba(19,31,46,.4), inset 0 1px 0 rgba(255,255,255,.09);
+}
+.prem-band::before{ /* 金の光沢が静かに流れる */
+  content:""; position:absolute; top:-30%; bottom:-30%; width:120px; left:-160px;
+  background:linear-gradient(100deg, transparent, rgba(240,193,105,.14), transparent);
+  transform:skewX(-18deg); animation:premShine 6.5s ease-in-out infinite;
+}
+@keyframes premShine{0%,55%{left:-160px}85%,100%{left:calc(100% + 80px)}}
+.prem-tag{
+  position:absolute; top:0; right:34px; background:linear-gradient(120deg, #F3CC7E, #D9A441);
+  color:#1A2A40; font-size:.62rem; font-weight:900; letter-spacing:.08em;
+  padding:6px 14px 5px; border-radius:0 0 9px 9px; box-shadow:0 4px 12px rgba(217,164,65,.4);
+}
+.prem-band .t b{font-size:1.2rem; display:inline-flex; align-items:center; gap:8px;
+  background:linear-gradient(100deg, #F7DCA0, #EDBE6C); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+.prem-band .t b svg{width:19px; height:19px; flex:none}
+.prem-band .t .py{font-weight:900; font-size:1.65rem; margin-left:12px; color:#F5D08C; font-feature-settings:"tnum"}
+.prem-band .t .py em{font-style:normal; font-size:.75rem; font-weight:700; opacity:.75; color:#fff}
+.prem-band .t p{font-size:.84rem; opacity:.85; margin-top:7px; line-height:1.9}
+.prem-band .a{margin-left:auto; position:relative; z-index:2}
+.btn-gold{
+  padding:14px 28px; font-size:.94rem; border-radius:13px;
+  background:linear-gradient(120deg, #F3CC7E, #DCA84A); color:#1A2A40; font-weight:900;
+  box-shadow:0 4px 12px rgba(217,164,65,.35), 0 14px 30px rgba(217,164,65,.28);
+}
+.btn-gold:hover{transform:translateY(-2px); box-shadow:0 6px 16px rgba(217,164,65,.42), 0 20px 40px rgba(217,164,65,.34)}
+@media (prefers-reduced-motion:reduce){.prem-band::before{animation:none}}
+.btn-white{background:rgba(255,255,255,.95); color:var(--navy)}
+.btn-white:hover{background:#fff; transform:translateY(-2px)}
+.price-notes{font-size:.78rem; color:var(--muted); margin-top:22px; line-height:2}
+/* ---- 月払い/年払いトグル ---- */
+.bill-tgl{display:inline-flex; gap:4px; background:#fff; border:1.5px solid var(--line); border-radius:999px; padding:4px; margin-bottom:36px; box-shadow:0 4px 14px rgba(16,42,67,.05)}
+.bill-tgl button{border:0; background:transparent; font:inherit; font-size:.88rem; font-weight:800; color:var(--muted); padding:9px 22px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:color .18s,background .18s}
+.bill-tgl button.on{background:var(--navy); color:#fff}
+.bill-tgl button em{font-style:normal; font-size:.68rem; font-weight:900; background:#FCE8E4; color:var(--coral); padding:2px 8px; border-radius:999px; letter-spacing:.02em}
+.bill-tgl button.on em{background:var(--coral); color:#fff}
+.plan2 .pprice .ybill{display:block; font-style:normal; font-size:.74rem; font-weight:700; color:var(--muted); margin-top:5px; min-height:1.3em; visibility:hidden}
+body.bill-y .plan2 .pprice .ybill{visibility:visible; color:#1F8A4B}
+.pprice b, .prem-band .t .py span{transition:opacity .16s}
+
+/* ---- 4つの公言 ---- */
+
+/* ---- 運営会社 ---- */
+.about2{display:flex; gap:44px; align-items:center; max-width:60rem; margin:0 auto; text-align:left}
+.about2 .photo{position:relative; background:#fff; padding:10px 10px 14px; border-radius:6px;
+  box-shadow:0 3px 8px rgba(30,42,56,.08), 0 22px 48px rgba(30,42,56,.16);
+  transform:rotate(-2deg); transition:transform .35s var(--spring); flex:none}
+.about2 .photo::before{content:""; position:absolute; top:-11px; left:50%; width:88px; height:24px;
+  transform:translateX(-50%) rotate(-3deg); background:rgba(244,209,138,.72); border-radius:2px;
+  box-shadow:0 2px 5px rgba(30,42,56,.08)}
+.about2 .photo:hover{transform:rotate(-.6deg) translateY(-3px)}
+.about2 .photo img{width:210px; border-radius:3px; display:block}
+.about2 .photo span{display:block; text-align:center; font-size:.76rem; font-weight:700; color:var(--muted); margin-top:11px}
+.about2 h2{margin-bottom:14px}
+.about2 .body2{font-size:.95rem; color:var(--ink); line-height:2.05}
+.about2 .body2 strong{color:var(--navy)}
+.afacts{display:flex; gap:26px; margin-top:22px; flex-wrap:wrap}
+.afact b{display:block; font-size:1.25rem; font-weight:900; color:var(--navy)}
+.afact span{font-size:.76rem; color:var(--muted); font-weight:700}
+
+/* ---- FAQ ---- */
+.faq2{max-width:46rem; margin:0 auto; text-align:left; display:grid; gap:12px}
+.faq2 details{
+  background:#fff; border:1px solid var(--line-soft); border-radius:15px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04),0 8px 22px rgba(30,42,56,.05);
+  overflow:hidden;
+}
+.faq2 summary{
+  display:flex; align-items:center; gap:13px; padding:17px 20px; cursor:pointer;
+  font-weight:700; font-size:.92rem; color:var(--navy); list-style:none;
+}
+.faq2 summary::-webkit-details-marker{display:none}
+.faq2 .q{display:grid; place-items:center; width:26px; height:26px; flex:none; border-radius:8px; background:var(--coral); color:#fff; font-size:.8rem; font-weight:900}
+.faq2 .arw{margin-left:auto; color:var(--muted); transition:transform .25s var(--spring)}
+.faq2 details[open] .arw{transform:rotate(180deg)}
+.faq2 .a{padding:0 20px 18px 59px; font-size:.88rem; color:var(--muted); line-height:1.95}
+
+/* ---- クロージング ---- */
+.closing{padding:120px 0 130px; text-align:center; position:relative; overflow:hidden}
+.closing-bg{position:absolute; left:50%; top:166px; width:0; height:0; pointer-events:none}
+.cl-chip{
+  position:absolute; left:-17px; top:-17px; width:34px; height:34px; border-radius:10px;
+  display:grid; place-items:center; background:#fff; border:1px solid var(--line-soft);
+  box-shadow:0 3px 8px rgba(30,42,56,.1), 0 14px 30px rgba(30,42,56,.14);
+  opacity:0; animation:clFall 13s linear infinite; animation-delay:var(--d,0s);
+}
+.cl-chip i{width:22px; height:22px; border-radius:7px; display:grid; place-items:center}
+.cl-chip svg{width:13px; height:13px}
+@keyframes clFall{
+  0%{transform:translate(var(--sx), -400px) rotate(var(--r0,-14deg)) scale(1); opacity:0}
+  6%{opacity:.95}
+  30%{transform:translate(calc(var(--sx)*.42), -150px) rotate(var(--r1,10deg)); opacity:.95}
+  40%{transform:translate(calc(var(--sx)*.1), -40px) rotate(0deg) scale(.72); opacity:.9}
+  46%,100%{transform:translate(0,0) rotate(0deg) scale(.1); opacity:0}
+}
+@media (prefers-reduced-motion:reduce){.cl-chip{display:none}}
+.closing .markimg{width:92px; margin:0 auto 22px; animation:markBob 3.4s ease-in-out infinite}
+@keyframes markBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@media (prefers-reduced-motion:reduce){.closing .markimg{animation:none}}
+.closing h2{font-size:clamp(1.7rem,3.4vw,2.6rem); font-weight:900; color:var(--navy); line-height:1.5; margin-bottom:16px; text-wrap:balance}
+.closing .sub2{margin-bottom:34px}
+.closing .acts{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+
+/* ---- フッター ---- */
+footer.site2{background:var(--navy-deep); color:#fff; padding:64px 0 30px; position:relative; z-index:2}
+footer.site2::before{content:""; position:absolute; top:0; left:0; right:0; height:4px;
+  background:linear-gradient(90deg, var(--ch-green) 0 25%, var(--ch-blue) 0 50%, var(--ch-pink) 0 75%, var(--ch-amber) 0 100%)}
+.fgrid{display:grid; grid-template-columns:minmax(250px,1fr) auto auto auto; gap:44px clamp(48px,6vw,110px);
+  max-width:74rem; margin:0 auto; padding:0 max(24px,4vw); text-align:left}
+.fbrand-logo{display:flex; align-items:center; gap:11px; margin-bottom:15px}
+.fbrand-logo img{width:38px; height:38px; border-radius:10px; background:#fff; padding:4px; box-sizing:border-box}
+.fbrand-logo span{font-size:1.18rem; font-weight:900; color:#fff; letter-spacing:.05em}
+.fgrid .fbrand p{font-size:.8rem; color:rgba(255,255,255,.6); line-height:1.9}
+.fgrid h4{font-size:.74rem; letter-spacing:.18em; color:var(--coral); margin-bottom:14px}
+.fgrid ul{list-style:none; display:grid; gap:9px}
+.fgrid ul a{color:rgba(255,255,255,.72); text-decoration:none; font-size:.85rem; transition:color .18s ease}
+.fgrid ul a:hover{color:#FF9A8D}
+.fcopy{max-width:74rem; margin:44px auto 0; padding:22px max(24px,4vw) 0; border-top:1px solid rgba(255,255,255,.12);
+  font-size:.75rem; color:rgba(255,255,255,.62); display:flex; align-items:center; gap:8px}
+.fcopy .fdots{margin-left:auto; display:inline-flex; gap:5px}
+.fcopy .fdots i{width:7px; height:7px; border-radius:50%}
+.fcopy .fdots i:nth-child(1){background:var(--ch-green)}
+.fcopy .fdots i:nth-child(2){background:var(--ch-blue)}
+.fcopy .fdots i:nth-child(3){background:var(--ch-pink)}
+.fcopy .fdots i:nth-child(4){background:var(--ch-amber)}
+
+/* ---- レスポンシブ(本編) ---- */
+@media (max-width:980px){
+  .sec{padding:72px 0}
+  .pain-board{grid-template-columns:1fr; max-width:30rem}
+  .flowmap{grid-template-columns:1fr; gap:10px; max-width:24rem}
+  .flow-line{min-height:56px; height:56px;
+    background-image:radial-gradient(circle, rgba(31,58,95,.35) 2.2px, transparent 2.6px);
+    background-size:14px 18px; animation-name:flowY;
+    -webkit-mask-image:linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+    mask-image:linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent)}
+  .feat-grid{grid-template-columns:1fr; max-width:30rem}
+  .ind-grid{grid-template-columns:1fr 1fr}
+  .demo2 .ui{grid-template-columns:1fr}
+  .demo2 .side{display:flex; overflow-x:auto; border-right:none; border-bottom:1px solid var(--line-soft); padding:8px}
+  .demo2 .side .row{white-space:nowrap; padding:8px 12px}
+  .dl-grid{grid-template-columns:1fr; max-width:26rem; margin:0 auto; gap:30px}
+  .dl-grid::before,.dl-prog{display:none}
+  .dl-dot{display:none}
+  .plans2{grid-template-columns:1fr; max-width:30rem}
+  .prem-band{flex-direction:column; align-items:flex-start; max-width:30rem}
+  .prem-band .a{margin-left:0}
+  .about2{flex-direction:column; text-align:center}
+  .about2 .afacts{justify-content:center}
+  .about2 .body2{text-align:left}
+  .fgrid{grid-template-columns:1fr 1fr}
+}
+@keyframes flowY{to{background-position:0 18px}}
+
+/* ---- 相談チャット(この窓口もトイバコの Web チャット) ---- */
+
+/* ---- 会社スタットのカード化 ---- */
+.afacts{gap:14px}
+.afact{background:#fff; border:1px solid var(--line-soft); border-radius:14px; padding:14px 22px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04), 0 10px 24px rgba(30,42,56,.06)}
+.afact b{font-feature-settings:"tnum"}
+/* ---- FAQ の開閉の手ざわり ---- */
+.faq2 details{transition:border-color .2s ease, box-shadow .25s ease}
+.faq2 details:hover{border-color:#D8D2C6}
+.faq2 details[open]{border-color:var(--navy); box-shadow:0 3px 6px rgba(30,42,56,.05), 0 16px 36px rgba(30,42,56,.09)}
+.faq2 details[open] .q{background:var(--navy)}
+.faq2 .a{animation:faqIn .35s ease}
+@keyframes faqIn{from{opacity:0; transform:translateY(-6px)}to{opacity:1; transform:none}}
+/* ---- ONE BOX: 着信パルス+箱の呼吸 ---- */
+.ch-chip i{position:relative}
+.ch-chip.ping i::after{content:""; position:absolute; inset:0; border-radius:10px; box-shadow:0 0 0 0 rgba(255,107,91,.5); animation:chPing 1.5s ease-out}
+@keyframes chPing{to{box-shadow:0 0 0 15px rgba(255,107,91,0)}}
+.flowmap.in .flow-box{animation:boxBreath 4.6s ease-in-out infinite}
+@keyframes boxBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+@media (prefers-reduced-motion:reduce){.flowmap.in .flow-box{animation:none}.ch-chip.ping i::after{animation:none}}
+
+/* ---- 3つのツールが1つに(WHY TOYBACO) ---- */
+.t2o{max-width:58rem; margin:0 auto}
+.t2o-old{display:flex; gap:12px; align-items:stretch; justify-content:center; flex-wrap:wrap}
+.t2o-card{
+  background:#fff; border:1px solid var(--line-soft); border-radius:14px; padding:14px 20px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04), 0 12px 28px rgba(30,42,56,.07);
+  position:relative; text-align:center;
+}
+.t2o-card b{display:block; font-size:.9rem; color:var(--ink); font-weight:800}
+.t2o-card em{font-style:normal; font-size:.76rem; color:var(--muted); font-weight:700}
+.t2o-card::after{
+  content:""; position:absolute; left:8%; top:52%; height:3px; width:0;
+  background:var(--coral); border-radius:2px; transform:rotate(-5deg);
+  transition:width .55s cubic-bezier(.25,.9,.3,1) .9s;
+}
+.t2o.in .t2o-card:nth-child(3)::after{transition-delay:1.05s}
+.t2o.in .t2o-card:nth-child(5)::after{transition-delay:1.2s}
+.t2o.in .t2o-card::after{width:84%}
+.t2o-plus{align-self:center; font-weight:900; color:#B8C2CE; font-size:1.3rem}
+.t2o-down{text-align:center; font-size:1.5rem; color:var(--coral); font-weight:900; margin:12px 0 12px}
+.t2o-new{
+  display:flex; align-items:center; justify-content:center; gap:13px; flex-wrap:wrap;
+  background:var(--navy); color:#fff; border-radius:18px; padding:17px 30px;
+  font-weight:800; font-size:1.08rem; max-width:36rem; margin:0 auto;
+  box-shadow:0 6px 14px rgba(31,58,95,.25), 0 22px 50px rgba(31,58,95,.35);
+}
+.t2o-new img{width:44px; height:44px; background:#FCFBF8; border-radius:11px; padding:6px; box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.t2o-new b{font-size:1.5rem; font-weight:900; color:#FFD9D2; font-feature-settings:"tnum"}
+.t2o-note{font-size:.66rem; color:var(--muted); text-align:center; margin-top:12px}
+/* ---- TOYBACO AI(ダークバンド) ---- */
+.ai-band{background:linear-gradient(180deg, #0F151E 0%, #16233A 55%, #1F3A5F 100%); color:#fff; position:relative; overflow:hidden}
+.ai-band h2{color:#fff}
+.ai-sub{color:rgba(255,255,255,.68)}
+.ai-eb{color:#FF9A8D; letter-spacing:.22em}
+.ai-glow{position:absolute; border-radius:50%; filter:blur(90px); opacity:.32; pointer-events:none}
+.ai-glow.a{width:560px; height:560px; background:#FF6B5B; top:-240px; left:-160px; animation:aiDrift 17s ease-in-out infinite alternate}
+.ai-glow.b{width:640px; height:640px; background:#4A79B8; bottom:-300px; right:-180px; animation:aiDrift 21s ease-in-out infinite alternate-reverse}
+.ai-moon{position:absolute; top:72px; right:max(7vw, 60px); width:86px; height:86px; opacity:.9; filter:drop-shadow(0 0 26px rgba(255,243,214,.45)); animation:moonFloat 7s ease-in-out infinite alternate; pointer-events:none}
+.ai-moon svg{width:100%; height:100%; transform:rotate(14deg)}
+@keyframes moonFloat{to{transform:translateY(-10px)}}
+.ai-star{position:absolute; width:5px; height:5px; border-radius:50%; background:#FFF3D6; opacity:.7; animation:twinkle 2.8s ease-in-out infinite; pointer-events:none}
+.ai-star.s1{top:120px; right:22vw; animation-delay:.4s}
+.ai-star.s2{top:66px; right:14vw; width:3.5px; height:3.5px; animation-delay:1.3s}
+.ai-star.s3{top:200px; right:9vw; width:4px; height:4px; animation-delay:2.1s}
+@keyframes twinkle{0%,100%{opacity:.25; transform:scale(.8)}50%{opacity:.9; transform:scale(1.25)}}
+@media (max-width:700px){.ai-moon{width:60px; height:60px; top:56px; right:20px}}
+@media (prefers-reduced-motion:reduce){.ai-moon,.ai-star{animation:none}}
+@keyframes aiDrift{to{transform:translate(70px, 44px) scale(1.14)}}
+.ai-demo{
+  max-width:27rem; margin:0 auto 32px; text-align:left;
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.13); border-radius:18px;
+  padding:18px 18px 14px; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+}
+.ai-time{text-align:center; font-size:.68rem; color:rgba(255,255,255,.45); font-weight:800; margin-bottom:11px}
+.ai-m{max-width:84%; padding:9px 14px; border-radius:13px; font-size:.83rem; line-height:1.75; margin-bottom:9px}
+.ai-m.in{background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15); width:fit-content}
+.ai-m.out{background:var(--coral); color:#fff; margin-left:auto; border-bottom-right-radius:4px; box-shadow:0 10px 26px rgba(255,107,91,.35)}
+.ai-meta{font-size:.66rem; color:#8BD7A9; font-weight:800; text-align:right}
+.ai-feats{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+.aif{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:15px 24px; min-width:190px}
+.aif b{display:block; font-size:1.35rem; font-weight:900; color:#FFD9D2; font-feature-settings:"tnum"}
+.aif span{font-size:.72rem; color:rgba(255,255,255,.62); font-weight:700}
+@media (prefers-reduced-motion:reduce){.ai-glow{animation:none}}
+/* ---- クロージング前口上 ---- */
+.closing-pre{font-size:.92rem; font-weight:800; color:var(--coral); letter-spacing:.05em; margin-bottom:14px}
+
+/* ---- 比較表(1つで全部そろう) ---- */
+.cmp-wrap{max-width:66rem; margin:0 auto; overflow-x:auto; border-radius:20px; background:#fff;
+  border:1px solid var(--line-soft);
+  box-shadow:0 3px 8px rgba(30,42,56,.05), 0 26px 56px rgba(30,42,56,.1)}
+.cmp{width:100%; min-width:780px; border-collapse:separate; border-spacing:0; font-size:.86rem; text-align:center}
+.cmp thead th{padding:16px 14px 14px; font-size:.8rem; font-weight:800; color:var(--muted);
+  border-bottom:1.5px solid var(--line-soft); line-height:1.5; vertical-align:bottom}
+.cmp thead th.me{
+  background:var(--navy); color:#fff; font-size:1rem; vertical-align:middle;
+  border-left:1.5px solid var(--navy); border-right:1.5px solid var(--navy);
+}
+.cmp thead th.me img{width:30px; height:30px; display:block; margin:0 auto 6px; background:#fff; border-radius:8px; padding:3px}
+.cmp tbody th{text-align:left; padding:14px 20px; font-size:.83rem; color:var(--ink); font-weight:800;
+  border-bottom:1px solid #F0EDE6; white-space:nowrap}
+.cmp tbody td{padding:14px 12px; color:var(--muted); border-bottom:1px solid #F0EDE6; font-weight:600; font-size:.8rem}
+.cmp tbody td.me{
+  background:#F5F9FF; color:var(--navy); font-weight:800; font-size:.88rem;
+  border-left:1.5px solid var(--navy); border-right:1.5px solid var(--navy);
+}
+.cmp tbody tr:last-child th, .cmp tbody tr:last-child td{border-bottom:none}
+.cmp tbody tr:last-child td.me{border-bottom:1.5px solid var(--navy)}
+.cmp i{font-style:normal; font-weight:900; font-size:1.1rem; line-height:1}
+.cmp .ok{color:#1F8A4B}
+.cmp .tri{color:var(--ch-amber)}
+.cmp .ng{color:#8E9AA9}
+.cmp td small{display:block; font-size:.64rem; font-weight:700; color:var(--muted); margin-top:2px}
+.cmp td.me small{color:var(--navy); opacity:.72}
+.cmp td.me b{font-size:.95rem; font-feature-settings:"tnum"}
+.cmp-note{font-size:.68rem; color:var(--muted); margin-top:14px}
+</style>
+<!-- toybaco-plans:runtime:start --><script id="toybaco-sales-data" type="application/json">[{"plan_id":"light","version":"2026-09-06.1","name":"ライト","product_name":"トイバコ ライト","amount":9800,"agents":3},{"plan_id":"standard","version":"2026-09-06.1","name":"スタンダード","product_name":"トイバコ スタンダード","amount":29800,"agents":null},{"plan_id":"pro","version":"2026-09-06.1","name":"プロ","product_name":"トイバコ プロ","amount":44800,"agents":null}]</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const plans = JSON.parse(document.getElementById('toybaco-sales-data').textContent);
+  const yen = n => '¥' + n.toLocaleString('ja-JP');
+  const range = document.getElementById('calcRange');
+  if (range) {
+    const update = () => {
+      const n = Number(range.value), seat = n * 8300;
+      const eligible = plans.filter(p => p.agents === null || p.agents >= n).sort((a, b) => a.amount - b.amount);
+      const plan = eligible[0];
+      range.style.setProperty('--fill', (((n - 2) / 28) * 100).toFixed(1) + '%');
+      document.getElementById('calcN').textContent = n;
+      document.getElementById('valSeat').textContent = '月 約' + yen(seat);
+      document.getElementById('lblToy').textContent = plan ? plan.product_name : 'この人数に対応する販売プランはありません';
+      document.getElementById('valToy').textContent = plan ? '月 ' + yen(plan.amount) : 'ご相談ください';
+      document.getElementById('barSeat').style.setProperty('--w', (seat / 249000 * 100).toFixed(1) + '%');
+      document.getElementById('barToy').style.setProperty('--w', plan ? Math.min(100, plan.amount / 249000 * 100).toFixed(1) + '%' : '0%');
+      document.getElementById('calcDiff').textContent = plan ? yen((seat - plan.amount) * 12) : '—';
+    };
+    range.addEventListener('input', update);
+    update();
+  }
+  const buttons = document.querySelectorAll('.bill-tgl button');
+  const priced = document.querySelectorAll('.plans2 [data-m]');
+  const buys = document.querySelectorAll('.plans2 .buy-btn');
+  const setCycle = yearly => {
+    buttons.forEach(b => { const selected = b.dataset.bill === (yearly ? 'y' : 'm'); b.classList.toggle('on', selected); b.setAttribute('aria-pressed', String(selected)); });
+    document.body.classList.toggle('bill-y', yearly);
+    priced.forEach(el => { el.textContent = yearly ? el.dataset.y : el.dataset.m; });
+    buys.forEach(a => {
+      const href = yearly ? a.dataset.ly : a.dataset.lm;
+      if (href) { a.href = href; a.removeAttribute('aria-disabled'); }
+      else { a.removeAttribute('href'); a.setAttribute('aria-disabled', 'true'); }
+    });
+  };
+  buttons.forEach(b => b.addEventListener('click', () => setCycle(b.dataset.bill === 'y')));
+  const params = new URLSearchParams(location.search);
+  setCycle(params.get('cycle') === 'year' || params.get('bill') === 'y');
+  const selected = params.get('plan') || location.hash.replace(/^#/, '');
+  const card = Array.from(document.querySelectorAll('#sgPlans .plan2')).find(el => el.dataset.plan === selected);
+  if (card) {
+    card.classList.add('picked');
+    if (params.get('version') && params.get('version') !== card.dataset.version) {
+      const notice = document.getElementById('plan-version-notice');
+      notice.hidden = false;
+      notice.textContent = '料金・プラン内容が更新されています。現在表示している条件をご確認のうえ、お申し込みください。';
+    }
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const buy = card.querySelector('.buy-btn');
+    if (buy) buy.focus({ preventScroll: true });
+  }
+});
+</script><!-- toybaco-plans:runtime:end -->
+<meta name="robots" content="noindex,nofollow,noarchive">
+</head>
+<body>
+
+<div class="ribbon" aria-hidden="true"></div>
+<div class="glow a" aria-hidden="true"></div>
+<div class="glow b" aria-hidden="true"></div>
+<header class="site">
+  <a class="logo" href="./" aria-label="トイバコ"><img src="assets/logo.webp" alt="トイバコ"></a>
+  <nav class="menu" id="siteMenu" aria-label="サイト内メニュー">
+    <a href="features/">できること</a>
+    <a href="posting/">投稿機能</a>
+    <a href="ai/">AI応答</a>
+    <a href="industries/">業界パック</a>
+    <a href="pricing/">料金</a>
+    <a href="start/">はじめ方</a>
+    <a class="login" href="https://app.staging.toybaco.jp">ログイン</a>
+    <a class="btn btn-coral btn-sm" href="signup/" style="margin-left:6px">申し込む</a>
+  </nav>
+  <button class="nav-toggle" id="navToggle" aria-label="メニューを開く" aria-expanded="false"><i></i><i></i><i></i></button>
+</header>
+
+<main id="top">
+<section class="hero-sec">
+<div class="copy">
+  <span class="mega-badge"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 17.5h15M5 15.5 3.5 7.5l5 3L12 4.5l3.5 6 5-3-1.5 8z" fill="#fff"/></svg>業界初<sup>※</sup><small>AI搭載の 問い合わせ・投稿 一元管理</small></span>
+  <h1>
+    <span class="nw">問い合わせも、</span><span class="nw">投稿も<span class="maru">。</span></span><br>
+    <span class="nw mk lit" id="mk">ひとつの箱に<i aria-hidden="true"></i></span><span class="maru">。</span>
+  </h1>
+  <p class="lead"><strong>ありそうで、なかった。</strong>問い合わせの受信箱・SNS 予約投稿・AI 自動応答が、ついにひとつに。返信はたった3秒、夜は AI が自動で接客。お店の窓口業務が、まるごとラクになります。</p>
+  <div class="actions">
+    <a class="btn btn-coral btn-lg" href="signup/">今すぐはじめる</a>
+    <a class="btn btn-ghost btn-lg" href="#toybaco-staging-chat-preview" data-open-chat>まずは無料で相談</a>
+  </div>
+  <div class="checks" aria-hidden="true">
+    <span>カード決済なら数分で開通</span><span>接続代行は希望制</span><span>契約の縛りなし</span>
+  <p class="legal-note">※ 複数チャネルの問い合わせ一元管理・SNS 予約投稿・AI 自動応答を単一契約で提供する国内サービスとして(2026年8月時点・自社調べ)
+  </div>
+</div>
+
+<div class="hero-movie-wrap reveal" aria-label="トイバコの製品デモ">
+  <div id="heroMovie"></div>
+</div>
+
+<div class="stat-band">
+  <div class="st"><i style="background:var(--ch-green)"></i><b><!-- toybaco-plans:minimum:start -->¥9,800<!-- toybaco-plans:minimum:end --><em>〜</em></b><span>店舗ごとの月額定額</span></div>
+  <div class="st"><i style="background:var(--ch-blue)"></i><b>数分</b><span>カード決済から開通まで</span></div>
+  <div class="st"><i style="background:var(--ch-pink)"></i><b>12業種</b><span>業界パック 初期設定済み</span></div>
+  <div class="st"><i style="background:var(--ch-amber)"></i><b>国内保管</b><span>会話データは日本のサーバーで管理</span></div>
+</div>
+
+</section><!-- /hero-sec -->
+
+<div class="page">
+
+<!-- ============ 課題 ============ -->
+<section class="sec tint" id="pains">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>よくある課題</span>
+    <h2 class="reveal">よくある、6つの対応漏れ<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">1つでも当てはまったら要注意。窓口をアプリごとに管理している店舗で、毎日起きています。</p>
+    <div class="pain-board" id="painBoard">
+      <div class="pain-note" style="--rot:-4.5deg;--ty:16px;--i:0">
+        <span class="badge-notif"><span>3</span><span>17</span><span>99+</span></span>
+        <h3><span class="app2" style="background:#06C755"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></span>LINE の返信は、店長のスマホの中</h3>
+        <p>個人スマホでの運用はチームで共有できず、店長不在の日は返信が止まる。</p>
+      </div>
+      <div class="pain-note" style="--rot:3deg;--ty:-8px;--i:1">
+        <h3><span class="app2" style="background:radial-gradient(circle at 28% 110%,#FEDA75 8%,#FA7E1E 28%,#D62976 55%,#962FBF 78%,#4F5BD5 100%)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/><circle cx="16.6" cy="7.4" r="1.2" fill="#fff"/></svg></span>Instagram の DM、気づいたら3日前</h3>
+        <p>いいね通知に紛れて DM を見落とし、新規のお客様を取りこぼす。</p>
+      </div>
+      <div class="pain-note" style="--rot:-2.5deg;--ty:10px;--i:2">
+        <h3><span class="app2" style="background:var(--ch-amber)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2.4" stroke="#fff" stroke-width="2"/><path d="m5.5 8 6.5 5 6.5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>メールの問い合わせが埋もれる</h3>
+        <p>予約通知やメルマガに埋もれて、重要な1通の発見が遅れる。</p>
+      </div>
+      <div class="pain-note" style="--rot:2deg;--ty:-12px;--i:3">
+        <h3><span class="app2" style="background:var(--ch-blue)"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5C5 5.1 6.1 4 7.5 4h9C17.9 4 19 5.1 19 6.5v5c0 1.4-1.1 2.5-2.5 2.5H12l-3.6 2.6V14H7.5C6.1 14 5 12.9 5 11.5v-5z" fill="#fff"/></svg></span>「あの件どうなった?」が口頭確認</h3>
+        <p>対応履歴が個人の記憶頼みになり、引き継ぎのたびに確認が発生する。</p>
+      </div>
+      <div class="pain-note" style="--rot:-3deg;--ty:-6px;--i:4">
+        <h3><span class="app2" style="background:var(--ch-pink)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/><circle cx="16.6" cy="7.4" r="1.2" fill="#fff"/></svg></span>Instagram の投稿、先月で止まってる</h3>
+        <p>返信対応に追われて、SNS の更新が数週間止まる。</p>
+      </div>
+      <div class="pain-note" style="--rot:4deg;--ty:14px;--i:5">
+        <h3><span class="app2" style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></span>Google マップの情報が、古いまま</h3>
+        <p>Google マップの営業時間が古いまま、来店の機会を逃す。</p>
+      </div>
+    </div>
+
+    <p class="sub2 reveal" style="--d:.15s;margin:40px auto 0;font-size:1.05rem;color:var(--navy);font-weight:700">この6つを、<b>トイバコがまとめて解決</b>。実際の画面でご覧ください。<span style="display:block;font-size:1.3rem;margin-top:8px;color:var(--coral)">↓</span></p>
+  </div>
+</section>
+
+<!-- ============ プロダクトツアー ============ -->
+<section class="tour" id="tour">
+  <div class="tour-sticky">
+    <div class="tour-grid">
+      <aside class="tour-col">
+        <div class="zhead">
+          <span class="eyebrow2"><span class="dots"><i></i><i></i><i></i><i></i></span>製品ツアー</span>
+          <h2>導入後の1日を、実画面で再現<span class="maru">。</span></h2>
+        </div>
+        <div class="tour-steps" id="tourSteps">
+        <div class="tstep" data-step="1"><b>01</b><div><h4>一元受信</h4><p>全チャネルの問い合わせを、時系列で1つの一覧に表示。</p></div></div>
+        <div class="tstep" data-step="2"><b>02</b><div><h4>自動割り当て</h4><p>開いた瞬間、担当者も顧客情報も自動でセット。探す時間はゼロ。</p></div></div>
+        <div class="tstep" data-step="3"><b>03</b><div><h4>定型文返信</h4><p>「/」キーで定型文を呼び出し。よくある返信はたった3秒で完了。</p></div></div>
+        <div class="tstep" data-step="4"><b>04</b><div><h4>予約投稿</h4><p>同一文面を Instagram・Google マップ・X へ日時指定で同時投稿。</p></div></div>
+          <div class="tstep" data-step="5"><b>05</b><div><h4>AI 応答</h4><p>営業時間外は AI が自動で一次応答(<!-- toybaco-plans:ai_name:start -->プロプラン<!-- toybaco-plans:ai_name:end -->・<!-- toybaco-plans:ai_count:start -->月500件<!-- toybaco-plans:ai_count:end -->)。</p></div></div>
+        </div>
+      </aside>
+      <div class="app-wrap" id="appWrap" aria-hidden="true">
+        <div class="app" id="appShell">
+          <div class="app-titlebar">
+            <div class="dots3" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="app-search">🔍 会話・お客様・投稿を検索</div>
+            <span class="app-clock"><span class="moon">🌙</span><span id="appClock">14:02</span></span>
+            <span class="app-ava">田</span>
+          </div>
+          <div class="app-body">
+            <nav class="app-nav" aria-hidden="true">
+              <div class="nav-acct"><img src="assets/toybaco-mark-c4.webp" alt="">トイバコ美容室</div>
+              <div class="nav-item on" id="navInbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3.5 9.5 12 4l8.5 5.5v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-8z"/><path d="M3.5 13h5l1.5 2h4l1.5-2h5"/></svg>会話<span class="navdot" id="navUnread">12</span></div>
+              <div class="nav-item" id="navPost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>投稿</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="6" width="17" height="12.5" rx="2.5"/><path d="M3.5 10h17"/></svg>ご契約内容</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19.5V13M11 19.5V8M17 19.5V4.5"/></svg>レポート</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7" stroke-linecap="round"/></svg>設定</div>
+              <div class="nav-foot"><span class="app-ava">田</span>田中(オーナー)</div>
+            </nav>
+            <aside class="app-side">
+              <div class="side-head">会話 <span class="cnt" id="unreadCnt">12</span></div>
+              <div class="side-tabs"><span>自分</span><span class="on">未対応</span><span>すべて</span></div>
+              <div class="convs">
+                <div class="conv newin sel-target" id="convNew">
+                  <span class="cava" style="background:#03B952">佐<span class="chip" style="background:#03B952"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></span></span>
+                  <span class="cc"><span class="cn"><b>佐藤さま</b><small>たった今</small></span><span class="cp">明日の15時にカット予約できますか?</span></span>
+                </div>
+                <div class="conv">
+                  <span class="cava" style="background:#E33E67">t<span class="chip" style="background:#E33E67"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/></svg></span></span>
+                  <span class="cc"><span class="cn"><b>tanaka__m</b><small>4分前</small></span><span class="cp">ストーリーで見たカラーにしたいです</span></span>
+                </div>
+                <div class="conv">
+                  <span class="cava" style="background:#4380B5">訪<span class="chip" style="background:#4380B5"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5C5 5.1 6.1 4 7.5 4h9C17.9 4 19 5.1 19 6.5v5c0 1.4-1.1 2.5-2.5 2.5H12l-3.6 2.6V14H7.5C6.1 14 5 12.9 5 11.5v-5z" fill="#fff"/></svg></span></span>
+                  <span class="cc"><span class="cn"><b>サイト訪問者</b><small>18分前</small></span><span class="cp">カットの料金を教えてください</span></span>
+                </div>
+                <div class="conv">
+                  <span class="cava" style="background:#F09A3E">す<span class="chip" style="background:#F09A3E"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2.4" stroke="#fff" stroke-width="2"/><path d="m5.5 8 6.5 5 6.5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
+                  <span class="cc"><span class="cn"><b>suzuki@…</b><small>1時間前</small></span><span class="cp">取材のお願いでご連絡いたしました</span></span>
+                </div>
+              </div>
+            </aside>
+            <main class="app-main">
+              <div class="chat-empty"><div class="ce-ic">📥</div>会話を選ぶと、ここに表示されます</div>
+              <div class="chat" id="chatPane">
+                <header class="chat-head">
+                  <b>佐藤さま</b>
+                  <span class="tagchip">LINE</span>
+                  <span class="tagchip assign" id="assignChip">田中</span>
+                  <span class="resolve-btn">✓ 解決</span>
+                </header>
+                <div class="msgs" id="msgsMain">
+                  <div class="m in">明日の15時にカット予約できますか?</div>
+                  <div class="mmeta center hiddenm" id="assignMeta">⚡ 自動ルールで「予約」ラベル・担当 田中 を設定しました</div>
+                  <div class="m out hiddenm" id="replyMsg"></div>
+                  <div class="mmeta right hiddenm" id="sentMeta"><span class="ok">✓</span> LINE に送信されました</div>
+                  <div class="m in hiddenm" id="nightQ">すみません、今日って何時まで営業していますか?</div>
+                  <div class="ai-think" id="aiThink"><span class="sp"></span>AI が店舗情報から回答を作成しています…</div>
+                  <div class="m out hiddenm" id="aiMsg"></div>
+                  <div class="mmeta right hiddenm" id="aiMeta"><span class="ai-badge">✦ AI</span><span class="ok">✓</span> AI が自動で応答しました(23:42)</div>
+                </div>
+                <footer class="composer">
+                  <div class="slash-pop" id="slashPop">
+                    <div class="sp-h">定型文</div>
+                    <div class="sp-i hl" id="slashFirst"><b>/yoyaku-uketsuke</b><small>ご希望の日時・メニュー・指名の有無をお知らせください…</small></div>
+                    <div class="sp-i"><b>/yoyaku-kakutei</b><small>ご予約を承りました。当日お気をつけてお越しください…</small></div>
+                    <div class="sp-i"><b>/eigyo-access</b><small>営業時間とアクセスのご案内です…</small></div>
+                  </div>
+                  <div class="ctabs"><span class="on">返信</span><span>プライベートメモ</span></div>
+                  <div class="crow">
+                    <div class="ph" id="composerText">返信を入力(<b style="color:var(--acoral)">/</b> で定型文)</div>
+                    <div class="tools" aria-hidden="true">😊 📎</div>
+                    <button class="sendb" id="sendBtn">送信 ⌘↵</button>
+                  </div>
+                </footer>
+              </div>
+            </main>
+              <div class="post-panel" id="postPanel">
+                <div class="pp-load"><span class="sp2"></span>投稿画面を開いています…</div>
+                <span class="pp-close" aria-hidden="true">×</span>
+                <div class="pp-body">
+                  <div class="pp-head"><b>投稿カレンダー</b><span class="pp-new">+ 投稿を作成</span></div>
+                  <div class="pp-cols">
+                    <div class="pv-comp">
+                      <div class="pv-h">新しいお知らせ(下書き)</div>
+                      <div class="pv-text">【今週の空き枠】木曜 15:00〜 ご案内できます。ご予約はプロフィールのリンク、またはメッセージからどうぞ ✂️</div>
+                      <div class="pv-media"><span class="pv-thumb"></span><span style="font-size:.64rem;color:var(--am)">photo_0828.jpg</span></div>
+                      <div class="pv-chips">
+                        <span class="pvc on"><i style="background:#E33E67"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/></svg></i>Instagram</span>
+                        <span class="pvc on"><i style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></i>Google マップ</span>
+                        <span class="pvc on"><i style="background:#111"><svg viewBox="0 0 24 24"><path fill="#fff" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></i>X</span>
+                      </div>
+                      <div class="pv-foot">
+                        <span class="pv-when">🗓 木曜 18:00 に公開</span>
+                        <button class="pv-btn" id="pvBtn">承認へ送る</button>
+                      </div>
+                      <div class="pv-note">店舗アカウントは下書きまで。公開は本部の承認後に予約されます。</div>
+                    </div>
+                    <div class="pv-queue">
+                      <div class="q-h">承認待ち・予約済み</div>
+                      <div class="qcard" id="q1"><i style="background:#E33E67"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/></svg></i>【今週の空き枠】木曜 15:00〜…<span class="approve">承認待ち</span><small>木 18:00</small></div>
+                      <div class="qcard" id="q2"><i style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></i>【今週の空き枠】木曜 15:00〜…<span class="approve">承認待ち</span><small>木 18:00</small></div>
+                      <div class="qcard" id="q3"><i style="background:#111"><svg viewBox="0 0 24 24"><path fill="#fff" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></i>【今週の空き枠】木曜 15:00〜…<span class="approve">承認待ち</span><small>木 18:00</small></div>
+                      <div class="qcard shown" style="opacity:.6"><i style="background:#03B952"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></i>お盆休みのお知らせ<small><span class="qk">✓</span> 公開済み</small></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            <aside class="app-info" aria-hidden="true">
+              <div class="ci-block">
+                <div class="ci-h">会話の操作</div>
+                <div class="ci-row"><span class="k">担当者</span><span class="ava-s">田</span>田中</div>
+                <div class="ci-row"><span class="k">ラベル</span><span class="ci-label">🏷 予約</span></div>
+              </div>
+              <div class="ci-block" style="border-bottom:none;margin-bottom:0">
+                <div class="ci-h">連絡先情報</div>
+                <div class="ci-contact">
+                  <span class="ci-ava">佐</span>
+                  <b>佐藤 美咲さま</b>
+                  <small>LINE でつながっています</small>
+                </div>
+                <div class="ci-row" style="margin-top:8px"><span class="k">来店</span>8回(前回 7/12)</div>
+                <div class="ci-row"><span class="k">メモ</span>指名は佐々木さん</div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <div class="toast" id="lineToast" aria-hidden="true">
+          <i><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></i>
+          <div><b>LINE・佐藤さま</b><span>明日の15時にカット予約できますか?</span></div>
+        </div>
+        <div class="ghost" id="ghostCur" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5.5 3.2 19 10.8l-6.2 1.4-3.1 5.7z" fill="#1E2A38" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tour-triggers" aria-hidden="true">
+    <div class="trg" data-scene="1"></div>
+    <div class="trg" data-scene="2"></div>
+    <div class="trg" data-scene="3"></div>
+    <div class="trg" data-scene="4"></div>
+    <div class="trg" data-scene="5"></div>
+  </div>
+</section>
+
+<!-- ============ 双方向チャネル図 ============ -->
+<section class="sec" id="features">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>なぜトイバコか</span>
+    <h2 class="reveal">いままでは、ツールが<span class="mk" style="padding:0 4px">3つ</span>必要でした<span class="maru">。</span></h2>
+    <div class="t2o reveal" style="--d:.08s">
+      <div class="t2o-old">
+        <div class="t2o-card"><b>問い合わせ管理ツール</b><em>月1〜3万円</em></div>
+        <span class="t2o-plus">+</span>
+        <div class="t2o-card"><b>SNS投稿管理ツール</b><em>月1〜3万円</em></div>
+        <span class="t2o-plus">+</span>
+        <div class="t2o-card"><b>AIチャットボット</b><em>月3〜10万円</em></div>
+      </div>
+      <div class="t2o-down" aria-hidden="true">↓</div>
+      <div class="t2o-new"><img src="assets/toybaco-mark-c4.webp" alt="">トイバコ、これひとつ。<b>月<!-- toybaco-plans:minimum:start -->¥9,800<!-- toybaco-plans:minimum:end -->〜</b></div>
+      <p class="t2o-note">※ 各カテゴリの主要ツールの公開料金の目安(2026年8月時点)</p>
+    </div>
+    <p class="sub2 reveal" style="--d:.13s; margin:36px auto 46px">受信 4チャネル+投稿 5チャネル、9つの窓口がこの1契約に。<b style="color:var(--navy)">面倒な移行はゼロ</b>、いまのアカウントをそのままつなぐだけです。</p>
+    <div class="flowmap reveal" style="--d:.12s" id="flowmap">
+      <div class="ch-col">
+        <div class="ch-chip"><i style="background:#06C755"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></i><span>LINE公式アカウント<small>友だちもそのまま接続</small></span></div>
+        <div class="ch-chip"><i style="background:radial-gradient(circle at 28% 110%,#FEDA75 8%,#FA7E1E 28%,#D62976 55%,#962FBF 78%,#4F5BD5 100%)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/><circle cx="16.6" cy="7.4" r="1.2" fill="#fff"/></svg></i><span>Instagram DM<small>新規の声を逃さない</small></span></div>
+                <div class="ch-chip"><i style="background:var(--ch-blue)"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5C5 5.1 6.1 4 7.5 4h9C17.9 4 19 5.1 19 6.5v5c0 1.4-1.1 2.5-2.5 2.5H12l-3.6 2.6V14H7.5C6.1 14 5 12.9 5 11.5v-5z" fill="#fff"/></svg></i><span>Webチャット<small>ホームページに貼るだけ</small></span></div>
+        <div class="ch-chip"><i style="background:var(--ch-amber)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2.4" stroke="#fff" stroke-width="2"/><path d="m5.5 8 6.5 5 6.5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></i><span>メール<small>埋もれと見落としをゼロに</small></span></div>
+      </div>
+      <div class="flow-line" aria-hidden="true"></div>
+      <div class="flow-box">
+        <img src="assets/logo.webp" alt="トイバコ">
+        <span>ひとつの受信箱・ひとつの投稿箱</span>
+      </div>
+      <div class="flow-line" aria-hidden="true"></div>
+      <div class="ch-col">
+        <div class="ch-chip"><i style="background:radial-gradient(circle at 28% 110%,#FEDA75 8%,#FA7E1E 28%,#D62976 55%,#962FBF 78%,#4F5BD5 100%)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/><circle cx="16.6" cy="7.4" r="1.2" fill="#fff"/></svg></i><span>Instagram 投稿<small>写真つきで予約投稿</small></span></div>
+        <div class="ch-chip"><i style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></i><span>Google マップ<small>地図から来るお客様に届く</small></span></div>
+        <div class="ch-chip"><i style="background:#1877F2"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5.8C4 4.8 4.8 4 5.8 4h12.4c1 0 1.8.8 1.8 1.8v9.4c0 1-.8 1.8-1.8 1.8H9l-5 3V5.8z" fill="#fff"/></svg></i><span>Facebook・Threads<small>同じ内容をまとめて</small></span></div>
+        <div class="ch-chip"><i style="background:#111"><svg viewBox="0 0 24 24"><path fill="#fff" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></i><span>X<small>当日のお知らせをすぐに</small></span></div>
+        <div class="ch-chip"><i style="background:#111"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></i><span>TikTok 投稿<small>短い動画でお店の様子を</small></span></div>
+      </div>
+    </div>
+    <p class="sub2 reveal" style="--d:.2s;margin:40px auto 0;font-size:.9rem"><b style="color:var(--navy)">ログイン・請求・サポート窓口まで、すべて1つ</b>にまとまります。</p>
+  </div>
+</section>
+
+<!-- ============ 投稿機能 ============ -->
+<section class="sec tint" id="posting">
+  <div class="posting-grid">
+    <aside class="post-col">
+      <div class="zhead">
+        <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>投稿機能</span>
+        <h2 class="reveal">5つの SNS へ、まとめて予約投稿<span class="maru">。</span></h2>
+        <p class="sub2 reveal" style="--d:.08s">Instagram・Google マップ・Facebook・X・TikTok。1画面で作って、あとは自動配信です。</p>
+      </div>
+      <div class="post-points">
+        <div class="ppoint reveal" style="--d:.1s"><b>01</b><div><h4>5チャネル同時投稿</h4><p>書くのは1回だけ。5つの投稿先へ一斉配信、チャネル別の調整も自由です。</p></div></div>
+        <div class="ppoint reveal" style="--d:.18s"><b>02</b><div><h4>日時指定の予約配信</h4><p>仕込んでおけば、あとは全自動。定休日も繁忙時間帯も逃しません。</p></div></div>
+        <div class="ppoint reveal" style="--d:.26s"><b>03</b><div><h4>承認ワークフロー</h4><p>誤投稿はゼロに。店舗は下書きまで、公開は本部の承認後だけ。</p></div></div>
+      </div>
+    </aside>
+    <div class="pcal-wrap reveal" style="--d:.15s" id="pcalWrap" aria-hidden="true">
+      <div class="app">
+        <div class="app-titlebar">
+          <div class="dots3" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="app-search">🔍 会話・お客様・投稿を検索</div>
+          <span class="app-clock">14:00</span>
+          <span class="app-ava">田</span>
+        </div>
+        <div class="app-body pbody">
+          <nav class="app-nav" aria-hidden="true">
+            <div class="nav-acct"><img src="assets/toybaco-mark-c4.webp" alt="">トイバコ美容室</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3.5 9.5 12 4l8.5 5.5v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-8z"/><path d="M3.5 13h5l1.5 2h4l1.5-2h5"/></svg>会話<span class="navdot">12</span></div>
+            <div class="nav-item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>投稿</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="6" width="17" height="12.5" rx="2.5"/><path d="M3.5 10h17"/></svg>ご契約内容</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19.5V13M11 19.5V8M17 19.5V4.5"/></svg>レポート</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7" stroke-linecap="round"/></svg>設定</div>
+            <div class="nav-foot"><span class="app-ava">田</span>田中(オーナー)</div>
+          </nav>
+          <main class="pcal-main">
+            <div class="pp-head"><b>投稿カレンダー</b><span class="pcal-week">‹ 8/25 – 8/31 ›</span><span class="pp-new" id="pcalNew">+ 投稿を作成</span></div>
+            <div class="pcal-days">
+              <span>月<b>25</b></span><span>火<b>26</b></span><span>水<b>27</b></span><span class="today">木<b>28</b></span><span>金<b>29</b></span><span>土<b>30</b></span><span>日<b>31</b></span>
+            </div>
+            <div class="pcal-grid">
+              <div class="pcal-cell">
+                <div class="pchip done"><span class="pc-top"><i style="background:#03B952"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></i><small>10:00</small></span><span class="pc-t">お盆休み明けのお知らせ</span><em class="ok">✓ 公開済み</em></div>
+              </div>
+              <div class="pcal-cell"></div>
+              <div class="pcal-cell">
+                <div class="pchip done"><span class="pc-top"><i style="background:#E33E67"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/></svg></i><small>17:00</small></span><span class="pc-t">スタッフ紹介 vol.3</span><em class="ok">✓ 公開済み</em></div>
+              </div>
+              <div class="pcal-cell today" id="pcalThu">
+                <div class="pchip newp" id="pcalNewChip"><span class="pc-top"><i style="background:#E33E67"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/></svg></i><i style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></i><i style="background:#111"><svg viewBox="0 0 24 24"><path fill="#fff" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></i><small>18:00</small></span><span class="pc-t">【新メニュー】秋のケアカラー🍁</span><em class="wait">承認待ち</em></div>
+              </div>
+              <div class="pcal-cell">
+                <div class="pchip"><span class="pc-top"><i style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></i><small>12:00</small></span><span class="pc-t">金曜限定クーポン</span><em class="sch">🗓 予約済み</em></div>
+              </div>
+              <div class="pcal-cell"></div>
+              <div class="pcal-cell"></div>
+            </div>
+            <div class="pcal-comp" id="pcalComp">
+              <div class="pc-h">新しいお知らせ(下書き)<span class="pc-close">×</span></div>
+              <div class="pc-text" id="pcalText"><span class="pc-ph">お知らせを入力…</span></div>
+              <div class="pv-media"><span class="pv-thumb"></span><span style="font-size:.64rem;color:var(--am)">autumn_color.jpg</span></div>
+              <div class="pc-chips">
+                <span class="pvc" id="pch1"><i style="background:#E33E67"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/></svg></i>Instagram</span>
+                <span class="pvc" id="pch2"><i style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></i>Google マップ</span>
+                <span class="pvc" id="pch3"><i style="background:#1877F2"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5.8C4 4.8 4.8 4 5.8 4h12.4c1 0 1.8.8 1.8 1.8v9.4c0 1-.8 1.8-1.8 1.8H9l-5 3V5.8z" fill="#fff"/></svg></i>Facebook</span>
+                <span class="pvc" id="pch4"><i style="background:#111"><svg viewBox="0 0 24 24"><path fill="#fff" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></i>X</span>
+                <span class="pvc"><i style="background:#111"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></i>TikTok</span>
+              </div>
+              <div class="pc-foot">
+                <span class="pv-when">🗓 木曜 18:00 に公開</span>
+                <button class="pv-btn" id="pcalSend">承認へ送る</button>
+              </div>
+              <div class="pv-note">店舗アカウントは下書きまで。公開は本部の承認後に予約されます。</div>
+            </div>
+          </main>
+        </div>
+        <div class="ghost" id="pcalGhost" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5.5 3.2 19 10.8l-6.2 1.4-3.1 5.7z" fill="#1E2A38" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 業界パック ============ -->
+<section class="sec" id="packs">
+  <div class="packs-grid">
+    <aside class="pack-col">
+      <div class="zhead">
+        <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>業界パック</span>
+        <h2 class="reveal"><span class="mk" style="padding:0 4px">設定いらず</span>。12業種の専用プリセット<span class="maru">。</span></h2>
+        <p class="sub2 reveal" style="--d:.08s">定型文・ラベル・投稿テンプレートを業種別にプリセット済み。<b style="color:var(--navy)">業種を選ぶと、右の画面が一瞬で切り替わります。</b></p>
+      </div>
+      <div class="pack-list reveal" style="--d:.1s" id="packList" role="tablist" aria-label="業種を選ぶ"></div>
+    </aside>
+    <div class="pack-mock reveal" style="--d:.15s" aria-hidden="true">
+      <div class="app">
+        <div class="app-titlebar">
+          <div class="dots3" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="app-search">🔍 会話・お客様・投稿を検索</div>
+          <span class="app-clock">14:00</span>
+          <span class="app-ava">田</span>
+        </div>
+        <div class="app-body pbody2">
+          <nav class="app-nav" aria-hidden="true">
+            <div class="nav-acct"><img src="assets/toybaco-mark-c4.webp" alt=""><span id="packAcct">トイバコ美容室</span></div>
+            <div class="nav-item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3.5 9.5 12 4l8.5 5.5v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-8z"/><path d="M3.5 13h5l1.5 2h4l1.5-2h5"/></svg>会話<span class="navdot">3</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>投稿</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="6" width="17" height="12.5" rx="2.5"/><path d="M3.5 10h17"/></svg>ご契約内容</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19.5V13M11 19.5V8M17 19.5V4.5"/></svg>レポート</div>
+            <div class="nav-foot"><span class="app-ava">田</span><span id="packOwner">田中(オーナー)</span></div>
+          </nav>
+          <aside class="app-side">
+            <div class="side-head">会話 <span class="cnt">3</span></div>
+            <div class="side-tabs"><span>自分</span><span class="on">未対応</span><span>すべて</span></div>
+            <div class="convs" id="packConvs"></div>
+          </aside>
+          <main class="app-main">
+            <div class="chat open" style="position:relative; opacity:1; pointer-events:auto; height:100%">
+              <header class="chat-head">
+                <b id="packChatName">佐藤さま</b>
+                <span class="tagchip" id="packChatCh">LINE</span>
+                <span class="tagchip labchip" id="packChatLab">予約</span>
+                <span class="resolve-btn">✓ 解決</span>
+              </header>
+              <div class="msgs" id="packMsgs" style="flex:1 1 auto; min-height:0">
+                <div class="m in" id="packQ"></div>
+                <div class="mmeta center" id="packMetaLab"></div>
+                <div class="m out" id="packA"></div>
+                <div class="mmeta right" id="packMetaSent"></div>
+              </div>
+              <div class="canned-box" id="packCannedBox">
+                <div class="cb-h" id="packCannedHead">定型文 — 10種プリセット済み</div>
+                <div id="packCannedList"></div>
+              </div>
+              <footer class="composer" style="margin-top:0">
+                <div class="crow" style="padding-top:9px">
+                  <div class="ph">返信を入力(<b style="color:var(--acoral)">/</b> で定型文)</div>
+                  <div class="tools" aria-hidden="true">😊 📎</div>
+                  <button class="sendb">送信 ⌘↵</button>
+                </div>
+              </footer>
+            </div>
+          </main>
+          <aside class="app-info" aria-hidden="true">
+            <div class="ci-block">
+              <div class="ci-h">このパックのラベル</div>
+              <div id="packLabels"></div>
+            </div>
+            <div class="ci-block" style="border-bottom:none;margin-bottom:0">
+              <div class="ci-h">パックに含まれるもの</div>
+              <div class="pack-counts" id="packCounts"></div>
+              <div class="pack-note2">開通した日から、この状態で始まります。文面はあとから自由に編集できます。</div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="sub2 reveal center" style="--d:.2s;margin:28px auto 0;font-size:.82rem">定型文・ラベル・投稿テンプレートのプリセットは、全プランに1業界分が含まれます。</p>
+</section>
+
+<!-- ============ はじめ方 ============ -->
+<section class="sec" id="steps">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>はじめ方</span>
+    <h2 class="reveal">接続代行も選べて、<span class="mk" style="padding:0 4px">最短当日</span>で開通<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">接続代行を選び、必要な承認が済んだ場合の例です。朝10時のお申し込みから —</p>
+    <div class="dayline reveal" style="--d:.1s" id="dayline">
+      <div class="dl-grid">
+        <div class="dl-prog" aria-hidden="true"></div>
+        <div class="dl-node reveal" style="--d:.15s">
+          <span class="dl-time">10:02<small>お申し込み</small></span>
+          <span class="dl-dot" aria-hidden="true"></span>
+          <div class="dl-card" aria-hidden="true">
+            <div class="dlc-bar"><i></i><i></i><i></i></div>
+            <div class="dlc-body">
+              <div class="pay-row1"><span><!-- toybaco-plans:showcase_name:start -->プロプラン<!-- toybaco-plans:showcase_name:end --></span><b><!-- toybaco-plans:showcase_price:start -->¥44,800<!-- toybaco-plans:showcase_price:end --><small> /月(税別)</small></b></div>
+              <div class="pay-field">カード番号<b>•••• •••• •••• 4242</b></div>
+              <div class="pay-go">決済して、今日から使う</div>
+            </div>
+          </div>
+          <h3>相談 or そのまま申し込み</h3>
+          <p>相談してからでも、いきなり申し込みでも OK。決済はカードで数分です。</p>
+        </div>
+        <div class="dl-node reveal" style="--d:.3s">
+          <span class="dl-time">10:07<small>開通メール</small></span>
+          <span class="dl-dot" aria-hidden="true"></span>
+          <div class="dl-card" aria-hidden="true">
+            <div class="dlc-bar"><i></i><i></i><i></i></div>
+            <div class="dlc-body">
+              <div class="ml-from"><i>ト</i><div><b>トイバコ</b><small>hello@toybaco.jp</small></div><em>10:07</em></div>
+              <div class="ml-subj">【トイバコ】ご契約の箱が、開通しました</div>
+              <div class="ml-body">ログインのご案内と、最初の10分ガイドをお送りします。ご希望の LINE・Instagram 接続代行をご案内します。</div>
+            </div>
+          </div>
+          <h3>接続代行を利用</h3>
+          <p>接続代行を選んだ方は、ご案内に沿って承認操作を。いまのアカウントをそのまま接続します。</p>
+        </div>
+        <div class="dl-node reveal" style="--d:.45s">
+          <span class="dl-time">14:00<small>最初の1通</small></span>
+          <span class="dl-dot" aria-hidden="true"></span>
+          <div class="dl-card" aria-hidden="true">
+            <div class="dlc-bar"><i></i><i></i><i></i></div>
+            <div class="dlc-body">
+              <div class="ib-conv"><span class="cava-s" style="background:#03B952">佐</span><div><b>佐藤さま</b><small>たった今</small><p>カットの予約をお願いしたいです</p></div></div>
+              <div class="ib-out">お問い合わせありがとうございます。ご希望の日時・メニューをお知らせください。</div>
+              <div class="ib-reply"><span class="ok2">✓</span><b>/yoyaku-uketsuke</b> で返信しました — 3秒</div>
+            </div>
+          </div>
+          <h3>利用開始</h3>
+          <p>チャネルの接続と必要な設定を終えたら利用開始。届いた問い合わせに返信できます。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TOYBACO AI ============ -->
+<section class="sec ai-band" id="ai">
+  <div class="ai-glow a" aria-hidden="true"></div>
+  <div class="ai-glow b" aria-hidden="true"></div>
+  <div class="ai-moon" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M44.5 8.5A26.5 26.5 0 1 0 55.5 44 21 21 0 0 1 44.5 8.5z" fill="#FFF3D6"/></svg></div>
+  <span class="ai-star s1" aria-hidden="true"></span>
+  <span class="ai-star s2" aria-hidden="true"></span>
+  <span class="ai-star s3" aria-hidden="true"></span>
+  <div class="wrap2 center" style="position:relative; z-index:2">
+    <span class="eyebrow2 reveal ai-eb">✦ トイバコのAI</span>
+    <h2 class="reveal">寝ている間も、お店は答え続ける<span class="maru">。</span></h2>
+    <p class="sub2 reveal ai-sub" style="--d:.08s">営業時間外の問い合わせには、AI が自動で一次応答。お店の情報と FAQ を学習して、あなたのお店の言葉で答えます。</p>
+    <div class="ai-demo reveal" style="--d:.12s" aria-hidden="true">
+      <div class="ai-time">23:42</div>
+      <div class="ai-m in">明日って空いてますか?</div>
+      <div class="ai-m out">お問い合わせありがとうございます。明日は 11:00 と 15:30 にご案内できます。ご希望はありますか?</div>
+      <div class="ai-meta">✦ AI が自動で応答しました — スタッフの確認は翌朝でOK</div>
+    </div>
+    <div class="ai-feats reveal" style="--d:.18s">
+      <div class="aif"><b>24時間</b><span>営業時間外も自動で一次応答</span></div>
+      <div class="aif"><b><!-- toybaco-plans:ai_count:start -->月500件<!-- toybaco-plans:ai_count:end --></b><span><!-- toybaco-plans:ai_name:start -->プロプラン<!-- toybaco-plans:ai_name:end -->の AI 応答枠</span></div>
+      <div class="aif"><b>2モード</b><span>全自動 / AI は下書き・送信は人</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 比較表 ============ -->
+<section class="sec" id="compare">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>比較</span>
+    <h2 class="reveal">比べれば、一目瞭然<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">問い合わせ管理・SNS 投稿・AI 応答。1つで全部そろうのがトイバコです。</p>
+    <div class="cmp-wrap reveal" style="--d:.12s">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="me"><img src="assets/toybaco-mark-c4.webp" alt="">トイバコ</th>
+            <th>問い合わせ<br>管理ツール</th>
+            <th>SNS投稿<br>管理ツール</th>
+            <th>AIチャット<br>ボット</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th>月額の目安</th><td class="me"><b><!-- toybaco-plans:minimum:start -->¥9,800<!-- toybaco-plans:minimum:end -->〜</b></td><td>1〜3万円</td><td>1〜3万円</td><td>3〜10万円</td></tr>
+          <tr><th>問い合わせ一元管理</th><td class="me"><i class="ok">◎</i><small>4チャネル</small></td><td><i class="ok">◎</i></td><td><i class="ng">✕</i></td><td><i class="tri">△</i><small>チャットのみ</small></td></tr>
+          <tr><th>SNS 予約投稿</th><td class="me"><i class="ok">◎</i><small>5チャネル</small></td><td><i class="ng">✕</i></td><td><i class="ok">◎</i></td><td><i class="ng">✕</i></td></tr>
+          <tr><th>AI 自動応答</th><td class="me"><i class="ok">◎</i><small><!-- toybaco-plans:ai_count:start -->月500件<!-- toybaco-plans:ai_count:end -->〜</small></td><td><i class="tri">△</i><small>オプション</small></td><td><i class="ng">✕</i></td><td><i class="ok">◎</i></td></tr>
+          <tr><th>業界別プリセット</th><td class="me"><i class="ok">◎</i><small>12業種</small></td><td><i class="ng">✕</i></td><td><i class="ng">✕</i></td><td><i class="tri">△</i></td></tr>
+          <tr><th>料金体系</th><td class="me"><b>店舗ごと定額</b></td><td>アカウント課金が主流</td><td>プラン課金</td><td>従量課金が主流</td></tr>
+          <tr><th>導入・設定</th><td class="me"><b>接続代行も選べる</b></td><td>自分で設定</td><td>自分で設定</td><td>要開発・要設定</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cmp-note reveal" style="--d:.16s">※ 各カテゴリの一般的なサービス構成・公開料金にもとづく当社調べ(2026年8月時点)。個別のサービスにより内容は異なります。</p>
+  </div>
+</section>
+
+<!-- ============ 料金 ============ -->
+<section class="sec tint" id="pricing">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>料金</span>
+    <h2 class="reveal price-h"><span class="mk" style="padding:0 4px">アカウント課金ゼロ</span>。利用人数の上限内で、店舗ごとの定額制<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">利用人数の上限内なら、人数が増えても料金は同じ。見積もり不要、料金はすべてこのページに公開しています。</p>
+    <div class="compare2 reveal" style="--d:.1s" id="staffCalc">
+      <div class="calc-head">
+        <h3>スタッフ <b id="calcN">10</b>人のお店なら —</h3>
+        <input type="range" id="calcRange" min="2" max="30" value="10" step="1" aria-label="スタッフの人数">
+      </div>
+      <div class="crow"><span>アカウント課金ツール</span><span class="cbar"><i id="barSeat" style="--w:33%"></i></span><span class="cval" id="valSeat">月 約¥83,000</span></div>
+      <div class="crow toy"><span id="lblToy"><!-- toybaco-plans:calc_name:start -->トイバコ スタンダード<!-- toybaco-plans:calc_name:end --></span><span class="cbar"><i id="barToy" style="--w:12%"></i></span><span class="cval" id="valToy"><!-- toybaco-plans:calc_price:start -->月 ¥29,800<!-- toybaco-plans:calc_price:end --></span></div>
+      <p class="calc-diff">1年で <b id="calcDiff"><!-- toybaco-plans:calc_difference:start -->¥638,400<!-- toybaco-plans:calc_difference:end --></b> の差になります。<span>スライダーで人数を変更できます。プランごとの利用人数の上限内なら定額です。</span></p>
+      <p class="note2">※ 1アカウントあたり約¥8,300のツールを同人数で利用した場合の試算(2026年8月・各社公開情報より)。トイバコはプランごとの利用人数の上限内なら定額です。</p>
+    </div>
+    <div class="bill-tgl reveal" style="--d:.12s" role="group" aria-label="お支払いサイクルの選択">
+      <button type="button" class="on" data-bill="m" aria-pressed="true">月払い</button>
+      <button type="button" data-bill="y" aria-pressed="false">年払い<em><!-- toybaco-plans:discount:start -->10%オフ<!-- toybaco-plans:discount:end --></em></button>
+    </div>
+    <!-- toybaco-plans:cards:start --><div class="plans2">
+      <div class="plan2 reveal" style="--d:0.00s" data-plan="light" data-version="2026-09-06.1" id="plan-light">
+        <h3>ライト</h3>
+        <p class="pfor">問い合わせ管理だけを小さく始めたいお店に。LINE・メール・Webチャット/3名まで。SNS投稿機能はありません</p>
+        <p class="pprice"><b data-m="¥9,800" data-y="¥8,820">¥9,800</b><span> /月(税別)</span><i class="ybill">年一括 ¥105,840</i></p>
+        <ul>
+          <li>問い合わせ一元管理(LINE・メール・Web チャット)</li>
+          <li>利用は3名まで</li>
+          <li class="no">SNS 投稿機能はありません</li>
+          <li class="no">AI 応答は含まれません</li>
+          <li>1店舗分</li>
+        </ul>
+        <a class="btn btn-ghost buy-btn" data-plan="light" data-lm="signup/?plan=light&amp;cycle=month&amp;version=2026-09-06.1" data-ly="signup/?plan=light&amp;cycle=year&amp;version=2026-09-06.1" href="signup/?plan=light&amp;cycle=month&amp;version=2026-09-06.1">このプランではじめる</a>
+      </div>
+      <div class="plan2 reveal" style="--d:0.06s" data-plan="standard" data-version="2026-09-06.1" id="plan-standard">
+        <h3>スタンダード</h3>
+        <p class="pfor">Instagram・SNS投稿まで全部使いたいお店に。人数無制限</p>
+        <p class="pprice"><b data-m="¥29,800" data-y="¥26,820">¥29,800</b><span> /月(税別)</span><i class="ybill">年一括 ¥321,840</i></p>
+        <ul>
+          <li>問い合わせ一元管理(LINE・メール・Web チャット・Instagram DM)</li>
+          <li>利用人数 無制限</li>
+          <li>SNS 予約投稿・承認フロー</li>
+          <li class="no">AI 応答は含まれません</li>
+          <li>1店舗分</li>
+        </ul>
+        <a class="btn btn-ghost buy-btn" data-plan="standard" data-lm="signup/?plan=standard&amp;cycle=month&amp;version=2026-09-06.1" data-ly="signup/?plan=standard&amp;cycle=year&amp;version=2026-09-06.1" href="signup/?plan=standard&amp;cycle=month&amp;version=2026-09-06.1">このプランではじめる</a>
+      </div>
+      <div class="plan2 hot reveal" style="--d:0.12s" data-plan="pro" data-version="2026-09-06.1" id="plan-pro">
+        <span class="rec">AI 応答つき</span>
+        <h3>プロ</h3>
+        <p class="pfor">AI応答(月500件)で夜間・繁忙時間まで自動化したいお店に</p>
+        <p class="pprice"><b data-m="¥44,800" data-y="¥40,320">¥44,800</b><span> /月(税別)</span><i class="ybill">年一括 ¥483,840</i></p>
+        <ul>
+          <li>問い合わせ一元管理(LINE・メール・Web チャット・Instagram DM)</li>
+          <li>利用人数 無制限</li>
+          <li>SNS 予約投稿・承認フロー</li>
+          <li class="ai">AI 応答エージェント(月500件)</li>
+          <li>1店舗分</li>
+        </ul>
+        <a class="btn btn-coral buy-btn" data-plan="pro" data-lm="signup/?plan=pro&amp;cycle=month&amp;version=2026-09-06.1" data-ly="signup/?plan=pro&amp;cycle=year&amp;version=2026-09-06.1" href="signup/?plan=pro&amp;cycle=month&amp;version=2026-09-06.1">このプランではじめる</a>
+      </div>
+    </div><!-- toybaco-plans:cards:end -->
+    <div class="prem-band reveal" style="--d:.25s">
+      <span class="prem-tag">多店舗のご相談</span>
+      <div class="t"><b>多店舗でのご利用</b><span class="py">個別お見積もり</span><p>店舗数と必要な機能に合わせて、ご契約と運用方法をご案内します。</p></div>
+      <div class="a"><a class="btn btn-gold" href="#toybaco-staging-chat-preview" data-open-chat>チャットで相談する</a></div>
+    </div>
+    <p class="price-notes reveal" style="--d:.3s"><!-- toybaco-plans:price_notes:start -->価格はすべて税別です。月払いの税込目安: ライト ¥10,780 / スタンダード ¥32,780 / プロ ¥49,280。<br>年払いは1年分の一括前払いです。解約後は契約期間の終了までご利用いただけます。追加店舗・接続代行の提供条件と料金は、決済画面または事前のお見積もりでご確認ください。<!-- toybaco-plans:price_notes:end --></p>
+    <p class="price-notes reveal" style="--d:.32s"><!-- toybaco-plans:change_policy:start -->同じ支払周期の上位プランへの変更は、差額を日割りで請求し、決済成功後すぐに反映します。下位プランへの変更と月払い・年払いの切替は、現在の契約期間の終了時に反映し、期間途中の追加請求・返金は行いません。<!-- toybaco-plans:change_policy:end --><br><!-- toybaco-plans:change_scope:start -->変更可能なプラン・料金・適用日は「ご契約内容」でご確認ください。旧契約や追加オプションを含む契約の変更は、お問い合わせください。<!-- toybaco-plans:change_scope:end --></p>
+  </div>
+</section>
+
+<!-- ============ 運営会社 ============ -->
+<section class="sec" id="company">
+  <div class="wrap2">
+    <div class="about2">
+      <div class="photo reveal">
+        <img src="assets/president.webp" alt="株式会社サイバーリレーションズ 代表取締役 岩下航大" width="210" loading="lazy">
+        <span>代表取締役 岩下 航大</span>
+      </div>
+      <div>
+        <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>運営会社</span>
+        <h2 class="reveal" style="--d:.05s">企業支援500社超の、<span class="nw">AI カンパニー</span><span class="maru">。</span></h2>
+        <p class="body2 reveal" style="--d:.1s">開発・運営は<strong>株式会社サイバーリレーションズ</strong>(福岡)。500社を超える企業の総合支援と、自社 AI プロダクトの開発・運営を行うテクノロジーカンパニーです。導入現場で最も多い失敗「高機能だが使いこなせない」を徹底的に排除し、初日から使える AI プロダクトとしてトイバコを作りました。</p>
+        <div class="afacts reveal" style="--d:.15s">
+          <div class="afact"><b>500社+</b><span>企業の総合支援実績</span></div>
+          <div class="afact"><b>自社開発</b><span>AI プロダクトの開発・運営</span></div>
+          <div class="afact"><b>福岡発</b><span>九州発のテックカンパニー</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="sec tint" id="faq">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>よくある質問</span>
+    <h2 class="reveal">よくある質問</h2>
+    <p class="sub2 reveal" style="--d:.08s">ここにない質問は、<a href="#toybaco-staging-chat-preview" data-open-chat style="color:var(--coral); font-weight:800; text-decoration:underline; text-underline-offset:3px">チャットからどうぞ</a>。</p>
+    <div class="faq2 reveal" style="--d:.12s">
+      <details>
+        <summary><span class="q">Q</span>いまの LINE 公式アカウントは、そのまま使えますか?<span class="arw">▾</span></summary>
+        <div class="a">はい。いまのアカウントをそのまま接続します。友だちリストも引き継がれます。</div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>設定が難しそうで不安です。<span class="arw">▾</span></summary>
+        <div class="a">接続代行は希望制で、お申し込み時に選べます。代行をご希望の場合も、画面での承認操作はお客様にお願いします。チャネルの接続と必要な設定が完了したら、使いはじめられます。</div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>スマホでも使えますか?<span class="arw">▾</span></summary>
+        <div class="a">はい。ブラウザからスマホ・タブレット・パソコンでお使いいただけます。外出先でも返信できます。</div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>AI に自動で返信させることはできますか?<span class="arw">▾</span></summary>
+        <div class="a">はい。<!-- toybaco-plans:ai_name:start -->プロプラン<!-- toybaco-plans:ai_name:end -->の AI 応答エージェントが、お店の情報と FAQ をもとに一次応答を担当します。すべて自動にせず「AI が下書き、人が確認して送信」という使い方もできます。</div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>スタッフが増えたら料金は上がりますか?<span class="arw">▾</span></summary>
+        <div class="a"><!-- toybaco-plans:seat_note:start -->人数に応じた追加課金はありません。プランごとの人数上限があります(ライトは3名まで)。<!-- toybaco-plans:seat_note:end --></div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>自分の業種のパックが見当たりません。<span class="arw">▾</span></summary>
+        <div class="a">12業種でぴったり合わない場合も、いちばん近いパックを土台にお使いいただけます。定型文もラベルもあとから自由に編集できます。迷ったら<a href="#toybaco-staging-chat-preview" data-open-chat style="color:var(--coral); font-weight:800">チャットでご相談ください</a>。</div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>解約すると、データはどうなりますか?<span class="arw">▾</span></summary>
+        <div class="a">ご希望に応じて会話データをエクスポートしてお渡しし、その後は責任をもって削除します。データを人質に取るようなことはしません。</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ クロージング ============ -->
+<section class="closing" id="cta">
+  <div class="closing-bg" aria-hidden="true">
+    <span class="cl-chip" style="--sx:-340px; --d:0s; --r0:-16deg; --r1:8deg"><i style="background:#06C755"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></i></span>
+    <span class="cl-chip" style="--sx:180px; --d:2.6s; --r0:12deg; --r1:-9deg"><i style="background:radial-gradient(circle at 28% 110%,#FEDA75 8%,#FA7E1E 28%,#D62976 55%,#962FBF 78%,#4F5BD5 100%)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/></svg></i></span>
+    <span class="cl-chip" style="--sx:-140px; --d:5.2s; --r0:-10deg; --r1:14deg"><i style="background:var(--ch-amber)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2.4" stroke="#fff" stroke-width="2"/><path d="m5.5 8 6.5 5 6.5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></i></span>
+    <span class="cl-chip" style="--sx:320px; --d:7.8s; --r0:15deg; --r1:-12deg"><i style="background:var(--ch-blue)"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5C5 5.1 6.1 4 7.5 4h9C17.9 4 19 5.1 19 6.5v5c0 1.4-1.1 2.5-2.5 2.5H12l-3.6 2.6V14H7.5C6.1 14 5 12.9 5 11.5v-5z" fill="#fff"/></svg></i></span>
+    <span class="cl-chip" style="--sx:40px; --d:10.4s; --r0:-8deg; --r1:6deg"><i style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></i></span>
+  </div>
+  <div class="wrap2">
+    <img class="markimg reveal" src="assets/toybaco-mark-c4.webp" alt="">
+    <p class="closing-pre reveal">「ありそうでなかった」を、あなたのお店に。</p>
+    <h2 class="reveal" style="--d:.05s">申し込みは3分、開通は最短当日<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.1s">相談無料・契約の縛りなし。接続代行は、ご希望の方が選べます。</p>
+    <div class="acts reveal" style="--d:.15s">
+      <a class="btn btn-coral btn-lg" href="signup/">今すぐはじめる</a>
+      <a class="btn btn-ghost btn-lg" href="#toybaco-staging-chat-preview" data-open-chat>チャットで相談する</a>
+      <a class="btn btn-ghost btn-lg" href="#pricing">料金を見る</a>
+    </div>
+  </div>
+</section>
+
+</div><!-- /page -->
+</main>
+
+<!-- ============ フッター ============ -->
+<footer class="site2">
+  <div class="fgrid">
+    <div class="fbrand">
+      <div class="fbrand-logo"><img src="assets/toybaco-mark-c4.webp" alt="" width="38" height="38"><span>トイバコ</span></div>
+      <p>問い合わせも、投稿も。ひとつの箱に。<br>運営: 株式会社サイバーリレーションズ</p>
+    </div>
+    <div>
+      <h4>サービス</h4>
+      <ul>
+        <li><a href="features/">できること</a></li>
+        <li><a href="posting/">投稿機能</a></li>
+        <li><a href="ai/">AI応答</a></li>
+        <li><a href="industries/">業界パック</a></li>
+        <li><a href="security/">セキュリティ</a></li>
+        <li><a href="faq/">よくある質問</a></li>
+        <li><a href="guide/">お役立ちガイド</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>ご利用の流れ</h4>
+      <ul>
+        <li><a href="pricing/">料金</a></li>
+        <li><a href="enterprise/">エンタープライズ</a></li>
+        <li><a href="compare/">ツールの選び方</a></li>
+        <li><a href="start/">はじめ方</a></li>
+        <li><a href="signup/">お申し込み</a></li>
+        <li><a href="https://app.staging.toybaco.jp">ログイン</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>会社・規約</h4>
+      <ul>
+        <li><a href="news/">お知らせ</a></li>
+        <li><a href="partners/">パートナー募集</a></li>
+        <li><a href="https://cyber-relations.jp/" target="_blank" rel="noopener">運営会社</a></li>
+        <li><a href="terms/">利用規約</a></li>
+        <li><a href="privacy/">プライバシーポリシー</a></li>
+        <li><a href="tokushoho/">特定商取引法に基づく表記</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="fcopy"><span>© 2026 株式会社サイバーリレーションズ — 福岡より</span><span class="fdots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
+</footer>
+
+<!-- ============ 相談チャット(この窓口もトイバコの Web チャット) ============ -->
+<!-- 相談チャット: Chatwoot(トイバコの Web チャットそのもの) -->
+
+
+
+<script type="module">
+/* ============================================================
+   物理演算おもちゃ箱 — Three.js + Rapier (WASM)
+   ============================================================ */
+/* --- 「。」はどこでも跳ねる --- */
+document.querySelectorAll('.maru').forEach(m => {
+  m.addEventListener('click', () => {
+    m.classList.remove('jump'); void m.offsetWidth; m.classList.add('jump');
+  });
+});
+
+/* --- スクロール入場(本編セクション) --- */
+const io = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  });
+}, { threshold: .16 });
+document.querySelectorAll('.reveal, .pain-board, .compare2').forEach(el => io.observe(el));
+
+/* --- スクロールでヘッダーに面を出す --- */
+const siteHeader = document.querySelector('header.site');
+addEventListener('scroll', () => {
+  siteHeader.classList.toggle('scrolled', scrollY > 8);
+}, { passive:true });
+
+/* --- モバイルナビ(下層ページと共通の挙動) --- */
+const navToggle = document.getElementById('navToggle');
+const siteMenu = document.getElementById('siteMenu');
+if (navToggle) {
+  navToggle.addEventListener('click', () => {
+    const open = siteMenu.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', open);
+  });
+  document.addEventListener('click', e => {
+    if (siteMenu.classList.contains('open') && !e.target.closest('nav.menu') && !e.target.closest('.nav-toggle')) {
+      siteMenu.classList.remove('open'); navToggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+/* --- プロダクトツアー: シーンエンジン --- */
+const appShell = document.getElementById('appShell');
+if (appShell) {
+  const $id = id => document.getElementById(id);
+  const ghost = $id('ghostCur');
+  let curScene = 0, tourTimers = [];
+  const tAfter = (ms, fn) => tourTimers.push(setTimeout(fn, ms));
+  const clearTour = () => { tourTimers.forEach(t => { clearTimeout(t); clearInterval(t); }); tourTimers = []; };
+  const cursorTo = (x, y, ms = 650) => {
+    ghost.style.transitionDuration = `${ms}ms, ${ms}ms, .3s`;
+    ghost.style.left = x + '%'; ghost.style.top = y + '%';
+  };
+  /* 実要素の位置へカーソルを動かす(ウィンドウサイズが変わってもズレない) */
+  const wrapEl = document.getElementById('appWrap');
+  const cursorToEl = (id, ms = 650, dx = .5, dy = .5) => {
+    const el = typeof id === 'string' ? $id(id) : id;
+    if (!el) return;
+    const w = wrapEl.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    cursorTo(((r.left + r.width * dx) - w.left) / w.width * 100,
+             ((r.top + r.height * dy) - w.top) / w.height * 100, ms);
+  };
+  const cursorJumpEl = (id, dx = .5, dy = .5) => {
+    ghost.style.transitionDuration = '0ms, 0ms, .3s';
+    cursorToEl(id, 0, dx, dy);
+  };
+  const gclick = () => { ghost.classList.remove('clicked'); void ghost.offsetWidth; ghost.classList.add('clicked'); };
+  const typeInto = (el, text, cps = 24, done) => {
+    el.textContent = '';
+    let i = 0;
+    const iv = setInterval(() => {
+      el.textContent = text.slice(0, ++i);
+      if (i >= text.length) { clearInterval(iv); done && done(); }
+    }, cps);
+    tourTimers.push(iv);
+  };
+  const show = (id, on = true) => $id(id).classList.toggle('hiddenm', !on);
+  const popMsg = id => { const el = $id(id); el.classList.remove('hiddenm'); el.classList.add('popin'); };
+
+  const REPLY = 'お問い合わせありがとうございます。ご希望の日時・メニューをお知らせください。';
+  const AIREPLY = '本日の営業は 21:00 までです🌙 21時以降をご希望の場合は、明日以降のお時間をご案内できます。ご希望の日時をお知らせください。';
+
+  /* シーン n の「開始状態」を同期的に組み立てる(途中スクロールでも破綻しない) */
+  const base = n => {
+    clearTour();
+    appShell.classList.toggle('night', n >= 5);
+    appShell.classList.toggle('postview', n === 4);
+    $id('postPanel').classList.toggle('loaded', n === 4);
+    $id('navInbox').classList.toggle('on', n !== 4);
+    $id('navPost').classList.toggle('on', n === 4);
+    $id('appClock').textContent = n >= 5 ? '23:42' : '14:0' + Math.min(n, 4);
+    const convNew = $id('convNew');
+    convNew.classList.toggle('shown', n >= 1);
+    convNew.classList.toggle('settle', n >= 2);
+    convNew.classList.toggle('sel', n >= 2);
+    const unread = n >= 2 ? 12 : (n >= 1 ? 13 : 12);
+    $id('unreadCnt').textContent = unread;
+    $id('navUnread').textContent = unread;
+    $id('chatPane').classList.toggle('open', n >= 2);
+    $id('assignChip').classList.toggle('shown', n >= 2);
+    show('assignMeta', n >= 2);
+    const replied = n >= 3;
+    $id('replyMsg').textContent = replied ? REPLY : '';
+    show('replyMsg', replied);
+    show('sentMeta', replied);
+    $id('composerText').innerHTML = '返信を入力(<b style="color:var(--acoral)">/</b> で定型文)';
+    $id('slashPop').classList.remove('shown');
+    show('nightQ', false); $id('aiThink').classList.remove('shown');
+    show('aiMsg', false); show('aiMeta', false);
+    ['q1','q2','q3'].forEach(q => $id(q).classList.remove('shown'));
+    $id('lineToast').classList.remove('shown');
+    ghost.classList.toggle('on', n >= 2 && n <= 4);
+  };
+
+  /* 演出が終わったら少し置いて同じシーンをループ再生する */
+  const loopScene = (n, delay) => tAfter(delay, () => { if (curScene === n) scenes[n](); });
+
+  const scenes = {
+    1(){ // 届く
+      base(0);
+      tAfter(300, () => $id('lineToast').classList.add('shown'));
+      tAfter(1400, () => {
+        $id('lineToast').classList.remove('shown');
+        $id('convNew').classList.add('shown');
+        const c = $id('unreadCnt'); c.textContent = 13; $id('navUnread').textContent = 13;
+        c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+      });
+      loopScene(1, 4600);
+    },
+    2(){ // ひらく
+      base(1);
+      ghost.classList.add('on');
+      cursorJumpEl('sendBtn', .5, 2.2);
+      tAfter(300, () => cursorToEl('convNew', 780, .45, .5));
+      tAfter(1200, () => { gclick(); $id('convNew').classList.add('sel','settle');
+        $id('unreadCnt').textContent = 12; $id('navUnread').textContent = 12; });
+      tAfter(1430, () => $id('chatPane').classList.add('open'));
+      tAfter(2050, () => { $id('assignChip').classList.add('shown'); show('assignMeta'); });
+      loopScene(2, 5400);
+    },
+    3(){ // かえす
+      base(2);
+      ghost.classList.add('on');
+      cursorJumpEl('convNew', .45, .5);
+      tAfter(300, () => cursorToEl('composerText', 720, .3, .5));
+      tAfter(1180, () => { gclick(); $id('slashPop').classList.add('shown'); });
+      tAfter(1450, () => cursorToEl('slashFirst', 420));
+      tAfter(2100, () => {
+        gclick(); $id('slashPop').classList.remove('shown');
+        typeInto($id('composerText'), REPLY, 20, () => {
+          tAfter(250, () => cursorToEl('sendBtn', 500));
+          tAfter(820, () => {
+            gclick();
+            $id('composerText').innerHTML = '返信を入力(<b style="color:var(--acoral)">/</b> で定型文)';
+            $id('replyMsg').textContent = REPLY; popMsg('replyMsg');
+          });
+          tAfter(1320, () => popMsg('sentMeta'));
+          tAfter(4600, () => { if (curScene === 3) scenes[3](); });
+        });
+      });
+    },
+    4(){ // とどける(サイドバーの「投稿」→ パネルが開く実挙動)
+      base(3);
+      ghost.classList.add('on');
+      cursorJumpEl('sendBtn');
+      tAfter(350, () => cursorToEl('navPost', 700, .42, .5));
+      tAfter(1200, () => { gclick();
+        $id('navInbox').classList.remove('on'); $id('navPost').classList.add('on');
+        appShell.classList.add('postview');   // スピナー表示から
+      });
+      tAfter(2300, () => $id('postPanel').classList.add('loaded'));
+      tAfter(2650, () => cursorToEl('pvBtn', 650));
+      tAfter(3450, () => gclick());
+      tAfter(3650, () => $id('q1').classList.add('shown'));
+      tAfter(3860, () => $id('q2').classList.add('shown'));
+      tAfter(4070, () => $id('q3').classList.add('shown'));
+      loopScene(4, 7600);
+    },
+    5(){ // やすむ(AI)
+      base(3);
+      ghost.classList.remove('on');   // 夜は誰も操作していない
+      appShell.classList.add('night');
+      $id('appClock').textContent = '23:42';
+      tAfter(600, () => popMsg('nightQ'));
+      tAfter(1350, () => $id('aiThink').classList.add('shown'));
+      tAfter(2500, () => {
+        $id('aiThink').classList.remove('shown');
+        popMsg('aiMsg');
+        typeInto($id('aiMsg'), AIREPLY, 16, () => tAfter(300, () => popMsg('aiMeta')));
+      });
+      tAfter(8200, () => { if (curScene === 5) scenes[5](); });
+    },
+  };
+
+  const setScene = n => {
+    if (n === curScene) return;
+    curScene = n;
+    document.querySelectorAll('.tstep').forEach(s =>
+      s.classList.toggle('on', +s.dataset.step === n));
+    scenes[n] && scenes[n]();
+  };
+
+  /* 画面中央の帯に入ったトリガーだけを拾う(縦長ウィンドウで複数同時交差しても順に切り替わる) */
+  const tourIO = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting) setScene(+e.target.dataset.scene); });
+  }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+  document.querySelectorAll('.tour-triggers .trg').forEach(t => tourIO.observe(t));
+  /* ツアーが画面に入ったら、待たせずシーン1を始める。
+     縦長ビューポート(sticky なし)ではシーンを自動で進める */
+  const isTall = () => matchMedia('(min-height:1200px)').matches;
+  let autoTimer = null;
+  const startAuto = () => {
+    if (autoTimer) return;
+    autoTimer = setInterval(() => setScene(curScene >= 5 ? 1 : curScene + 1), 7200);
+  };
+  const stopAuto = () => { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } };
+  const stickyIO = new IntersectionObserver(es => {
+    const vis = es[0].intersectionRatio > .4;
+    if (vis && curScene === 0) setScene(1);
+    if (isTall()) { vis ? startAuto() : stopAuto(); } else stopAuto();
+  }, { threshold: [0, .4, .8] });
+  stickyIO.observe(document.querySelector('.tour-sticky'));
+  base(0);
+}
+
+/* --- 投稿カレンダーのモック: 自動ループ再生 --- */
+const pcalWrap = document.getElementById('pcalWrap');
+if (pcalWrap) {
+  const P = id => document.getElementById(id);
+  const pg = P('pcalGhost');
+  let pTimers = [], pPlaying = false;
+  const pAfter = (ms, fn) => pTimers.push(setTimeout(fn, ms));
+  const pClear = () => { pTimers.forEach(t => { clearTimeout(t); clearInterval(t); }); pTimers = []; };
+  const pCursorTo = (id, ms = 620, dx = .5, dy = .5) => {
+    const el = P(id); if (!el) return;
+    const w = pcalWrap.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    pg.style.transitionDuration = `${ms}ms, ${ms}ms, .3s`;
+    pg.style.left = ((r.left + r.width * dx) - w.left) / w.width * 100 + '%';
+    pg.style.top = ((r.top + r.height * dy) - w.top) / w.height * 100 + '%';
+  };
+  const pClick = () => { pg.classList.remove('clicked'); void pg.offsetWidth; pg.classList.add('clicked'); };
+  const POST_TEXT = '【新メニュー】秋のケアカラー、はじめました🍁 ツヤ感長持ち。ご予約はメッセージからどうぞ';
+  const pReset = () => {
+    pClear();
+    P('pcalComp').classList.remove('open');
+    ['pch1','pch2','pch3','pch4'].forEach(c => P(c).classList.remove('on'));
+    P('pcalNewChip').classList.remove('shown');
+    P('pcalText').innerHTML = '<span class="pc-ph">お知らせを入力…</span>';
+    pg.classList.remove('on');
+    pg.style.transitionDuration = '0ms, 0ms, .3s';
+    pg.style.left = '86%'; pg.style.top = '80%';
+  };
+  const pPlay = () => {
+    pReset();
+    pAfter(350, () => { pg.classList.add('on'); pCursorTo('pcalNew', 700); });
+    pAfter(1150, () => { pClick();
+      const b = P('pcalNew'); b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 250);
+      P('pcalComp').classList.add('open');
+    });
+    pAfter(1750, () => {
+      const el = P('pcalText');
+      el.textContent = '';
+      let i = 0;
+      const iv = setInterval(() => {
+        el.textContent = POST_TEXT.slice(0, ++i);
+        if (i >= POST_TEXT.length) clearInterval(iv);
+      }, 26);
+      pTimers.push(iv);
+    });
+    pAfter(3300, () => pCursorTo('pch1', 420));
+    pAfter(3800, () => { pClick(); P('pch1').classList.add('on'); });
+    pAfter(4050, () => P('pch2').classList.add('on'));
+    pAfter(4280, () => P('pch3').classList.add('on'));
+    pAfter(4500, () => P('pch4').classList.add('on'));
+    pAfter(4850, () => pCursorTo('pcalSend', 560));
+    pAfter(5550, () => { pClick(); P('pcalComp').classList.remove('open'); });
+    pAfter(6050, () => P('pcalNewChip').classList.add('shown'));
+    pAfter(6500, () => pg.classList.remove('on'));
+    pAfter(9200, () => { if (pPlaying) pPlay(); });
+  };
+  const pcalIO = new IntersectionObserver(es => {
+    const vis = es[0].isIntersecting;
+    if (vis && !pPlaying) { pPlaying = true; pPlay(); }
+    else if (!vis && pPlaying) { pPlaying = false; pReset(); }
+  }, { threshold: .35 });
+  pcalIO.observe(pcalWrap);
+}
+
+/* --- 業界パック: 選ぶと受信箱が着せ替わる(データは overlay/app/toybaco-packs/*.yaml の実物) --- */
+const packList = document.getElementById('packList');
+if (packList) {
+  const IC = {
+    scissors:'<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.1 7.5 20 19M8.1 16.5 20 5"/>',
+    food:'<path d="M7.5 3v7.5M4.8 3v4.2a2.7 2.7 0 0 0 5.4 0V3M7.5 10.5V21"/><path d="M16.8 3c-1.7 2-2.3 4.2-2.3 6.8h4.6V21"/>',
+    home:'<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.8V20h12V9.8"/>',
+    bag:'<path d="M5.5 8.2h13L17.4 20H6.6z"/><path d="M9 8V6.4a3 3 0 0 1 6 0V8"/>',
+    clinic:'<circle cx="12" cy="12" r="8.4"/><path d="M12 8.4v7.2M8.4 12h7.2"/>',
+    school:'<path d="m12 4 9.5 4.3L12 12.6 2.5 8.3z"/><path d="M6.5 10.4v4.7c0 1.5 2.5 2.9 5.5 2.9s5.5-1.4 5.5-2.9v-4.7M21 9v5"/>',
+    car:'<path d="M4.5 12.3 6 8.2a2 2 0 0 1 1.9-1.4h8.2a2 2 0 0 1 1.9 1.4l1.5 4.1"/><rect x="3.5" y="12.3" width="17" height="5" rx="1.6"/><circle cx="7.6" cy="17.3" r="1.7"/><circle cx="16.4" cy="17.3" r="1.7"/>',
+    wrench:'<path d="M20.7 6.3a5 5 0 0 1-6.5 6.4L7 19.9a2.1 2.1 0 0 1-3-3l7.2-7.2a5 5 0 0 1 6.4-6.5l-3.1 3.1.4 2.7 2.7.4z"/>',
+    bed:'<path d="M3 19V7"/><path d="M3 15.5h18V19"/><circle cx="7" cy="11" r="1.8"/><path d="M11 15.5V11h6.5a3.5 3.5 0 0 1 3.5 3.5v1"/>',
+    camera:'<rect x="3.5" y="7" width="17" height="12.5" rx="2.5"/><path d="M8.5 7 10 4.5h4L15.5 7"/><circle cx="12" cy="13" r="3.3"/>',
+    paw:'<ellipse cx="8" cy="7.6" rx="1.7" ry="2.3"/><ellipse cx="16" cy="7.6" rx="1.7" ry="2.3"/><ellipse cx="4.7" cy="12.2" rx="1.6" ry="2.1"/><ellipse cx="19.3" cy="12.2" rx="1.6" ry="2.1"/><path d="M12 11.6c2.7 0 4.9 2.1 4.9 4.4 0 1.9-1.4 3.3-3.1 3.3-.8 0-1.3-.3-1.8-.3s-1 .3-1.8.3c-1.7 0-3.1-1.4-3.1-3.3 0-2.3 2.2-4.4 4.9-4.4z"/>',
+    scale:'<path d="M12 4.5V20M5.5 20h13"/><path d="M12 6.2 6 8.2m6-2 6 2"/><path d="M6 8.2 3.6 13.6a2.9 2.9 0 0 0 4.8 0L6 8.2zM18 8.2l-2.4 5.4a2.9 2.9 0 0 0 4.8 0L18 8.2z"/>',
+  };
+  const CHSVG = {
+    line:{c:'#03B952', n:'LINE', s:'LINE に送信されました', svg:'<path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/>'},
+    ig:{c:'#E33E67', n:'Instagram', s:'Instagram に送信されました', svg:'<rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2" fill="none"/>'},
+    chat:{c:'#4380B5', n:'Webチャット', s:'Web チャットに送信されました', svg:'<path d="M5 6.5C5 5.1 6.1 4 7.5 4h9C17.9 4 19 5.1 19 6.5v5c0 1.4-1.1 2.5-2.5 2.5H12l-3.6 2.6V14H7.5C6.1 14 5 12.9 5 11.5v-5z" fill="#fff"/>'},
+    mail:{c:'#F09A3E', n:'メール', s:'メールで返信されました', svg:'<rect x="4" y="6" width="16" height="12" rx="2.4" stroke="#fff" stroke-width="2" fill="none"/><path d="m5.5 8 6.5 5 6.5-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'},
+  };
+  const PACKS = [
+    {id:'beauty', label:'美容室・サロン', icon:'scissors', store:'トイバコ美容室',
+     convs:[{ini:'佐',ch:'line',name:'佐藤さま',time:'たった今',pv:'カットの予約をお願いしたいです'},
+            {ini:'m',ch:'ig',name:'mika_style',time:'12分前',pv:'ストーリーのインナーカラー、私もできますか?'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'34分前',pv:'縮毛矯正の料金を教えてください'}],
+     lab0:'予約', code:'/yoyaku-uketsuke',
+     a:'お問い合わせありがとうございます。ご希望の日時・メニュー・指名の有無をお知らせください。空き状況を確認してご案内します。',
+     canned:[['/yoyaku-uketsuke','ご希望の日時・メニュー・指名の有無をお知らせください。空き状況を…'],
+             ['/zenjitsu-remind','明日◯:◯からのご予約のご確認です。ご都合が変わった場合は…'],
+             ['/kuchikomi-onegai','よろしければ、Google マップで感想をお聞かせください…']],
+     labels:[['予約','#E05C7A'],['変更キャンセル','#F09A3E'],['初めての方','#2FA35C'],['お直し相談','#4A79B8'],['求人応募','#8A6FBF']],
+     counts:[10,5,3]},
+    {id:'food', label:'飲食店', icon:'food', store:'トイバコ食堂',
+     convs:[{ini:'田',ch:'line',name:'田村さま',time:'たった今',pv:'金曜の夜、席は空いていますか?'},
+            {ini:'k',ch:'ig',name:'kenta.gohan',time:'15分前',pv:'誕生日プレートってお願いできますか?'},
+            {ini:'す',ch:'mail',name:'suzuki@…',time:'1時間前',pv:'8名で貸切の相談をしたいです'}],
+     lab0:'予約', code:'/yoyaku-uketsuke',
+     a:'お問い合わせありがとうございます。ご希望の日時・人数・お席の希望をお知らせください。空き状況を確認してご案内します。',
+     canned:[['/yoyaku-uketsuke','ご希望の日時・人数・お席の希望をお知らせください。空き状況を…'],
+             ['/kashikiri-soudan','貸切のご相談ありがとうございます。ご希望の日時・人数・ご予算を…'],
+             ['/yoyaku-henkou','変更をご希望の日時と人数をお知らせください。空き状況を確認して…']],
+     labels:[['予約','#E05C7A'],['変更キャンセル','#F09A3E'],['貸切相談','#2FA35C'],['メニュー確認','#4A79B8'],['ご意見','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'estate', label:'不動産', icon:'home', store:'トイバコ不動産',
+     convs:[{ini:'高',ch:'mail',name:'高橋さま',time:'たった今',pv:'掲載中の2LDK、まだ募集していますか?'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'18分前',pv:'初期費用はどのくらいかかりますか?'},
+            {ini:'山',ch:'line',name:'山本さま',time:'42分前',pv:'内見の日程、変更できますか?'}],
+     lab0:'物件反響', code:'/bukken-toiawase',
+     a:'物件へのお問い合わせありがとうございます。物件名または掲載ページをお知らせください。詳細を確認してご案内します。',
+     canned:[['/bukken-toiawase','物件名または掲載ページをお知らせください。詳細を確認して…'],
+             ['/naiken-uketsuke','内見のご希望ありがとうございます。ご希望の日時をお知らせ…'],
+             ['/kibou-joken','ご希望のエリア・物件種別・ご予算・入居希望時期をお知らせ…']],
+     labels:[['物件反響','#E05C7A'],['内見','#F09A3E'],['希望条件','#2FA35C'],['資料請求','#4A79B8'],['申込相談','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'retail-ec', label:'小売・EC', icon:'bag', store:'トイバコ雑貨店',
+     convs:[{ini:'n',ch:'ig',name:'nao_zakka',time:'たった今',pv:'昨日ストーリーのトートバッグ、在庫ありますか?'},
+            {ini:'伊',ch:'mail',name:'伊藤さま',time:'25分前',pv:'注文した器の発送はいつごろですか?'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'50分前',pv:'ギフト包装はできますか?'}],
+     lab0:'在庫確認', code:'/zaiko-kakunin',
+     a:'在庫についてお問い合わせいただきありがとうございます。商品名・品番・ご希望の色やサイズをお知らせください。在庫状況を確認してご返信します。',
+     canned:[['/zaiko-kakunin','商品名・品番・ご希望の色やサイズをお知らせください。在庫状況を…'],
+             ['/sainyuka-yotei','再入荷についてお問い合わせいただきありがとうございます…'],
+             ['/hassou-yotei','ご注文番号をお知らせください。発送予定を確認してご案内します。']],
+     labels:[['在庫確認','#E05C7A'],['再入荷','#F09A3E'],['注文確認','#2FA35C'],['返品交換','#4A79B8'],['商品質問','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'clinic', label:'クリニック・治療院', icon:'clinic', store:'トイバコ歯科',
+     convs:[{ini:'中',ch:'line',name:'中村さま',time:'たった今',pv:'初診の予約をしたいのですが'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'20分前',pv:'保険証を忘れた場合はどうなりますか?'},
+            {ini:'佐',ch:'line',name:'佐々木さま',time:'45分前',pv:'明日の予約を変更したいです'}],
+     lab0:'予約受付', code:'/shoshin-yoyaku',
+     a:'初めて受診される方のお問い合わせを承ります。ご希望の日時と受診を希望される方のお名前をお知らせください。空き状況を確認してご案内します。',
+     canned:[['/shoshin-yoyaku','初めて受診される方の…ご希望の日時とお名前をお知らせください…'],
+             ['/yoyaku-henkou','現在の予約日時とご希望の変更日時をお知らせください…'],
+             ['/saishin-yoyaku','再診のご予約を承ります。ご希望の日時とお名前をお知らせ…']],
+     labels:[['予約受付','#E05C7A'],['予約変更','#F09A3E'],['初診','#2FA35C'],['受診案内','#4A79B8'],['確認待ち','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'school', label:'スクール・塾', icon:'school', store:'トイバコ学習教室',
+     convs:[{ini:'森',ch:'line',name:'森さま',time:'たった今',pv:'小5の子の体験授業を申し込みたいです'},
+            {ini:'t',ch:'mail',name:'tanaka@…',time:'30分前',pv:'来週の授業を振替できますか?'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'1時間前',pv:'月謝はいくらですか?'}],
+     lab0:'体験申込', code:'/taiken-moushikomi',
+     a:'体験授業へのお申し込みありがとうございます。ご希望のコースと日時、参加される方の学年または年代をお知らせください。空き状況を確認してご案内します。',
+     canned:[['/taiken-moushikomi','ご希望のコースと日時、参加される方の学年または年代を…'],
+             ['/furikae-uketsuke','欠席される授業の日程と、ご希望の振替日時をお知らせ…'],
+             ['/kessekirenraku','欠席のご連絡ありがとうございます。お大事になさって…']],
+     labels:[['体験申込','#E05C7A'],['振替希望','#F09A3E'],['欠席連絡','#2FA35C'],['月謝確認','#4A79B8'],['入会検討','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'auto', label:'自動車(販売・整備)', icon:'car', store:'トイバコモータース',
+     convs:[{ini:'岡',ch:'line',name:'岡田さま',time:'たった今',pv:'車検の見積をお願いしたいです'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'22分前',pv:'オイル交換は予約が必要ですか?'},
+            {ini:'s',ch:'mail',name:'sato@…',time:'1時間前',pv:'修理の進捗を教えてください'}],
+     lab0:'車検見積', code:'/shaken-mitsumori',
+     a:'車検見積のお問い合わせありがとうございます。車種、初度登録年月、車検満了日をお知らせください。内容を確認して、見積のご案内に必要な来店日程をご相談します。',
+     canned:[['/shaken-mitsumori','車種、初度登録年月、車検満了日をお知らせください…'],
+             ['/seibi-mitsumori','車種とご希望の整備内容、来店希望日時をお知らせください…'],
+             ['/daisha-kakunin','代車をご希望の場合は、ご利用を希望される期間をお知らせ…']],
+     labels:[['車検見積','#E05C7A'],['整備相談','#F09A3E'],['代車希望','#2FA35C'],['進捗確認','#4A79B8'],['車両相談','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'reform', label:'住宅設備・リフォーム', icon:'wrench', store:'トイバコ住設',
+     convs:[{ini:'村',ch:'mail',name:'村上さま',time:'たった今',pv:'洗面台の交換、見積をお願いできますか?'},
+            {ini:'小',ch:'line',name:'小林さま',time:'28分前',pv:'現地調査の日程の件でご連絡しました'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'1時間前',pv:'工期はどのくらいかかりますか?'}],
+     lab0:'見積依頼', code:'/mitsumori-uketsuke',
+     a:'お問い合わせありがとうございます。ご希望の工事内容、建物の種類、現地調査の希望日時をお知らせください。内容を確認して、担当者からご案内します。',
+     canned:[['/mitsumori-uketsuke','ご希望の工事内容、建物の種類、現地調査の希望日時を…'],
+             ['/genchi-chosa-chosei','ご都合のよい候補日時をお知らせください。空き状況を…'],
+             ['/kouki-kakunin','工事内容と現地の状況を確認したうえで、予定をご案内…']],
+     labels:[['見積依頼','#E05C7A'],['現地調査','#F09A3E'],['工期確認','#2FA35C'],['日程変更','#4A79B8'],['アフター対応','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'hotel', label:'宿泊(旅館・ゲストハウス)', icon:'bed', store:'トイバコ旅館',
+     convs:[{ini:'b',ch:'mail',name:'booking@…',time:'たった今',pv:'9月の連休、2名で泊まれますか?'},
+            {ini:'加',ch:'line',name:'加藤さま',time:'16分前',pv:'チェックインが遅れそうです'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'40分前',pv:'子ども用の浴衣はありますか?'}],
+     lab0:'空室確認', code:'/akishitsu-kakunin',
+     a:'お問い合わせありがとうございます。ご希望の宿泊日、泊数、人数、部屋数をお知らせください。空室状況を確認してご案内します。',
+     canned:[['/akishitsu-kakunin','ご希望の宿泊日、泊数、人数、部屋数をお知らせください…'],
+             ['/yoyaku-henkou','ご予約者名、宿泊日、変更をご希望の内容をお知らせ…'],
+             ['/yoyaku-cancel','ご予約者名と宿泊日をお知らせください。予約内容と規定を…']],
+     labels:[['空室確認','#E05C7A'],['予約変更','#F09A3E'],['アメニティ','#2FA35C'],['団体利用','#4A79B8'],['滞在相談','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'bridal-photo', label:'冠婚葬祭・写真館', icon:'camera', store:'トイバコ写真館',
+     convs:[{ini:'藤',ch:'line',name:'藤井さま',time:'たった今',pv:'七五三の撮影を考えています'},
+            {ini:'y',ch:'ig',name:'yuki_wd',time:'19分前',pv:'前撮りの空き日程を教えてください'},
+            {ini:'h',ch:'mail',name:'hara@…',time:'1時間前',pv:'打ち合わせの日程変更をお願いします'}],
+     lab0:'空き日程', code:'/akibi-kakunin',
+     a:'お問い合わせありがとうございます。ご希望の日程と、撮影・挙式・ご法要などのご利用内容、人数をお知らせください。空き状況を確認してご案内します。',
+     canned:[['/akibi-kakunin','ご希望の日程と、撮影・挙式・ご法要などのご利用内容を…'],
+             ['/uchiawase-chosei','ご都合のよい候補日時をお知らせください。空き状況を…'],
+             ['/ryokin-plan','料金とプランの一覧はこちらです。ご希望の内容をお知らせ…']],
+     labels:[['空き日程','#E05C7A'],['料金相談','#F09A3E'],['打ち合わせ','#2FA35C'],['日程変更','#4A79B8'],['衣装と仕上がり','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'pet', label:'ペット(トリミング・病院)', icon:'paw', store:'トイバコペットサロン',
+     convs:[{ini:'石',ch:'line',name:'石井さま',time:'たった今',pv:'トリミングの予約をしたいです'},
+            {ini:'p',ch:'ig',name:'pome_hana',time:'14分前',pv:'初めてですが、シニア犬でも大丈夫ですか?'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'38分前',pv:'爪切りだけでもお願いできますか?'}],
+     lab0:'予約', code:'/yoyaku-uketsuke',
+     a:'お問い合わせありがとうございます。ご希望の日時・ご利用内容(トリミング・診療など)・ペットの種類と年齢をお知らせください。空き状況を確認してご案内します。',
+     canned:[['/yoyaku-uketsuke','ご希望の日時・ご利用内容・ペットの種類と年齢をお知らせ…'],
+             ['/mochimono-annai','当日の持ち物についてご案内します…'],
+             ['/yoyaku-henkou','ご希望の変更日時をお知らせください。空き状況を確認して…']],
+     labels:[['予約','#E05C7A'],['変更キャンセル','#F09A3E'],['混雑確認','#2FA35C'],['持ち物確認','#4A79B8'],['初めての方','#8A6FBF']],
+     counts:[9,5,3]},
+    {id:'pro', label:'士業・コンサル', icon:'scale', store:'トイバコ行政書士事務所',
+     convs:[{ini:'大',ch:'mail',name:'大野さま',time:'たった今',pv:'建設業許可について相談したいです'},
+            {ini:'訪',ch:'chat',name:'サイト訪問者',time:'26分前',pv:'初回相談は無料ですか?'},
+            {ini:'青',ch:'line',name:'青木さま(顧問先)',time:'1時間前',pv:'契約書のドラフト、確認いただけますか?'}],
+     lab0:'初回相談', code:'/shokai-soudan',
+     a:'初回相談のお問い合わせありがとうございます。ご相談の概要と面談希望日時を2〜3つほどお知らせください。担当者が確認してご案内します。',
+     canned:[['/shokai-soudan','ご相談の概要と面談希望日時をお知らせください。担当者が…'],
+             ['/mendan-henkou','ご希望の変更日時をお知らせください。日程を確認して…'],
+             ['/hiyou-mitsumori','支援内容と費用のお見積もりについてご案内します…']],
+     labels:[['初回相談','#E05C7A'],['面談調整','#F09A3E'],['見積依頼','#2FA35C'],['書類確認','#4A79B8'],['顧問先','#8A6FBF']],
+     counts:[9,5,3]},
+  ];
+  const K = id => document.getElementById(id);
+  const chChip = (ch, size=15) => {
+    const c = CHSVG[ch];
+    return `<span class="chip" style="background:${c.c}"><svg viewBox="0 0 24 24">${c.svg}</svg></span>`;
+  };
+  const avaColor = ch => CHSVG[ch].c;
+  const renderPack = pk => {
+    /* 業種ボタンの選択状態 */
+    packList.querySelectorAll('.pack-btn').forEach(b =>
+      b.classList.toggle('on', b.dataset.pack === pk.id));
+    /* 店名 */
+    K('packAcct').textContent = pk.store;
+    /* 会話リスト(スタッガー入場) */
+    K('packConvs').innerHTML = pk.convs.map((c, i) => `
+      <div class="conv penter ${i === 0 ? 'sel' : ''}" style="--i:${i}">
+        <span class="cava" style="background:${avaColor(c.ch)}">${c.ini}${chChip(c.ch)}</span>
+        <span class="cc"><span class="cn"><b>${c.name}</b><small>${c.time}</small></span>
+        <span class="cp">${c.pv}</span></span>
+      </div>`).join('');
+    /* チャット */
+    const c0 = pk.convs[0], ch = CHSVG[c0.ch];
+    K('packChatName').textContent = c0.name;
+    K('packChatCh').textContent = ch.n;
+    const lab = K('packChatLab');
+    lab.textContent = pk.lab0;
+    lab.style.background = pk.labels[0][1] + '22';
+    lab.style.color = pk.labels[0][1];
+    const put = (id, html, i) => { const el = K(id); el.innerHTML = html;
+      el.classList.remove('penter'); void el.offsetWidth; el.classList.add('penter'); el.style.setProperty('--i', i); };
+    put('packQ', c0.pv, 1);
+    put('packMetaLab', `🏷️ 自動ルールでラベル「${pk.lab0}」が付きました`, 2);
+    put('packA', pk.a, 3);
+    put('packMetaSent', `<b style="color:var(--anavy);font-weight:800">${pk.code}</b> を挿入 → <span class="ok">✓</span> ${ch.s}`, 4);
+    /* 定型文 */
+    K('packCannedHead').textContent = `定型文 — ${pk.counts[0]}種プリセット済み`;
+    K('packCannedList').innerHTML = pk.canned.map(([code, txt], i) =>
+      `<div class="cb-i penter" style="--i:${i + 3}"><b>${code}</b><small>${txt}</small></div>`).join('') +
+      `<div class="cb-more">ほか ${pk.counts[0] - pk.canned.length} 種</div>`;
+    /* 右パネル */
+    K('packLabels').innerHTML = pk.labels.map(([t, c], i) =>
+      `<div class="plabel penter" style="--i:${i}"><i style="background:${c}"></i>${t}</div>`).join('');
+    K('packCounts').innerHTML =
+      `<div class="pcnt penter" style="--i:1"><b>${pk.counts[0]}</b><span>定型文</span></div>
+       <div class="pcnt penter" style="--i:2"><b>${pk.counts[1]}</b><span>ラベル</span></div>
+       <div class="pcnt penter" style="--i:3"><b>${pk.counts[2]}</b><span>投稿テンプレ</span></div>`;
+  };
+  /* 業種ボタンを生成 */
+  packList.innerHTML = PACKS.map(pk => `
+    <button class="pack-btn" type="button" role="tab" data-pack="${pk.id}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${IC[pk.icon]}</svg>
+      ${pk.label}
+    </button>`).join('');
+  packList.addEventListener('click', e => {
+    const btn = e.target.closest('.pack-btn');
+    if (!btn) return;
+    const pk = PACKS.find(p => p.id === btn.dataset.pack);
+    if (pk) renderPack(pk);
+  });
+  renderPack(PACKS[0]);
+}
+
+/* --- トイバコ相談チャット(Chatwoot 実ウィジェット) --- */
+// toybaco_staging_site_v1: consultation preview sends no messages.
+function openChat() {
+  document.getElementById('toybaco-staging-chat-preview').showModal();
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-open-chat]');
+  if (!t) return;
+  e.preventDefault();
+  openChat(t.getAttribute('href'));
+});
+
+/* --- ONE BOX: 受信チップが順に「着信」する --- */
+const fm = document.getElementById('flowmap');
+if (fm) {
+  const inChips = fm.querySelectorAll('.ch-col:first-child .ch-chip');
+  let ci = 0;
+  setInterval(() => {
+    if (!fm.classList.contains('in') || document.hidden) return;
+    const r = fm.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight) return;
+    inChips.forEach(c => c.classList.remove('ping'));
+    const c = inChips[ci % inChips.length];
+    void c.offsetWidth; c.classList.add('ping');
+    ci++;
+  }, 2400);
+}
+
+
+</script>
+<script src="assets/hero-movie.js" defer></script>
+
+<!-- toybaco_staging_site_v1: staging consultation is a preview only -->
+<button type="button" onclick="document.getElementById('toybaco-staging-chat-preview').showModal()" style="position:fixed;right:16px;bottom:16px;z-index:999;padding:12px 16px;border:0;border-radius:24px;background:#1F3A5F;color:#fff;font:inherit;font-size:13px;cursor:pointer">相談チャット（確認用）</button>
+<dialog id="toybaco-staging-chat-preview" aria-labelledby="toybaco-staging-chat-title" style="margin:auto;width:min(calc(100% - 2rem),28rem);padding:24px;border:1px solid #D0D8E1;border-radius:18px;color:#1F3A5F;background:#fff">
+  <h2 id="toybaco-staging-chat-title" style="font-size:1.15rem;margin-bottom:12px">相談チャットの確認用画面</h2>
+  <p style="line-height:1.8;margin-bottom:18px">この検証環境では相談チャットに接続していません。メッセージは送信されません。</p>
+  <form method="dialog"><button class="btn btn-coral" autofocus>閉じる</button></form>
+</dialog>
+</body>
+</html>
