@@ -44,7 +44,6 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { groupBy, random, sortBy } from 'lodash';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { extend } from 'dayjs';
-import { isUSCitizen } from './helpers/isuscitizen.utils';
 import { useInterval } from '@mantine/hooks';
 import { StatisticsModal } from '@gitroom/frontend/components/launches/statistics';
 import { MissingReleaseModal } from '@gitroom/frontend/components/launches/missing-release.modal';
@@ -79,12 +78,16 @@ i18next.on('languageChanged', () => {
 updateDayjsLocale();
 
 const convertTimeFormatBasedOnLocality = (time: number) => {
-  if (isUSCitizen()) {
-    return `${time === 12 ? 12 : time % 12}:00 ${time >= 12 ? 'PM' : 'AM'}`;
-  } else {
-    return `${time}:00`;
-  }
+  return `${time}:00`;
 };
+
+// 下書きと承認申請を混同せず、サーバーが返した状態だけを表示する。
+const toybacoPostStatus = (state: State) => ({
+  DRAFT: '下書き・承認前',
+  QUEUE: '予約済み',
+  PUBLISHED: '公開済み',
+  ERROR: '公開に失敗',
+})[state] || '状態を確認';
 
 export const hours = Array.from(
   {
@@ -202,9 +205,15 @@ const usePostActions = (onMutate?: () => void) => {
         return;
       }
 
-      await fetch(`/posts/${post.group}`, {
-        method: 'DELETE',
-      });
+      try {
+        const response = await fetch(`/posts/${post.group}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('TOYBACO_DELETE_REJECTED');
+      } catch {
+        toaster.show('削除結果を確認できません。カレンダーを確認してから再操作してください。', 'warning');
+        return;
+      }
 
       toaster.show(
         t('post_deleted_successfully', 'Post deleted successfully'),
@@ -310,7 +319,7 @@ export const DayView = () => {
                 .startOf('day')
                 .add(option[0].time, 'minute')
                 .local()
-                .format(isUSCitizen() ? 'hh:mm A' : 'LT')}
+                .format('HH:mm')}
             </div>
             <div
               key={option[0].time}
@@ -361,7 +370,7 @@ export const WeekView = () => {
   return (
     <div className="flex flex-col text-textColor flex-1">
       <div className="flex-1 relative">
-        <div className="grid [grid-template-columns:136px_repeat(7,_minmax(0,_1fr))] gap-[4px] rounded-[10px] absolute h-full start-0 top-0 w-full overflow-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
+        <div data-toybaco-calendar-grid="week" className="grid [grid-template-columns:136px_repeat(7,_minmax(0,_1fr))] gap-[4px] rounded-[10px] absolute h-full start-0 top-0 w-full overflow-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
           <div className="z-10 bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px] sticky top-0"></div>
           {localizedDays.map((day, index) => (
             <div
@@ -454,7 +463,7 @@ export const MonthView = () => {
   return (
     <div className="flex flex-col text-textColor flex-1">
       <div className="flex-1 flex relative">
-        <div className="grid grid-cols-7 grid-rows-[62px_auto] gap-[4px] rounded-[10px] absolute start-0 top-0 overflow-auto w-full h-full scrollbar scrollbar-thumb-tableBorder scrollbar-track-secondary">
+        <div data-toybaco-calendar-grid="month" className="grid grid-cols-7 grid-rows-[62px_auto] gap-[4px] rounded-[10px] absolute start-0 top-0 overflow-auto w-full h-full scrollbar scrollbar-thumb-tableBorder scrollbar-track-secondary">
           {localizedDays.map((day) => (
             <div
               key={day}
@@ -485,12 +494,12 @@ export const ListView = () => {
   const { integrations, loading, listPosts, listState } = useCalendar();
   const emptyMessage =
     listState === 'scheduled'
-      ? t('no_upcoming_posts', 'No upcoming posts scheduled')
+      ? t('no_upcoming_posts', '予約中の投稿はありません')
       : listState === 'draft'
-      ? t('no_draft_posts', 'No draft posts')
+      ? t('no_draft_posts', '下書きはありません')
       : listState === 'published'
-      ? t('no_published_posts', 'No published posts')
-      : t('no_posts', 'No posts');
+      ? t('no_published_posts', '公開済みの投稿はありません')
+      : t('no_posts', '投稿はありません');
 
   // Use shared post actions hook
   const { editPost, deletePost, copyDebugJson, openStatistics, openMissingRelease } = usePostActions();
@@ -530,7 +539,7 @@ export const ListView = () => {
         {groupedPosts.map(([dateKey, datePosts]) => (
           <Fragment key={dateKey}>
             <div className="text-center text-[14px] min-h-[21px] text-textColor font-[500] mt-[10px]">
-              {newDayjs(dateKey).format(isUSCitizen() ? 'dddd, MMMM D, YYYY' : 'dddd, D MMMM YYYY')}
+              {newDayjs(dateKey).format('YYYY/MM/DD')}
             </div>
             <div className="flex flex-col gap-[10px] mb-[20px] px-[10px]">
               {datePosts.map((post) => (
@@ -1015,6 +1024,7 @@ const CalendarItem: FC<{
   } = props;
   const { disableXAnalytics } = useVariables();
   const user = useUser();
+  const toybacoCanManagePost = !!user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN' || state === 'DRAFT');
   const showCreationMethodBadge =
     user?.impersonate &&
     post.creationMethod &&
@@ -1025,6 +1035,7 @@ const CalendarItem: FC<{
   const [{ opacity }, dragRef] = useDrag(
     () => ({
       type: 'post',
+      canDrag: toybacoCanManagePost,
       item: {
         id: post.id,
         interval: !!post.intervalInDays,
@@ -1034,7 +1045,7 @@ const CalendarItem: FC<{
         opacity: monitor.isDragging() ? 0 : 1,
       }),
     }),
-    []
+    [post.id, post.intervalInDays, date, toybacoCanManagePost]
   );
   return (
     <div
@@ -1068,6 +1079,7 @@ const CalendarItem: FC<{
         </div>
       )}
       <div
+        data-toybaco-post-actions=""
         className={clsx(
           'text-white text-[11px] max-h-[24px] h-[24px] min-h-[24px] w-full rounded-tr-[10px] rounded-tl-[10px] flex items-center justify-center gap-[10px] px-[5px] bg-btnPrimary'
         )}
@@ -1137,18 +1149,32 @@ const CalendarItem: FC<{
         ) : (
           <></>
         )}{' '}
-        <div
-          className={clsx(
-            'hidden group-hover:block hover:underline cursor-pointer',
-            post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
-          )}
-          onClick={deletePost}
-        >
-          <DeletePost />
-        </div>
+        {toybacoCanManagePost && (
+          <button
+            type="button"
+            aria-label="投稿を削除"
+            className={clsx(
+              'hidden group-hover:block group-focus-within:block hover:underline cursor-pointer',
+              post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
+            )}
+            onClick={deletePost}
+          >
+            <DeletePost />
+          </button>
+        )}
       </div>
       <div
+        data-toybaco-post-content=""
         onClick={editPost}
+        role="button"
+        tabIndex={0}
+        aria-label={`${post.integration.name}の投稿を開く：${toybacoPostStatus(state)}`}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            editPost();
+          }
+        }}
         className={clsx(
           'gap-[5px] w-full flex h-full flex-1 rounded-br-[10px] rounded-bl-[10px] p-[8px] text-[14px] bg-newColColor',
           'relative',
@@ -1166,9 +1192,7 @@ const CalendarItem: FC<{
           />
         </div>
         <div className="w-full flex-1 flex flex-col min-h-[40px]">
-          <div className="text-start">
-            {state === 'DRAFT' ? t('draft', 'Draft') + ': ' : ''}
-          </div>
+
             <div className="w-full relative">
               <div className="absolute top-0 start-0 w-full text-ellipsis break-words line-clamp-1 text-start">
                 {stripHtmlValidation('none', post.content, false, true, false) ||
@@ -1178,10 +1202,11 @@ const CalendarItem: FC<{
         </div>
         {showTime && (
           <div className="text-textColor/50 text-[12px] whitespace-nowrap flex items-center">
-            {newDayjs(post.publishDate).local().format(isUSCitizen() ? 'hh:mm A' : 'HH:mm')}
+            {newDayjs(post.publishDate).local().format('HH:mm')}
           </div>
         )}
       </div>
+      <span data-toybaco-post-status="">{toybacoPostStatus(state)}</span>
     </div>
   );
 });

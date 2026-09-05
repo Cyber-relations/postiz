@@ -10,6 +10,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
 } from 'react';
 import { Button } from '@gitroom/react/form/button';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -102,6 +103,42 @@ export const Component: FC<{
   modal: { id: string } & OpenModalInterface;
 }> = memo(({ isLast, modal, closeModal, zIndex }) => {
   const decision = useDecisionModal();
+  const toybacoDialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (modal.id !== 'add-edit-modal') return;
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = toybacoDialogRef.current;
+    dialog?.focus();
+    return () => {
+      if (previous?.isConnected) previous.focus();
+    };
+  }, [modal.id]);
+  useEffect(() => {
+    if (!isLast || modal.id !== 'add-edit-modal') return;
+    const dialog = toybacoDialogRef.current;
+    if (!dialog) return;
+    // ネストした確認画面が開いている間は、その画面のフォーカス管理に任せる。
+    const keepFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(dialog.querySelectorAll<HTMLElement>(
+        'button, a[href], input, select, textarea, [contenteditable="true"], [tabindex]'
+      )).filter((element) => element.tabIndex >= 0 && !element.hasAttribute('disabled') && element.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first) {
+        event.preventDefault();
+        dialog.focus();
+      } else if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    dialog.addEventListener('keydown', keepFocus);
+    return () => dialog.removeEventListener('keydown', keepFocus);
+  }, [isLast, modal.id]);
   const closeModalFunction = useCallback(async () => {
     if (modal.askClose) {
       const open = await decision.open();
@@ -122,16 +159,19 @@ export const Component: FC<{
   useHotkeys(
     'Escape',
     () => {
-      if (isLast) {
+      if (isLast && modal.closeOnEscape !== false) {
         closeModalFunction();
       }
     },
-    [isLast, closeModalFunction]
+    [isLast, closeModalFunction, modal.closeOnEscape]
   );
 
   if (modal.removeLayout) {
     return (
       <div
+        data-toybaco-modal={modal.id}
+        ref={toybacoDialogRef}
+        tabIndex={-1}
         style={{ zIndex }}
         className={clsx(
           !modal.fullScreen
