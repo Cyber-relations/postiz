@@ -1,0 +1,272 @@
+/* ============================================================
+   トイバコ サブページ共通CSS — トップのデザインシステムを継承
+   ============================================================ */
+:root{
+  --navy:#1F3A5F; --navy-deep:#16273E; --coral:#FF6B5B; --coral-deep:#E85948;
+  --ink:#1E2A38; --muted:#5D6B7A; --line-soft:#E3E8EE;
+  --ch-green:#2FA35C; --ch-blue:#4A79B8; --ch-pink:#E05C7A; --ch-amber:#F09A3E;
+  --marker:#FFE193;
+  --spring:cubic-bezier(.3,1.45,.4,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
+  color:var(--ink); line-height:1.9; font-size:15.5px;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  display:flex; flex-direction:column; min-height:100dvh;
+  background:
+    radial-gradient(42rem 26rem at 88% 6%, rgba(240,154,62,.05), transparent 60%),
+    #FCFCFA;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:radial-gradient(rgba(31,58,95,.085) 1.2px, transparent 1.2px);
+  background-size:24px 24px;
+  -webkit-mask-image:linear-gradient(180deg, transparent 46%, #000 82%);
+  mask-image:linear-gradient(180deg, transparent 46%, #000 82%);
+}
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:5; opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .12 0 0 0 0 .16 0 0 0 0 .22 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{background:var(--coral); color:#fff}
+a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible{
+  outline:3px solid var(--coral); outline-offset:2px; border-radius:6px}
+main{position:relative; z-index:2; flex:1}
+
+/* ---------- ヘッダー ---------- */
+.ribbon{position:fixed;top:0;left:0;right:0;height:3px;z-index:40;background:linear-gradient(90deg,
+  var(--ch-green) 0 28%,var(--ch-blue) 28% 52%,var(--ch-pink) 52% 76%,var(--ch-amber) 76% 100%)}
+header.site{
+  position:fixed;top:3px;left:0;right:0;z-index:30;
+  display:flex;align-items:center;gap:26px;
+  padding:14px max(22px, 3.2vw);
+}
+.logo img{height:34px;display:block}
+nav.menu{display:flex;align-items:center;gap:22px;margin-left:auto;
+  background:rgba(252,251,248,.72); border:1px solid rgba(227,232,238,.8); border-radius:999px;
+  padding:6px 8px 6px 20px; backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+  transition:background .3s ease, border-color .3s ease}
+header.site.scrolled nav.menu{background:transparent; border-color:transparent; backdrop-filter:none; -webkit-backdrop-filter:none}
+nav.menu a{
+  text-decoration:none;font-size:.88rem;font-weight:700;color:var(--ink);
+  padding:4px 2px;border-bottom:2px solid transparent;transition:.18s;
+}
+nav.menu a:hover{color:var(--navy);border-bottom-color:var(--coral)}
+nav.menu a.on{color:var(--navy);border-bottom-color:var(--coral)}
+nav.menu a.login{color:var(--muted)}
+nav.menu a.login:hover{color:var(--navy)}
+header.site.scrolled{
+  background:rgba(252,252,250,.92); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line-soft);
+}
+.nav-toggle{display:none; margin-left:auto; width:44px; height:44px; border:none; background:transparent;
+  cursor:pointer; border-radius:12px; position:relative}
+.nav-toggle i{position:absolute; left:11px; top:50%; margin-top:-1.2px; width:22px; height:2.4px;
+  background:var(--navy); border-radius:2px; transition:transform .25s var(--spring), opacity .2s}
+.nav-toggle i:nth-child(1){transform:translateY(-7px)}
+.nav-toggle i:nth-child(3){transform:translateY(7px)}
+.nav-toggle[aria-expanded="true"] i:nth-child(1){transform:rotate(45deg)}
+.nav-toggle[aria-expanded="true"] i:nth-child(2){opacity:0}
+.nav-toggle[aria-expanded="true"] i:nth-child(3){transform:rotate(-45deg)}
+
+/* ---------- ボタン ---------- */
+.btn{
+  display:inline-block;text-decoration:none;cursor:pointer;border:none;
+  font-family:inherit;font-weight:700;letter-spacing:.02em;border-radius:12px;
+  transition:transform .18s var(--spring),box-shadow .2s,background .2s;
+  pointer-events:auto;
+}
+.btn:active{transform:scale(.96)}
+.btn:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.btn-coral{background:var(--coral);color:#fff;box-shadow:0 4px 14px rgba(255,107,91,.32)}
+.btn-coral:hover{background:var(--coral-deep);transform:translateY(-2px);box-shadow:0 14px 34px rgba(255,107,91,.35)}
+.btn-navy{background:var(--navy);color:#fff;box-shadow:0 4px 14px rgba(31,58,95,.28)}
+.btn-navy:hover{background:var(--navy-deep);transform:translateY(-2px);box-shadow:0 14px 34px rgba(31,58,95,.32)}
+.btn-ghost{background:rgba(255,255,255,.7);color:var(--navy);border:1.5px solid #C7D2DE;backdrop-filter:blur(4px)}
+.btn-ghost:hover{border-color:var(--navy);transform:translateY(-2px)}
+.btn-sm{padding:9px 20px;font-size:.86rem;border-radius:9px}
+header.site .btn-sm{border-radius:999px; padding:9px 22px}
+.btn-lg{padding:17px 34px;font-size:1.02rem;border-radius:14px}
+.btn-lg.btn-ghost{padding:15.5px 30px}
+
+/* ---------- ページヒーロー ---------- */
+.phero{padding:138px 0 64px; position:relative}
+.phero .crumbs{font-size:.74rem; color:var(--muted); margin-bottom:22px; font-weight:700}
+.phero .crumbs a{color:var(--muted); text-decoration:none; transition:color .18s}
+.phero .crumbs a:hover{color:var(--coral)}
+.phero .crumbs .sep{margin:0 8px; opacity:.5}
+.phero h1{
+  font-weight:900;color:var(--navy);letter-spacing:.01em;
+  font-size:clamp(1.95rem, 3.9vw, 3.15rem); line-height:1.42; margin-bottom:20px;
+  text-wrap:balance;
+}
+.phero .lead{font-size:1.02rem; max-width:42em; color:var(--ink)}
+.phero .lead strong{color:var(--navy)}
+.phero .actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}
+.phero .pstats{display:flex; gap:12px; flex-wrap:wrap; margin-top:30px}
+.pstat{background:#fff; border:1px solid var(--line-soft); border-radius:14px; padding:12px 22px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04), 0 10px 24px rgba(30,42,56,.06); display:flex; align-items:baseline; gap:9px}
+.pstat i{width:9px; height:9px; border-radius:3.5px; flex:none; align-self:center}
+.pstat b{font-size:1.22rem; font-weight:900; color:var(--navy); font-feature-settings:"tnum"}
+.pstat span{font-size:.76rem; color:var(--muted); font-weight:700}
+
+/* ---------- セクション共通 ---------- */
+.sec{padding:96px 0; position:relative}
+.sec.tint{background:rgba(255,255,255,.72)}
+.wrap2{max-width:74rem; margin:0 auto; padding:0 max(24px,4vw)}
+.center{text-align:center}
+.eyebrow2{
+  display:inline-flex; align-items:center; font-size:.74rem; font-weight:700;
+  letter-spacing:.08em; color:var(--coral); margin-bottom:16px;
+}
+.eyebrow2 .dots{display:inline-flex; gap:4px; margin-right:10px}
+.eyebrow2 .dots i{width:6px; height:6px; border-radius:50%}
+.eyebrow2 .dots i:nth-child(1){background:var(--ch-green)}
+.eyebrow2 .dots i:nth-child(2){background:var(--ch-blue)}
+.eyebrow2 .dots i:nth-child(3){background:var(--ch-pink)}
+.eyebrow2 .dots i:nth-child(4){background:var(--ch-amber)}
+.sec h2{
+  font-size:clamp(1.7rem,3.2vw,2.5rem); font-weight:900; color:var(--navy);
+  line-height:1.5; margin-bottom:18px; text-wrap:balance;
+}
+.sub2{color:var(--muted); max-width:46em; font-size:1rem; margin-bottom:46px}
+.center .sub2{margin-inline:auto}
+.note2{font-size:.72rem; color:var(--muted); font-weight:500; margin-top:10px}
+.nw{white-space:nowrap}
+.maru{
+  color:var(--coral); display:inline-block; pointer-events:auto; cursor:pointer;
+  transition:transform .2s var(--spring);
+}
+.maru:hover{transform:scale(1.25)}
+.maru.jump{animation:maruJump .55s var(--spring)}
+@keyframes maruJump{
+  0%{transform:translateY(0) scale(1)}
+  30%{transform:translateY(-.34em) scale(1.15,.9)}
+  55%{transform:translateY(.02em) scale(.92,1.08)}
+  75%{transform:translateY(-.08em) scale(1.04,.97)}
+  100%{transform:translateY(0) scale(1)}
+}
+.mk{position:relative;padding:0 2px}
+.mk i{
+  position:absolute; left:-1%; right:-1%; top:58%; bottom:6%; z-index:-1;
+  background:var(--marker); border-radius:3px;
+  transform:scaleX(0); transform-origin:left center;
+  transition:transform .45s cubic-bezier(.6,.05,.2,1);
+}
+.mk.lit i{transform:scaleX(1)}
+.reveal{opacity:0; transform:translateY(26px);
+  transition:opacity .7s ease var(--d,0s), transform .8s var(--spring) var(--d,0s)}
+.reveal.in{opacity:1; transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+/* ---------- 汎用カードグリッド ---------- */
+.cardg{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:70rem; margin:0 auto; text-align:left}
+.cardg.two{grid-template-columns:repeat(2,1fr); max-width:56rem}
+.fcard{
+  background:#fff; border:1px solid var(--line-soft); border-radius:20px; padding:26px 26px 24px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04),0 14px 34px rgba(30,42,56,.07);
+  transition:transform .2s var(--spring), box-shadow .25s ease;
+}
+.fcard:hover{transform:translateY(-4px); box-shadow:0 4px 8px rgba(30,42,56,.05),0 24px 48px rgba(30,42,56,.12)}
+.fcard .ico{width:44px; height:44px; border-radius:13px; display:grid; place-items:center; margin-bottom:16px}
+.fcard .ico svg{width:23px; height:23px}
+.fcard h3{font-size:1.05rem; color:var(--navy); margin-bottom:8px}
+.fcard p{font-size:.87rem; color:var(--muted); line-height:1.95}
+.fcard p b{color:var(--ink)}
+
+/* ---------- チェックリスト ---------- */
+.ck{list-style:none; display:grid; gap:10px; font-size:.9rem; text-align:left}
+.ck li{padding-left:26px; position:relative; line-height:1.8}
+.ck li::before{content:"✓"; position:absolute; left:0; color:#1F8A4B; font-weight:900}
+.ck li b{color:var(--navy)}
+
+/* ---------- FAQ ---------- */
+.faq2{max-width:46rem; margin:0 auto; text-align:left; display:grid; gap:12px}
+.faq2 details{
+  background:#fff; border:1px solid var(--line-soft); border-radius:15px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04),0 8px 22px rgba(30,42,56,.05);
+  overflow:hidden; transition:border-color .2s ease, box-shadow .25s ease;
+}
+.faq2 details:hover{border-color:#D8D2C6}
+.faq2 details[open]{border-color:var(--navy); box-shadow:0 3px 6px rgba(30,42,56,.05), 0 16px 36px rgba(30,42,56,.09)}
+.faq2 details[open] .q{background:var(--navy)}
+.faq2 summary{
+  display:flex; align-items:center; gap:13px; padding:17px 20px; cursor:pointer;
+  font-weight:700; font-size:.92rem; color:var(--navy); list-style:none;
+}
+.faq2 summary::-webkit-details-marker{display:none}
+.faq2 .q{display:grid; place-items:center; width:26px; height:26px; flex:none; border-radius:8px; background:var(--coral); color:#fff; font-size:.8rem; font-weight:900}
+.faq2 .arw{margin-left:auto; color:var(--muted); transition:transform .25s var(--spring)}
+.faq2 details[open] .arw{transform:rotate(180deg)}
+.faq2 .a{padding:0 20px 18px 59px; font-size:.88rem; color:var(--muted); line-height:1.95; animation:faqIn .35s ease}
+.faq2 .a a{color:var(--navy)}
+@keyframes faqIn{from{opacity:0; transform:translateY(-6px)}to{opacity:1; transform:none}}
+.faq-cat{font-size:1.05rem!important; color:var(--navy); margin:46px 0 16px!important; text-align:left; max-width:46rem; margin-inline:auto!important}
+.faq-cat:first-of-type{margin-top:0!important}
+
+/* ---------- ページ下クロージング ---------- */
+.close2{padding:110px 0 120px; text-align:center}
+.close2 .markimg{width:88px; margin:0 auto 20px; animation:markBob 3.4s ease-in-out infinite}
+@keyframes markBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@media (prefers-reduced-motion:reduce){.close2 .markimg{animation:none}}
+.closing-pre{font-size:.92rem; font-weight:800; color:var(--coral); letter-spacing:.05em; margin-bottom:14px}
+.close2 h2{font-size:clamp(1.7rem,3.4vw,2.6rem)}
+.close2 .sub2{margin-bottom:34px}
+.close2 .acts{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+
+/* ---------- フッター ---------- */
+footer.site2{background:var(--navy-deep); color:#fff; padding:64px 0 30px; position:relative; z-index:2}
+footer.site2::before{content:""; position:absolute; top:0; left:0; right:0; height:4px;
+  background:linear-gradient(90deg, var(--ch-green) 0 25%, var(--ch-blue) 0 50%, var(--ch-pink) 0 75%, var(--ch-amber) 0 100%)}
+.fgrid{display:grid; grid-template-columns:minmax(250px,1fr) auto auto auto; gap:44px clamp(48px,6vw,110px);
+  max-width:74rem; margin:0 auto; padding:0 max(24px,4vw); text-align:left}
+.fbrand-logo{display:flex; align-items:center; gap:11px; margin-bottom:15px}
+.fbrand-logo img{width:38px; height:38px; border-radius:10px; background:#fff; padding:4px; box-sizing:border-box}
+.fbrand-logo span{font-size:1.18rem; font-weight:900; color:#fff; letter-spacing:.05em}
+.fgrid .fbrand p{font-size:.8rem; color:rgba(255,255,255,.6); line-height:1.9}
+.fgrid h4{font-size:.74rem; letter-spacing:.18em; color:var(--coral); margin-bottom:14px}
+.fgrid ul{list-style:none; display:grid; gap:9px}
+.fgrid ul a{color:rgba(255,255,255,.72); text-decoration:none; font-size:.85rem; transition:color .18s ease}
+.fgrid ul a:hover{color:#FF9A8D}
+.fcopy{max-width:74rem; margin:44px auto 0; padding:22px max(24px,4vw) 0; border-top:1px solid rgba(255,255,255,.12);
+  font-size:.75rem; color:rgba(255,255,255,.62); display:flex; align-items:center; gap:8px}
+.fcopy .fdots{margin-left:auto; display:inline-flex; gap:5px}
+.fcopy .fdots i{width:7px; height:7px; border-radius:50%}
+.fcopy .fdots i:nth-child(1){background:var(--ch-green)}
+.fcopy .fdots i:nth-child(2){background:var(--ch-blue)}
+.fcopy .fdots i:nth-child(3){background:var(--ch-pink)}
+.fcopy .fdots i:nth-child(4){background:var(--ch-amber)}
+
+/* ---------- レスポンシブ ---------- */
+@media (max-width:980px){
+  .sec{padding:70px 0}
+  .phero{padding:118px 0 52px}
+  .cardg,.cardg.two{grid-template-columns:1fr; max-width:30rem}
+  .fgrid{grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px 24px}
+  .fgrid .fbrand{grid-column:1 / -1}
+  nav.menu{
+    position:fixed; top:64px; right:14px; left:auto; margin:0;
+    flex-direction:column; align-items:stretch; gap:4px;
+    background:#fff; border:1px solid var(--line-soft); border-radius:18px;
+    padding:14px; min-width:220px;
+    box-shadow:0 6px 16px rgba(31,58,95,.12), 0 30px 70px rgba(31,58,95,.25);
+    opacity:0; transform:translateY(-8px) scale(.98); pointer-events:none; visibility:hidden;
+    transition:opacity .2s ease, transform .25s var(--spring), visibility 0s linear .3s;
+  }
+  nav.menu.open{opacity:1; transform:none; pointer-events:auto; visibility:visible;
+    transition:opacity .2s ease, transform .25s var(--spring), visibility 0s}
+  nav.menu a{padding:10px 12px; border-bottom:none; border-radius:10px; font-size:.92rem}
+  nav.menu a:hover, nav.menu a.on{background:rgba(31,58,95,.06); border-bottom:none}
+  nav.menu .btn{text-align:center; margin-top:6px}
+  .nav-toggle{display:grid}
+  header.site{
+    background:rgba(252,252,250,.92); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-soft);
+  }
+}
+@media (max-width:560px){
+  .phero h1{font-size:clamp(1.7rem,7.4vw,2.2rem)}
+  .fgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

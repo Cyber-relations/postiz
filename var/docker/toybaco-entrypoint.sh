@@ -1,6 +1,14 @@
 #!/bin/sh
 set -eu
 
+# The same immutable image is deployed to both environments. Production and
+# missing/mismatched origins use the original config, even for a forged Host.
+nginx_config='/etc/nginx/nginx.conf'
+if [ "${TOYBACO_APP_ORIGIN:-}" = 'https://app.staging.toybaco.jp' ] && \
+   [ "${FRONTEND_URL:-}" = 'https://post.staging.toybaco.jp' ]; then
+  nginx_config='/app/var/docker/nginx-staging.conf'
+fi
+
 service_pids=''
 service_exit=''
 
@@ -56,7 +64,7 @@ start_in /app/apps/orchestrator \
 start_in /app/apps/frontend \
   node /app/node_modules/next/dist/bin/next start -p 4200
 start_in /app \
-  nginx -g 'daemon off; pid /tmp/nginx.pid;'
+  nginx -c "$nginx_config" -g 'daemon off; pid /tmp/nginx.pid;'
 
 wait_for_service_exit
 

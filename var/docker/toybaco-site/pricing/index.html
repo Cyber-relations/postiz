@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<!-- toybaco-plans:title:start --><title>料金プラン — 月¥9,800から | トイバコ</title><!-- toybaco-plans:title:end -->
+<!-- toybaco-plans:description:start --><meta name="description" content="トイバコの料金は店舗ごとの定額制。ライト¥9,800/スタンダード¥29,800/プロ¥44,800(月・税別)。利用人数・AI応答枠はプランごとの契約条件をご確認ください。"><!-- toybaco-plans:description:end -->
+<link rel="canonical" href="https://staging.toybaco.jp/pricing/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="トイバコ">
+<!-- toybaco-plans:og_title:start --><meta property="og:title" content="料金プラン — 月¥9,800から | トイバコ"><!-- toybaco-plans:og_title:end -->
+<!-- toybaco-plans:og_description:start --><meta property="og:description" content="トイバコの料金は店舗ごとの定額制。ライト¥9,800/スタンダード¥29,800/プロ¥44,800(月・税別)。利用人数・AI応答枠はプランごとの契約条件をご確認ください。"><!-- toybaco-plans:og_description:end -->
+<meta property="og:url" content="https://staging.toybaco.jp/pricing/">
+<meta property="og:image" content="https://staging.toybaco.jp/assets/og.png?v=20260903c">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"トイバコ","url":"https://staging.toybaco.jp/","publisher":{"@type":"Organization","name":"株式会社サイバーリレーションズ","url":"https://cyber-relations.jp/","logo":"https://staging.toybaco.jp/assets/toybaco-mark-c4.png"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"トップ","item":"https://staging.toybaco.jp/"},{"@type":"ListItem","position":2,"name":"料金","item":"https://staging.toybaco.jp/pricing/"}]},{"@type":"SoftwareApplication","name":"トイバコ","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"中小店舗向けの問い合わせ一元管理・SNS予約投稿・AI自動応答サービス。店舗ごとの定額制。","offers":[{"@type":"Offer","name":"ライト","price":"9800","priceCurrency":"JPY"},{"@type":"Offer","name":"スタンダード","price":"29800","priceCurrency":"JPY"},{"@type":"Offer","name":"プロ","price":"44800","priceCurrency":"JPY"}]}]}</script>
+<link rel="stylesheet" href="../assets/fonts/zenkaku.css?v=20260901a">
+<link rel="stylesheet" href="../assets/sub.css?v=20260901a">
+<style>
+/* 計算機(トップと同一) */
+.compare2{max-width:46rem; margin:0 auto 54px; background:#fff; border:1px solid var(--line-soft); border-radius:18px; padding:24px 28px; box-shadow:0 2px 4px rgba(30,42,56,.04),0 12px 30px rgba(30,42,56,.06); text-align:left}
+.compare2 .crow{display:grid; grid-template-columns:11em 1fr auto; gap:12px; align-items:center; margin-bottom:10px; font-size:.84rem; font-weight:700}
+.compare2 .cbar{height:13px; border-radius:999px; background:#E9EDF2; overflow:hidden}
+.compare2 .cbar i{display:block; height:100%; width:0; border-radius:999px; background:#B9C4D1; transition:width .55s cubic-bezier(.25,.9,.3,1)}
+.compare2 .crow.toy .cbar i{background:var(--coral); transition-delay:.45s}
+.compare2.in .cbar i{width:var(--w)}
+.compare2 .cval{font-feature-settings:"tnum"; min-width:8.5em; text-align:right}
+.calc-head{display:flex; align-items:center; gap:18px; margin-bottom:18px; flex-wrap:wrap}
+.calc-head h3{margin:0; font-size:1rem; color:var(--navy)}
+.calc-head h3 b{color:var(--coral); font-size:1.35rem; font-feature-settings:"tnum"; padding:0 2px}
+.calc-head input[type=range]{flex:1; min-width:180px; height:22px; cursor:pointer; -webkit-appearance:none; appearance:none; background:transparent}
+.calc-head input[type=range]::-webkit-slider-runnable-track{height:7px; border-radius:999px; background:linear-gradient(90deg, var(--coral) var(--fill,28%), #E2E8EF var(--fill,28%))}
+.calc-head input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:19px; height:19px; border-radius:50%; margin-top:-6px; background:var(--coral); border:3px solid #fff; cursor:grab; box-shadow:0 0 0 1.5px var(--coral), 0 4px 10px rgba(255,107,91,.45)}
+.calc-head input[type=range]::-moz-range-track{height:7px; border-radius:999px; background:linear-gradient(90deg, var(--coral) var(--fill,28%), #E2E8EF var(--fill,28%))}
+.calc-head input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:50%; background:var(--coral); border:3px solid #fff; box-shadow:0 0 0 1.5px var(--coral), 0 4px 10px rgba(255,107,91,.45)}
+.calc-diff{margin-top:14px; font-size:.9rem; font-weight:800; color:var(--navy)}
+.calc-diff b{color:#E8503F; font-size:1.2rem; font-feature-settings:"tnum"}
+.calc-diff span{display:block; font-size:.76rem; color:var(--muted); font-weight:700; margin-top:2px}
+/* トグル+プランカード(トップと同一) */
+.bill-tgl{display:inline-flex; gap:4px; background:#fff; border:1.5px solid var(--line-soft); border-radius:999px; padding:4px; margin-bottom:36px; box-shadow:0 4px 14px rgba(16,42,67,.05)}
+.bill-tgl button{border:0; background:transparent; font:inherit; font-size:.88rem; font-weight:800; color:var(--muted); padding:9px 22px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:color .18s,background .18s}
+.bill-tgl button.on{background:var(--navy); color:#fff}
+.bill-tgl button em{font-style:normal; font-size:.68rem; font-weight:900; background:#FCE8E4; color:var(--coral); padding:2px 8px; border-radius:999px; letter-spacing:.02em}
+.bill-tgl button.on em{background:var(--coral); color:#fff}
+.plans2{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; max-width:70rem; margin:0 auto; text-align:left; align-items:stretch}
+.plan2{background:#fff; border:1.5px solid var(--line-soft); border-radius:20px; padding:28px;
+  box-shadow:0 2px 4px rgba(30,42,56,.04),0 14px 34px rgba(30,42,56,.07);
+  display:flex; flex-direction:column; position:relative;
+  transition:transform .2s var(--spring), box-shadow .25s ease}
+.plan2:hover{transform:translateY(-4px); box-shadow:0 4px 8px rgba(30,42,56,.05),0 24px 48px rgba(30,42,56,.12)}
+.plan2.hot{border-color:var(--coral); box-shadow:0 3px 6px rgba(255,107,91,.08),0 22px 50px rgba(255,107,91,.16)}
+.plan2.hot:hover{box-shadow:0 4px 8px rgba(255,107,91,.1),0 28px 58px rgba(255,107,91,.22)}
+.plan2 .rec{position:absolute; top:-13px; left:50%; transform:translateX(-50%);
+  background:var(--coral); color:#fff; font-size:.72rem; font-weight:900;
+  padding:4px 16px; border-radius:999px; box-shadow:0 6px 14px rgba(255,107,91,.4); white-space:nowrap}
+.plan2 h3{font-size:1.1rem; color:var(--navy); display:flex; align-items:center; gap:9px}
+.plan2 h3::before{content:""; width:10px; height:10px; border-radius:4px; flex:none}
+.plan2:nth-child(1) h3::before{background:var(--ch-green)}
+.plan2:nth-child(2) h3::before{background:var(--ch-blue)}
+.plan2:nth-child(3) h3::before{background:var(--coral)}
+.plan2 .pfor{font-size:.78rem; color:var(--muted); margin:6px 0 14px; line-height:1.7; min-height:2.6em}
+.plan2 .pprice{margin-bottom:16px}
+.plan2 .pprice b{font-size:2.1rem; font-weight:900; color:var(--navy); letter-spacing:-.02em; font-feature-settings:"tnum"; transition:opacity .16s}
+.plan2 .pprice span{font-size:.78rem; color:var(--muted); font-weight:700}
+.plan2 .pprice .ybill{display:block; font-style:normal; font-size:.74rem; font-weight:700; color:var(--muted); margin-top:5px; min-height:1.3em; visibility:hidden}
+body.bill-y .plan2 .pprice .ybill{visibility:visible; color:#1F8A4B}
+.plan2 ul{list-style:none; display:grid; gap:8px; font-size:.85rem; margin-bottom:22px}
+.plan2 ul li{padding-left:22px; position:relative; line-height:1.65}
+.plan2 ul li::before{content:"✓"; position:absolute; left:0; color:#1F8A4B; font-weight:900}
+.plan2 ul li.ai::before{color:var(--coral)}
+.plan2 ul li.no{color:#66717E}
+.plan2 ul li.no::before{content:"−"; color:#98A3B0}
+.plan2 ul li.ai b{color:var(--coral)}
+.plan2 .btn{margin-top:auto; text-align:center; padding:13px 20px; font-size:.9rem}
+.prem-band{max-width:70rem; margin:22px auto 0; border-radius:22px; position:relative; overflow:hidden;
+  background:linear-gradient(120deg, #131F2E 0%, #1C3355 52%, #27466E 100%);
+  border:1.5px solid rgba(240,193,105,.55);
+  padding:30px 36px; display:flex; gap:20px; align-items:center; flex-wrap:wrap;
+  color:#fff; text-align:left;
+  box-shadow:0 4px 10px rgba(19,31,46,.25), 0 26px 60px rgba(19,31,46,.4), inset 0 1px 0 rgba(255,255,255,.09)}
+.prem-band::before{content:""; position:absolute; top:-30%; bottom:-30%; width:120px; left:-160px;
+  background:linear-gradient(100deg, transparent, rgba(240,193,105,.14), transparent);
+  transform:skewX(-18deg); animation:premShine 6.5s ease-in-out infinite}
+@keyframes premShine{0%,55%{left:-160px}85%,100%{left:calc(100% + 80px)}}
+@media (prefers-reduced-motion:reduce){.prem-band::before{animation:none}}
+.prem-tag{position:absolute; top:0; right:34px; background:linear-gradient(120deg, #F3CC7E, #D9A441);
+  color:#1A2A40; font-size:.62rem; font-weight:900; letter-spacing:.08em;
+  padding:6px 14px 5px; border-radius:0 0 9px 9px; box-shadow:0 4px 12px rgba(217,164,65,.4)}
+.prem-band .t b{font-size:1.2rem; display:inline-flex; align-items:center; gap:8px;
+  background:linear-gradient(100deg, #F7DCA0, #EDBE6C); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+.prem-band .t b svg{width:19px; height:19px; flex:none}
+.prem-band .t .py{font-weight:900; font-size:1.65rem; margin-left:12px; color:#F5D08C; font-feature-settings:"tnum"}
+.prem-band .t .py span{transition:opacity .16s}
+.prem-band .t .py em{font-style:normal; font-size:.75rem; font-weight:700; opacity:.75; color:#fff}
+.prem-band .t p{font-size:.84rem; opacity:.85; margin-top:7px; line-height:1.9}
+.prem-band .a{margin-left:auto; position:relative; z-index:2}
+.btn-gold{padding:14px 28px; font-size:.94rem; border-radius:13px;
+  background:linear-gradient(120deg, #F3CC7E, #DCA84A); color:#1A2A40; font-weight:900;
+  box-shadow:0 4px 12px rgba(217,164,65,.35), 0 14px 30px rgba(217,164,65,.28)}
+.btn-gold:hover{transform:translateY(-2px); box-shadow:0 6px 16px rgba(217,164,65,.42), 0 20px 40px rgba(217,164,65,.34)}
+.ent-band{max-width:70rem; margin:18px auto 0; border-radius:22px; position:relative;
+  background:#fff; border:1.5px solid var(--navy);
+  padding:32px 36px 30px; display:flex; gap:20px; align-items:center; flex-wrap:wrap; text-align:left;
+  box-shadow:0 3px 8px rgba(31,58,95,.06), 0 20px 48px rgba(31,58,95,.1)}
+.ent-band .a .btn{padding:13px 26px; font-size:.92rem; border-radius:13px}
+.ent-band .a .btn-ghost{padding:11.5px 24.5px}
+.ent-tag{position:absolute; top:0; right:34px; background:var(--navy);
+  color:#fff; font-size:.62rem; font-weight:900; letter-spacing:.08em;
+  padding:6px 14px 5px; border-radius:0 0 9px 9px}
+.ent-band .t b{font-size:1.2rem; color:var(--navy)}
+.ent-band .t .py{font-weight:900; font-size:1.3rem; margin-left:12px; color:var(--navy)}
+.ent-band .t p{font-size:.84rem; color:var(--muted); margin-top:7px; line-height:1.9}
+.ent-band .a{margin-left:auto; display:flex; gap:12px; flex-wrap:wrap}
+@media (max-width:980px){.ent-band{max-width:26rem; flex-direction:column; align-items:flex-start}.ent-band .a{margin-left:0}}
+.price-notes{font-size:.78rem; color:var(--muted); margin-top:22px; line-height:2}
+@media (max-width:980px){.plans2{grid-template-columns:1fr; max-width:26rem}.prem-band{max-width:26rem; flex-direction:column; align-items:flex-start}.prem-band .a{margin-left:0}}
+/* 支払い方法カード */
+.payg{display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:56rem; margin:0 auto; text-align:left}
+@media (max-width:780px){.payg{grid-template-columns:1fr; max-width:30rem}}
+</style>
+
+<!-- toybaco-plans:runtime:start --><script id="toybaco-sales-data" type="application/json">[{"plan_id":"light","version":"2026-09-06.1","name":"ライト","product_name":"トイバコ ライト","amount":9800,"agents":3},{"plan_id":"standard","version":"2026-09-06.1","name":"スタンダード","product_name":"トイバコ スタンダード","amount":29800,"agents":null},{"plan_id":"pro","version":"2026-09-06.1","name":"プロ","product_name":"トイバコ プロ","amount":44800,"agents":null}]</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const plans = JSON.parse(document.getElementById('toybaco-sales-data').textContent);
+  const yen = n => '¥' + n.toLocaleString('ja-JP');
+  const range = document.getElementById('calcRange');
+  if (range) {
+    const update = () => {
+      const n = Number(range.value), seat = n * 8300;
+      const eligible = plans.filter(p => p.agents === null || p.agents >= n).sort((a, b) => a.amount - b.amount);
+      const plan = eligible[0];
+      range.style.setProperty('--fill', (((n - 2) / 28) * 100).toFixed(1) + '%');
+      document.getElementById('calcN').textContent = n;
+      document.getElementById('valSeat').textContent = '月 約' + yen(seat);
+      document.getElementById('lblToy').textContent = plan ? plan.product_name : 'この人数に対応する販売プランはありません';
+      document.getElementById('valToy').textContent = plan ? '月 ' + yen(plan.amount) : 'ご相談ください';
+      document.getElementById('barSeat').style.setProperty('--w', (seat / 249000 * 100).toFixed(1) + '%');
+      document.getElementById('barToy').style.setProperty('--w', plan ? Math.min(100, plan.amount / 249000 * 100).toFixed(1) + '%' : '0%');
+      document.getElementById('calcDiff').textContent = plan ? yen((seat - plan.amount) * 12) : '—';
+    };
+    range.addEventListener('input', update);
+    update();
+  }
+  const buttons = document.querySelectorAll('.bill-tgl button');
+  const priced = document.querySelectorAll('.plans2 [data-m]');
+  const buys = document.querySelectorAll('.plans2 .buy-btn');
+  const setCycle = yearly => {
+    buttons.forEach(b => { const selected = b.dataset.bill === (yearly ? 'y' : 'm'); b.classList.toggle('on', selected); b.setAttribute('aria-pressed', String(selected)); });
+    document.body.classList.toggle('bill-y', yearly);
+    priced.forEach(el => { el.textContent = yearly ? el.dataset.y : el.dataset.m; });
+    buys.forEach(a => {
+      const href = yearly ? a.dataset.ly : a.dataset.lm;
+      if (href) { a.href = href; a.removeAttribute('aria-disabled'); }
+      else { a.removeAttribute('href'); a.setAttribute('aria-disabled', 'true'); }
+    });
+  };
+  buttons.forEach(b => b.addEventListener('click', () => setCycle(b.dataset.bill === 'y')));
+  const params = new URLSearchParams(location.search);
+  setCycle(params.get('cycle') === 'year' || params.get('bill') === 'y');
+  const selected = params.get('plan') || location.hash.replace(/^#/, '');
+  const card = Array.from(document.querySelectorAll('#sgPlans .plan2')).find(el => el.dataset.plan === selected);
+  if (card) {
+    card.classList.add('picked');
+    if (params.get('version') && params.get('version') !== card.dataset.version) {
+      const notice = document.getElementById('plan-version-notice');
+      notice.hidden = false;
+      notice.textContent = '料金・プラン内容が更新されています。現在表示している条件をご確認のうえ、お申し込みください。';
+    }
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const buy = card.querySelector('.buy-btn');
+    if (buy) buy.focus({ preventScroll: true });
+  }
+});
+</script><!-- toybaco-plans:runtime:end -->
+<meta name="robots" content="noindex,nofollow,noarchive">
+</head>
+<body>
+<script>window.__p='../';</script>
+
+<div class="ribbon"></div>
+<header class="site">
+  <a class="logo" href="../index.html" aria-label="トイバコ"><img src="../assets/logo.webp" alt="トイバコ"></a>
+  <nav class="menu" id="siteMenu" aria-label="サイト内メニュー">
+    <a href="../features/">できること</a>
+    <a href="../posting/">投稿機能</a>
+    <a href="../ai/">AI応答</a>
+    <a href="../industries/">業界パック</a>
+    <a class="on" href="../pricing/">料金</a>
+    <a href="../start/">はじめ方</a>
+    <a class="login" href="https://app.staging.toybaco.jp">ログイン</a>
+    <a class="btn btn-coral btn-sm" href="../signup/" style="margin-left:6px">申し込む</a>
+  </nav>
+  <button class="nav-toggle" id="navToggle" aria-label="メニューを開く" aria-expanded="false"><i></i><i></i><i></i></button>
+</header>
+
+<main>
+<section class="phero">
+  <div class="wrap2">
+    <p class="crumbs"><a href="../index.html">トップ</a><span class="sep">/</span>料金</p>
+    <span class="eyebrow2"><span class="dots"><i></i><i></i><i></i><i></i></span>料金</span>
+    <h1><span class="mk">アカウント課金ゼロ<i></i></span>。<br>店舗ごとの定額制<span class="maru">。</span></h1>
+    <p class="lead">利用人数の上限内なら、人数が増えても料金は同じ。<strong>月 <!-- toybaco-plans:minimum:start -->¥9,800<!-- toybaco-plans:minimum:end --> から、見積もり不要</strong>で、料金はすべてこのページに公開しています。</p>
+    <div class="pstats reveal" style="--d:.2s">
+      <div class="pstat"><i style="background:var(--ch-green)"></i><b><!-- toybaco-plans:minimum:start -->¥9,800<!-- toybaco-plans:minimum:end -->〜</b><span>店舗ごとの月額定額</span></div>
+      <div class="pstat"><i style="background:var(--ch-blue)"></i><b>0円</b><span>アカウント追加はずっと無料</span></div>
+      <div class="pstat"><i style="background:var(--ch-amber)"></i><b><!-- toybaco-plans:discount:start -->10%オフ<!-- toybaco-plans:discount:end --></b><span>年払いの条件は各プランに記載</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 計算機 -->
+<section class="sec tint">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>料金比較</span>
+    <h2 class="reveal">アカウント課金型ツールとの料金比較<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">スタッフが10人でも30人でも、トイバコの料金は同じです。</p>
+    <div class="compare2 reveal" style="--d:.1s" id="staffCalc">
+      <div class="calc-head">
+        <h3>スタッフ <b id="calcN">10</b>人のお店なら —</h3>
+        <input type="range" id="calcRange" min="2" max="30" value="10" step="1" aria-label="スタッフの人数">
+      </div>
+      <div class="crow"><span>アカウント課金ツール</span><span class="cbar"><i id="barSeat" style="--w:33%"></i></span><span class="cval" id="valSeat">月 約¥83,000</span></div>
+      <div class="crow toy"><span id="lblToy"><!-- toybaco-plans:calc_name:start -->トイバコ スタンダード<!-- toybaco-plans:calc_name:end --></span><span class="cbar"><i id="barToy" style="--w:12%"></i></span><span class="cval" id="valToy"><!-- toybaco-plans:calc_price:start -->月 ¥29,800<!-- toybaco-plans:calc_price:end --></span></div>
+      <p class="calc-diff">1年で <b id="calcDiff"><!-- toybaco-plans:calc_difference:start -->¥638,400<!-- toybaco-plans:calc_difference:end --></b> の差になります。<span>スライダーで人数を変更できます。プランごとの利用人数の上限内なら定額です。</span></p>
+      <p class="note2">※ 1アカウントあたり約¥8,300のツールを同人数で利用した場合の試算(2026年8月・各社公開情報より)。トイバコはプランごとの利用人数の上限内なら定額です。</p>
+    </div>
+  </div>
+</section>
+
+<!-- プラン -->
+<section class="sec" id="plans">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>プラン</span>
+    <h2 class="reveal"><!-- toybaco-plans:plan_count:start -->全3プラン。すべて店舗ごとの定額<!-- toybaco-plans:plan_count:end --><span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.08s">すべて店舗ごとの定額・アカウント課金なし。見積もり不要で、料金はすべてこのページに公開しています。</p>
+    <div class="bill-tgl reveal" style="--d:.12s" role="group" aria-label="お支払いサイクルの選択">
+      <button type="button" class="on" data-bill="m" aria-pressed="true">月払い</button>
+      <button type="button" data-bill="y" aria-pressed="false">年払い<em><!-- toybaco-plans:discount:start -->10%オフ<!-- toybaco-plans:discount:end --></em></button>
+    </div>
+    <!-- toybaco-plans:cards:start --><div class="plans2">
+      <div class="plan2 reveal" style="--d:0.00s" data-plan="light" data-version="2026-09-06.1" id="plan-light">
+        <h3>ライト</h3>
+        <p class="pfor">問い合わせ管理だけを小さく始めたいお店に。LINE・メール・Webチャット/3名まで。SNS投稿機能はありません</p>
+        <p class="pprice"><b data-m="¥9,800" data-y="¥8,820">¥9,800</b><span> /月(税別)</span><i class="ybill">年一括 ¥105,840</i></p>
+        <ul>
+          <li>問い合わせ一元管理(LINE・メール・Web チャット)</li>
+          <li>利用は3名まで</li>
+          <li class="no">SNS 投稿機能はありません</li>
+          <li class="no">AI 応答は含まれません</li>
+          <li>1店舗分</li>
+        </ul>
+        <a class="btn btn-ghost buy-btn" data-plan="light" data-lm="../signup/?plan=light&amp;cycle=month&amp;version=2026-09-06.1" data-ly="../signup/?plan=light&amp;cycle=year&amp;version=2026-09-06.1" href="../signup/?plan=light&amp;cycle=month&amp;version=2026-09-06.1">このプランではじめる</a>
+      </div>
+      <div class="plan2 reveal" style="--d:0.06s" data-plan="standard" data-version="2026-09-06.1" id="plan-standard">
+        <h3>スタンダード</h3>
+        <p class="pfor">Instagram・SNS投稿まで全部使いたいお店に。人数無制限</p>
+        <p class="pprice"><b data-m="¥29,800" data-y="¥26,820">¥29,800</b><span> /月(税別)</span><i class="ybill">年一括 ¥321,840</i></p>
+        <ul>
+          <li>問い合わせ一元管理(LINE・メール・Web チャット・Instagram DM)</li>
+          <li>利用人数 無制限</li>
+          <li>SNS 予約投稿・承認フロー</li>
+          <li class="no">AI 応答は含まれません</li>
+          <li>1店舗分</li>
+        </ul>
+        <a class="btn btn-ghost buy-btn" data-plan="standard" data-lm="../signup/?plan=standard&amp;cycle=month&amp;version=2026-09-06.1" data-ly="../signup/?plan=standard&amp;cycle=year&amp;version=2026-09-06.1" href="../signup/?plan=standard&amp;cycle=month&amp;version=2026-09-06.1">このプランではじめる</a>
+      </div>
+      <div class="plan2 hot reveal" style="--d:0.12s" data-plan="pro" data-version="2026-09-06.1" id="plan-pro">
+        <span class="rec">AI 応答つき</span>
+        <h3>プロ</h3>
+        <p class="pfor">AI応答(月500件)で夜間・繁忙時間まで自動化したいお店に</p>
+        <p class="pprice"><b data-m="¥44,800" data-y="¥40,320">¥44,800</b><span> /月(税別)</span><i class="ybill">年一括 ¥483,840</i></p>
+        <ul>
+          <li>問い合わせ一元管理(LINE・メール・Web チャット・Instagram DM)</li>
+          <li>利用人数 無制限</li>
+          <li>SNS 予約投稿・承認フロー</li>
+          <li class="ai">AI 応答エージェント(月500件)</li>
+          <li>1店舗分</li>
+        </ul>
+        <a class="btn btn-coral buy-btn" data-plan="pro" data-lm="../signup/?plan=pro&amp;cycle=month&amp;version=2026-09-06.1" data-ly="../signup/?plan=pro&amp;cycle=year&amp;version=2026-09-06.1" href="../signup/?plan=pro&amp;cycle=month&amp;version=2026-09-06.1">このプランではじめる</a>
+      </div>
+    </div><!-- toybaco-plans:cards:end -->
+    <div class="prem-band reveal" style="--d:.25s">
+      <span class="prem-tag">多店舗のご相談</span>
+      <div class="t"><b>多店舗でのご利用</b><span class="py">個別お見積もり</span><p>店舗数と必要な機能に合わせて、ご契約と運用方法をご案内します。</p></div>
+      <div class="a"><a class="btn btn-gold" href="#toybaco-staging-chat-preview" data-open-chat>チャットで相談する</a></div>
+    </div>
+    <div class="ent-band reveal" style="--d:.28s">
+      <span class="ent-tag">エンタープライズ</span>
+      <div class="t">
+        <b>エンタープライズ</b><span class="py">個別お見積もり</span>
+        <p>専用環境(データ分離・SLA)+業務に合わせたカスタマイズ+多店舗構成+導入研修・運用伴走。<br>見積書・請求書・稟議書類に対応します。</p>
+      </div>
+      <div class="a"><a class="btn btn-ghost" href="../enterprise/">くわしく見る</a><a class="btn btn-navy" href="#toybaco-staging-chat-preview" data-open-chat>見積もりを依頼する</a></div>
+    </div>
+    <p class="price-notes reveal" style="--d:.3s"><!-- toybaco-plans:price_notes:start -->価格はすべて税別です。月払いの税込目安: ライト ¥10,780 / スタンダード ¥32,780 / プロ ¥49,280。<br>年払いは1年分の一括前払いです。解約後は契約期間の終了までご利用いただけます。追加店舗・接続代行の提供条件と料金は、決済画面または事前のお見積もりでご確認ください。<!-- toybaco-plans:price_notes:end --></p>
+  </div>
+</section>
+
+<!-- 支払い -->
+<section class="sec tint">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>お支払い</span>
+    <h2 class="reveal">カード決済・請求書払いに対応<span class="maru">。</span></h2>
+    <div class="payg" style="margin-top:40px">
+      <div class="fcard reveal" style="--d:0s">
+        <div class="ico" style="background:var(--ch-blue)"><svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5.5" width="17" height="13" rx="2.4" stroke="#fff" stroke-width="2"/><path d="M3.5 9.5h17" stroke="#fff" stroke-width="2"/><path d="M7 14.5h4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <h3>カード決済</h3>
+        <p>安全な決済ページ(Stripe)で24時間いつでも。決済から<b>数分で開通メール</b>が届きます。カードの変更・請求履歴の確認は管理画面からいつでも。</p>
+      </div>
+      <div class="fcard reveal" style="--d:.08s">
+        <div class="ico" style="background:var(--ch-green)"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16l-2.4-1.6L14.2 20l-2.2-1.6L9.8 20l-2.4-1.6L5 20V4z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M9 9h6M9 12.8h6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <h3>銀行振込(請求書払い)</h3>
+        <p>チャットで「請求書払い希望」とお知らせください。<b>1営業日以内に請求書</b>(支払期限10日)をお送りし、ご入金確認後に開通をご案内します。</p>
+      </div>
+    </div>
+    <p class="note2 reveal" style="--d:.14s">領収書はインボイス(適格請求書)対応。決済ごとに自動でメール送付されます。プラン変更はいつでも可能で、差額は日割りで自動調整されます。</p>
+  </div>
+</section>
+
+<!-- 料金FAQ -->
+<section class="sec">
+  <div class="wrap2 center">
+    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>よくある質問</span>
+    <h2 class="reveal">料金のよくある質問<span class="maru">。</span></h2>
+    <div class="faq2 reveal" style="--d:.1s">
+      <details>
+        <summary><span class="q">Q</span>スタッフやお客様が増えたら、料金は上がりますか?<span class="arw">▾</span></summary>
+        <div class="a"><!-- toybaco-plans:seat_note:start -->人数に応じた追加課金はありません。プランごとの人数上限があります(ライトは3名まで)。<!-- toybaco-plans:seat_note:end --></div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>契約期間の縛りや違約金はありますか?<span class="arw">▾</span></summary>
+        <div class="a">月払いは縛りも違約金もなく、いつでも解約できます。年払いは1年分の一括前払い(<!-- toybaco-plans:discount:start -->10%オフ<!-- toybaco-plans:discount:end -->)です。</div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>プランの変更はできますか?<span class="arw">▾</span></summary>
+        <div class="a">はい、いつでもできます。管理画面の「ご契約内容」からセルフで変更でき、差額は日割りで自動調整されます。</div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>初期費用はかかりますか?<span class="arw">▾</span></summary>
+        <div class="a">月額のほかに必ずかかる費用はありません。初期設定・接続の代行は希望制で、お申し込み時に選べます(ご自身で設定する場合は不要です)。</div>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>4店舗以上で使いたいのですが。<span class="arw">▾</span></summary>
+        <div class="a">店舗数と必要な機能に合わせた構成をご提案します。料金と運用方法はチャットでご相談ください。</div>
+      </details>
+    </div>
+    <p class="note2 reveal" style="--d:.16s"><a href="../faq/" style="color:var(--navy); font-weight:700">すべての質問を見る →</a></p>
+  </div>
+</section>
+
+<section class="sec close2" id="cta">
+  <div class="wrap2 center">
+    <img class="markimg reveal" src="../assets/toybaco-mark-c4.webp" alt="">
+    <p class="closing-pre reveal">「ありそうでなかった」を、あなたのお店に。</p>
+    <h2 class="reveal" style="--d:.05s">申し込みは3分、開通は最短当日<span class="maru">。</span></h2>
+    <p class="sub2 reveal" style="--d:.1s">相談無料・契約の縛りなし。接続代行は、ご希望の方が選べます。</p>
+    <div class="acts reveal" style="--d:.15s">
+      <a class="btn btn-coral btn-lg" href="../signup/">今すぐはじめる</a>
+      <a class="btn btn-ghost btn-lg" href="#toybaco-staging-chat-preview" data-open-chat>チャットで相談する</a>
+      <a class="btn btn-ghost btn-lg" href="../pricing/">料金を見る</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site2">
+  <div class="fgrid">
+    <div class="fbrand">
+      <div class="fbrand-logo"><img src="../assets/toybaco-mark-c4.webp" alt="" width="38" height="38"><span>トイバコ</span></div>
+      <p>問い合わせも、投稿も。ひとつの箱に。<br>運営: 株式会社サイバーリレーションズ</p>
+    </div>
+    <div>
+      <h4>サービス</h4>
+      <ul>
+        <li><a href="../features/">できること</a></li>
+        <li><a href="../posting/">投稿機能</a></li>
+        <li><a href="../ai/">AI応答</a></li>
+        <li><a href="../industries/">業界パック</a></li>
+        <li><a href="../security/">セキュリティ</a></li>
+        <li><a href="../faq/">よくある質問</a></li>
+        <li><a href="../guide/">お役立ちガイド</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>ご利用の流れ</h4>
+      <ul>
+        <li><a href="../pricing/">料金</a></li>
+        <li><a href="../enterprise/">エンタープライズ</a></li>
+        <li><a href="../compare/">ツールの選び方</a></li>
+        <li><a href="../start/">はじめ方</a></li>
+        <li><a href="../signup/">お申し込み</a></li>
+        <li><a href="https://app.staging.toybaco.jp">ログイン</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>会社・規約</h4>
+      <ul>
+        <li><a href="../news/">お知らせ</a></li>
+        <li><a href="../partners/">パートナー募集</a></li>
+        <li><a href="https://cyber-relations.jp/" target="_blank" rel="noopener">運営会社</a></li>
+        <li><a href="../terms/">利用規約</a></li>
+        <li><a href="../privacy/">プライバシーポリシー</a></li>
+        <li><a href="../tokushoho/">特定商取引法に基づく表記</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="fcopy"><span>© 2026 株式会社サイバーリレーションズ — 福岡より</span><span class="fdots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
+</footer>
+
+<!-- 相談チャット: Chatwoot(トイバコの Web チャットそのもの) -->
+
+<script src="../assets/sub.js?v=20260901a"></script>
+
+<!-- toybaco_staging_site_v1: staging consultation is a preview only -->
+<button type="button" onclick="document.getElementById('toybaco-staging-chat-preview').showModal()" style="position:fixed;right:16px;bottom:16px;z-index:999;padding:12px 16px;border:0;border-radius:24px;background:#1F3A5F;color:#fff;font:inherit;font-size:13px;cursor:pointer">相談チャット（確認用）</button>
+<dialog id="toybaco-staging-chat-preview" aria-labelledby="toybaco-staging-chat-title" style="margin:auto;width:min(calc(100% - 2rem),28rem);padding:24px;border:1px solid #D0D8E1;border-radius:18px;color:#1F3A5F;background:#fff">
+  <h2 id="toybaco-staging-chat-title" style="font-size:1.15rem;margin-bottom:12px">相談チャットの確認用画面</h2>
+  <p style="line-height:1.8;margin-bottom:18px">この検証環境では相談チャットに接続していません。メッセージは送信されません。</p>
+  <form method="dialog"><button class="btn btn-coral" autofocus>閉じる</button></form>
+</dialog>
+</body>
+</html>

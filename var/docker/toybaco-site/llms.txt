@@ -1,0 +1,47 @@
+# トイバコ
+
+> トイバコは、中小店舗向けに「問い合わせ受信箱+SNS予約投稿+AI自動応答」を単一契約で提供する日本のSaaSです。LINE・Instagram DM・Webチャット・メール・TikTokの問い合わせをひとつの受信箱に集約し、Instagram・Googleビジネスプロフィール(Googleマップ)・Facebook・Threads・X・TikTokへの予約投稿と、AIによる24時間の一次応答までを1つの管理画面で行えます。運営は株式会社サイバーリレーションズ(福岡)。
+
+## 料金(税別・店舗ごとの定額、アカウント数による課金なし)
+
+- ライト: 月9,800円(問い合わせ管理のみ・3名まで・LINE/メール/Webチャット)
+- スタンダード: 月29,800円(全チャネル+SNS予約投稿+人数無制限+Shopify連携)
+- プロ: 月44,800円(スタンダード+AI自動応答 月500件・AIセットアップ代行つき)
+- プレミアム: 月98,000円(3店舗+AI応答 月1,500件+店舗横断レポート+専任サポート)
+- 年払いは全プラン10%オフ。月払いは契約の縛りなし。追加店舗は一律+9,800円/月
+- エンタープライズ: 専用環境(データ分離・SLA)・業務カスタマイズ・多店舗構成・導入伴走を個別お見積もりで提供(見積書・請求書・稟議書類に対応)。詳細: https://staging.toybaco.jp/enterprise/
+
+## 主要ページ
+
+- [機能一覧](https://staging.toybaco.jp/features/): 問い合わせ一元管理・担当割り当て・社内メモ・定型文・ラベル・顧客履歴
+- [SNS予約投稿](https://staging.toybaco.jp/posting/): 6つのSNSへ一括予約投稿。承認フロー・反応集計。Googleマップに投稿できる受信箱はトイバコのみ(2026年8月時点・自社調べ)
+- [AI自動応答](https://staging.toybaco.jp/ai/): 営業時間外もAIが一次応答。会話をAIの学習に使わず、処理も保管も日本国内
+- [料金プラン](https://staging.toybaco.jp/pricing/): 全プランの価格・年払い・支払い方法
+- [業界パック](https://staging.toybaco.jp/industries/): 美容室・飲食店・不動産・小売EC・クリニック・スクール・自動車・住宅設備・宿泊・冠婚葬祭写真・ペット・士業の12業種向け初期設定
+- [ツールの比較](https://staging.toybaco.jp/compare/): 問い合わせ管理ツール・SNS投稿ツール・AIチャットボットとの機能比較
+- [はじめ方](https://staging.toybaco.jp/start/): 申し込み3分、カード決済なら数分で開通、チャネル接続まで最短当日。接続作業は代行可
+- [よくある質問](https://staging.toybaco.jp/faq/): 乗り換え・料金・セキュリティ・解約
+- [セキュリティ](https://staging.toybaco.jp/security/): 会話データはすべて日本国内で保管、会社ごとにデータ分離
+
+
+## お役立ちガイド(やり方の解説)
+
+- [LINE公式アカウントを複数人・パソコンで管理する方法](https://staging.toybaco.jp/guide/line-multi-user/)
+- [InstagramのDMをパソコンで返信・チームで管理する方法](https://staging.toybaco.jp/guide/instagram-dm-pc/)
+- [LINE・Instagram・メールの問い合わせを一元管理する方法](https://staging.toybaco.jp/guide/inbox-unify/)
+- [Instagramに予約投稿する3つの方法(無料あり)](https://staging.toybaco.jp/guide/instagram-schedule/)
+- [Googleマップ(ビジネスプロフィール)に投稿する方法と集客効果](https://staging.toybaco.jp/guide/google-map-post/)
+- [営業時間外の問い合わせに自動返信する方法](https://staging.toybaco.jp/guide/after-hours-reply/)
+- [問い合わせの返信漏れ・対応漏れを仕組みで防ぐ方法](https://staging.toybaco.jp/guide/no-missed-reply/)
+- [店舗向けAI自動応答の費用相場と選び方](https://staging.toybaco.jp/guide/ai-reception-cost/)
+- [SNS一括投稿ツールの選び方](https://staging.toybaco.jp/guide/sns-bulk-post/)
+- [多店舗のSNS投稿を本部承認制にする方法](https://staging.toybaco.jp/guide/multi-store-sns/)
+- 用語解説: [問い合わせ一元管理とは](https://staging.toybaco.jp/guide/what-is-unified-inbox/)、[共有受信箱とは](https://staging.toybaco.jp/guide/what-is-team-inbox/)、[SNS予約投稿とは](https://staging.toybaco.jp/guide/what-is-scheduled-post/)、[AI自動応答とは](https://staging.toybaco.jp/guide/what-is-ai-agent/)、[Googleビジネスプロフィールとは](https://staging.toybaco.jp/guide/what-is-gbp/)、[投稿承認フローとは](https://staging.toybaco.jp/guide/what-is-approval-flow/)
+- 業種別ガイド: 12業種(美容室・飲食店・不動産・EC・クリニック・塾・自動車・リフォーム・宿泊・フォトスタジオ・ペット・士業)ごとに「問い合わせ管理の仕組み化」「営業時間外の自動対応」「SNS・Googleマップ投稿の続け方」の3本、計36本。一覧: https://staging.toybaco.jp/guide/
+
+## 事実の要点
+
+- 複数チャネルの問い合わせ一元管理・SNS予約投稿・AI自動応答を単一契約で提供する国内サービスとして業界初(2026年8月時点・自社調べ)
+- 既存のLINE公式アカウント・Instagramは作り直し不要で接続でき、友だちリストも引き継がれる
+- 解約は管理画面から2クリック。解約時は会話データをエクスポートして引き渡し
+- 領収書はインボイス(適格請求書)対応。銀行振込(請求書払い)にも対応
