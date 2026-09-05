@@ -324,7 +324,7 @@ header.site .btn-sm{border-radius:999px; padding:9px 22px}
   }
   .hero-sec{height:auto; min-height:100dvh}
   .hud{position:static; justify-content:center; margin:0 0 26px; padding:0 18px}
-  .hero-sec{grid-template-columns:1fr; padding-top:92px; row-gap:6px}
+  .hero-sec{grid-template-columns:minmax(0,1fr); padding-top:92px; row-gap:6px}
   .copy{grid-column:1}
   .hero-movie-wrap{grid-column:1; grid-row:auto; margin-top:20px}
   .stat-band{grid-row:auto}
@@ -332,14 +332,14 @@ header.site .btn-sm{border-radius:999px; padding:9px 22px}
   .lead{font-size:.95rem}
   .scene-spacer{display:block;height:47dvh}
   .stat-band{
-    position:relative; left:0; right:0; bottom:0; margin:0 18px 20px;
-    display:grid; grid-template-columns:1fr 1fr; gap:14px 10px; align-items:start;
+    position:relative; left:0; right:0; bottom:0; width:auto; margin:0 18px 20px;
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 10px; align-items:start;
     background:rgba(255,255,255,.92); backdrop-filter:blur(10px);
     border:1px solid var(--line-soft); border-radius:18px; padding:18px 20px;
     box-shadow:0 2px 4px rgba(30,42,56,.04),0 14px 36px rgba(30,42,56,.1);
     animation-delay:.3s;
   }
-  .stat-band .st{flex-direction:column; align-items:flex-start; gap:3px; white-space:normal}
+  .stat-band .st{min-width:0; padding:14px 12px; flex-direction:column; align-items:flex-start; gap:3px; white-space:normal}
   .stat-band .st i{display:none}
   .stat-band .st b{font-size:1.18rem}
 }
