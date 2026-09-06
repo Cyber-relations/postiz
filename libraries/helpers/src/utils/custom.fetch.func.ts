@@ -57,7 +57,7 @@ export const customFetch = (
           : { 'Content-Type': 'application/json' }),
         Accept: 'application/json',
         ...(loggedAuth ? { auth: loggedAuth } : {}),
-        ...options?.headers,
+        ...(newRequestObject?.headers || options?.headers),
         ...(auth
           ? { auth }
           : authNonSecuredCookie

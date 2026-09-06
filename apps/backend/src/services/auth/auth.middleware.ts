@@ -100,6 +100,30 @@ export class AuthMiddleware implements NestMiddleware {
           throw new HttpForbiddenException();
         }
 
+        // 編集開始時のidentityは認可を追加せず、別タブの店舗/利用者切替だけを検出する。
+        const composerUser = req.headers['x-toybaco-composer-user-id'];
+        const composerOrganization =
+          req.headers['x-toybaco-composer-organization-id'];
+        const composerRole = req.headers['x-toybaco-composer-role'];
+        if (
+          (Object.prototype.hasOwnProperty.call(req.headers, 'x-toybaco-composer-user-id') ||
+            Object.prototype.hasOwnProperty.call(req.headers, 'x-toybaco-composer-organization-id') ||
+            Object.prototype.hasOwnProperty.call(req.headers, 'x-toybaco-composer-role')) &&
+          (typeof composerUser !== 'string' ||
+            typeof composerOrganization !== 'string' ||
+            typeof composerRole !== 'string' ||
+            composerUser !== user.id || composerOrganization !== organization.id ||
+            composerRole !== membership.role)
+        ) {
+          // throwすると下の認証catchが403へ変えるため、この409応答で終了する。
+          res.header('x-toybaco-session', 'identity-changed');
+          res.status(409).json({
+            code: 'TOYBACO_COMPOSER_IDENTITY_CHANGED',
+            message: '利用者・店舗・権限が変わりました。編集を始めた店舗でログインし直してください。',
+          });
+          return;
+        }
+
         const authenticatedRequest = req;
         delete user.password;
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
