@@ -81,7 +81,7 @@ export const getUppyUploadPlugin = (
           shouldUseMultipart: (_file: any) => true,
           getChunkSize: (_file: any) => 10 * 1024 * 1024,
           // Retry only through the user's explicit action, including after SSO recovery.
-          retryDelays: [],
+          retryDelays: [] as number[],
           endpoint: '',
           createMultipartUpload: (file: any) =>
             fetchUploadApiEndpoint(fetch, 'create-multipart-upload', {
