@@ -191,8 +191,11 @@ export const CalendarWeekProvider: FC<{
       endDate: newDayjs(filters.endDate).endOf('day').utc().format(),
     }).toString();
 
-    const data = await (await fetch(`/posts?${modifiedParams}`)).json();
-    return expandPosts(data);
+    const response = await fetch(`/posts?${modifiedParams}`);
+    if (!response.ok || response.headers.get('logout')) {
+      throw new Error('TOYBACO_CALENDAR_READ_FAILED');
+    }
+    return expandPosts(await response.json());
   }, [filters, params]);
 
   // List view data fetcher
@@ -207,6 +210,9 @@ export const CalendarWeekProvider: FC<{
 
   const loadListData = useCallback(async () => {
     const response = await fetch(`/posts/list?${listParams}`);
+    if (!response.ok || response.headers.get('logout')) {
+      throw new Error('TOYBACO_CALENDAR_READ_FAILED');
+    }
     return expandPostsList(await response.json());
   }, [listParams]);
 
@@ -219,10 +225,15 @@ export const CalendarWeekProvider: FC<{
     filters.display !== 'list' ? `/posts-${params}` : null,
     loadData,
     {
-      refreshInterval: 3600000,
+      // Re-evaluate the interval after each response, including the first QUEUE.
+      refreshInterval: (data) =>
+        data?.posts?.some((post: { state?: string }) => post.state === 'QUEUE')
+          ? 30000
+          : 0,
       refreshWhenOffline: false,
       refreshWhenHidden: false,
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
     }
   );
 
@@ -235,10 +246,15 @@ export const CalendarWeekProvider: FC<{
     filters.display === 'list' ? `/posts-list-${listParams}` : null,
     loadListData,
     {
-      refreshInterval: 3600000,
+      // Re-evaluate the interval after each response, including the first QUEUE.
+      refreshInterval: (data) =>
+        data?.posts?.some((post: { state?: string }) => post.state === 'QUEUE')
+          ? 30000
+          : 0,
       refreshWhenOffline: false,
       refreshWhenHidden: false,
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
     }
   );
 
