@@ -30,17 +30,39 @@ export function ToybacoEmbedReady({
       );
       return true;
     };
-    if (notifyParentIfReady()) return;
-
     const observer = new MutationObserver(() => {
       if (!notifyParentIfReady()) return;
       observer.disconnect();
     });
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-    });
-    return () => observer.disconnect();
+    if (!notifyParentIfReady()) {
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    // iframeのキーイベントは親へ伝播しない。子の編集・確認・メニューを
+    // 先に保護し、shellで消費されなかったEscapeだけを親へ通知する。
+    const dialogSelector = '[data-toybaco-modal], [data-toybaco-composer], [role="dialog"], [aria-modal="true"], [role="menu"], [role="listbox"], .bg-popup';
+    const hasOpenDialog = () => Array.from(document.querySelectorAll(dialogSelector))
+      .some((element) => element.getClientRects().length > 0);
+    let active = true;
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.isComposing || event.keyCode === 229 || event.defaultPrevented) return;
+      if ((event.target instanceof Element && event.target.closest(dialogSelector)) || hasOpenDialog()) return;
+      // 次のtaskまで待つ。microtaskではnativeイベントのbubbleより先に動き得る。
+      // capture時点のmodalを守り、子のbubble handlerによるpreventDefaultも尊重する。
+      setTimeout(() => {
+        if (!active || event.defaultPrevented || hasOpenDialog() || !document.querySelector('[data-toybaco-shell]')) return;
+        window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CLOSE' }, appOrigin);
+      }, 0);
+    };
+    document.addEventListener('keydown', onKeydown, true);
+    return () => {
+      active = false;
+      observer.disconnect();
+      document.removeEventListener('keydown', onKeydown, true);
+    };
   }, [appOrigin]);
 
   return null;
