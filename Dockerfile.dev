@@ -42,8 +42,12 @@ LABEL org.opencontainers.image.source="https://github.com/Cyber-relations/postiz
 
 USER root
 
+# These optional modules are not loaded by the application Nginx configuration.
+# Keep fonts and image codecs; remove only the modules and their unused XML libraries.
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+ && DEBIAN_FRONTEND=noninteractive apt-get purge -y --no-auto-remove \
+      nginx-module-image-filter nginx-module-njs nginx-module-xslt libxml2 libxslt1.1 \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       tini \
  && rm -rf /var/lib/apt/lists/*
