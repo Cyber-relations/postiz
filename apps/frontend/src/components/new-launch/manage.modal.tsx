@@ -40,6 +40,7 @@ import {
 } from '@gitroom/frontend/components/ui/icons';
 import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
+import { toybacoRegisterComposer } from '@gitroom/frontend/components/layout/layout.context';
 import { useShortlinkPreference } from '@gitroom/frontend/components/settings/shortlink-preference.component';
 import dayjs from 'dayjs';
 import { Button } from '@gitroom/react/form/button';
@@ -133,8 +134,8 @@ async function toybacoCheckedPostRequest(
         }, 30000);
       }),
     ]);
-    if (!response.ok) {
-      throw new Error(response.status === 401 || response.status === 403
+    if (!response.ok || response.headers?.get('logout')) {
+      throw new Error(response.status === 401 || response.status === 403 || response.headers?.get('logout')
         ? 'TOYBACO_POST_NOT_ALLOWED'
         : response.status >= 500
         ? 'TOYBACO_POST_RESULT_UNKNOWN'
@@ -157,6 +158,39 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const toybacoCanPublish = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
   const toybacoSaving = useRef(false);
   const [toybacoSaveError, setToybacoSaveError] = useState('');
+  const [toybacoSessionOwner] = useState(() => user && ({ id: user.id, orgId: user.orgId, role: user.role, providerName: user.providerName }));
+  const [toybacoConnectionError, setToybacoConnectionError] = useState('');
+  const [toybacoCheckingConnection, setToybacoCheckingConnection] = useState(false);
+  const toybacoReconnecting = useRef(false);
+  const toybacoSession = useRef<ReturnType<typeof toybacoRegisterComposer> | undefined>(undefined);
+  useEffect(() => {
+    const session = toybacoRegisterComposer(toybacoSessionOwner, setToybacoConnectionError);
+    toybacoSession.current = session;
+    return () => {
+      session.dispose();
+      if (toybacoSession.current === session) toybacoSession.current = undefined;
+    };
+  }, [toybacoSessionOwner]);
+  const toybacoReleaseReconnect = useCallback(() => {
+    toybacoReconnecting.current = false;
+  }, []);
+  const toybacoReconnect = useCallback(async () => {
+    if (toybacoReconnecting.current) return;
+    const session = toybacoSession.current;
+    toybacoReconnecting.current = true;
+    setToybacoCheckingConnection(true);
+    try {
+      const response = await toybacoCheckedPostRequest(uncheckedFetch, '/user/self', { method: 'GET' });
+      if (session && toybacoSession.current === session && session.verify(await response.json())) {
+        setToybacoSaveError('');
+      }
+    } catch {
+      if (toybacoSession.current === session) setToybacoConnectionError('接続を確認できません。入力は残しています。別タブで再接続してから、もう一度確認してください。');
+    } finally {
+      toybacoReleaseReconnect();
+      if (toybacoSession.current === session) setToybacoCheckingConnection(false);
+    }
+  }, [uncheckedFetch, toybacoReleaseReconnect]);
   const ref = useRef(null);
   const existingData = useExistingData();
   const toybacoCanEditDraft = !!user && (toybacoCanPublish || !existingData.integration || existingData?.posts?.[0]?.state === 'DRAFT');
@@ -285,7 +319,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   }, [activateExitButton, dummy]);
 
   const deletePost = useCallback(async () => {
-    if (toybacoSaving.current || !toybacoCanEditDraft) return;
+    if (toybacoSaving.current || !toybacoCanEditDraft || toybacoConnectionError) return;
     toybacoSaving.current = true;
     setLoading(true);
     setToybacoSaveError('');
@@ -312,11 +346,12 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     } finally {
       toybacoFinishSaving();
     }
-  }, [existingData, mutate, modal, fetch, t, toybacoCanEditDraft, toybacoFinishSaving]);
+  }, [existingData, mutate, modal, fetch, t, toybacoCanEditDraft, toybacoFinishSaving, toybacoConnectionError]);
 
   const schedule = useCallback(
     (type: 'draft' | 'now' | 'schedule' | 'update') => async () => {
       if (toybacoSaving.current) return;
+      if (toybacoConnectionError) return;
       if (!toybacoCanEditDraft || (!dummy && !addEditSets && type !== 'draft' && !toybacoCanPublish)) {
         setToybacoSaveError('予約・公開済みの投稿の変更と公開は管理者が行います。');
         return;
@@ -603,7 +638,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         toybacoFinishSaving();
       }
     },
-    [ref, repeater, tags, date, addEditSets, dummy, shortlinkPreferenceData, fetch, selectedIntegrations, existingData, mutate, modal, customClose, toaster, t, toybacoCanPublish, toybacoCanEditDraft, toybacoFinishSaving]
+    [ref, repeater, tags, date, addEditSets, dummy, shortlinkPreferenceData, fetch, selectedIntegrations, existingData, mutate, modal, customClose, toaster, t, toybacoCanPublish, toybacoCanEditDraft, toybacoFinishSaving, toybacoConnectionError]
   );
 
   return (
@@ -719,8 +754,19 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             </div>
           </div>
         </div>
-        <div data-toybaco-composer-footer="" aria-busy={loading} className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
-          {toybacoSaveError && <p data-toybaco-save-error="" role="alert">{toybacoSaveError}</p>}
+        <div data-toybaco-composer-footer="" aria-busy={loading} style={toybacoConnectionError ? { height: 'auto', flexWrap: 'wrap', maxHeight: '40dvh', overflowY: 'auto' } : undefined} className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
+          {toybacoSaveError && !toybacoConnectionError && <p data-toybaco-save-error="" role="alert">{toybacoSaveError}</p>}
+          {toybacoConnectionError && (
+            <div data-toybaco-session-recovery="" style={{ flexBasis: '100%', minWidth: 0, padding: '8px 16px' }}>
+              <p role="alert">{toybacoConnectionError}</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px' }}>
+                <a href="/api/auth/toybaco-entry?return=/launches" target="_blank" rel="noopener noreferrer" className="underline">別タブで再接続</a>
+                <button type="button" onClick={toybacoReconnect} disabled={toybacoCheckingConnection} className="underline">
+                  {toybacoCheckingConnection ? '接続を確認中…' : '接続を確認'}
+                </button>
+              </div>
+            </div>
+          )}
           {!dummy && !addEditSets && (
             <p data-toybaco-approval-note="">
               {toybacoCanPublish
@@ -749,7 +795,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           <div data-toybaco-composer-actions="" className="pe-[20px] flex items-center justify-end gap-[8px]">
             {existingData?.integration && toybacoCanEditDraft && (
               <button
-                disabled={loading}
+                disabled={loading || !!toybacoConnectionError}
                 onClick={deletePost}
                 className="cursor-pointer flex text-[#FF3F3F] gap-[8px] items-center text-[15px] font-[600]"
               >
@@ -763,7 +809,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             {!addEditSets && (
               <button
                 disabled={
-                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft
+                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError
                 }
                 onClick={schedule('draft')}
                 className="relative cursor-pointer disabled:cursor-not-allowed px-[20px] h-[44px] bg-btnSimple justify-center items-center flex rounded-[8px] text-[15px] font-[600]"
@@ -782,7 +828,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <button
                 className="text-white text-[15px] font-[600] min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
                 disabled={
-                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft
+                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError
                 }
                 onClick={schedule('draft')}
               >
@@ -793,7 +839,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <div className="group cursor-pointer relative">
                 <button
                   disabled={
-                    selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft
+                    selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError
                   }
                   onClick={schedule('schedule')}
                   className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
@@ -830,7 +876,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   <button
                     onClick={schedule('now')}
                     disabled={
-                      selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft
+                      selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError
                     }
                     className="rounded-[8px] z-[300] disabled:cursor-not-allowed disabled:opacity-80 hidden group-hover:flex absolute bottom-[100%] -left-[12px] p-[12px] w-[206px] bg-newBgColorInner"
                   >

@@ -5,6 +5,78 @@ import { FetchWrapperComponent } from '@gitroom/helpers/utils/custom.fetch';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useReturnUrl } from '@gitroom/frontend/app/(app)/auth/return.url.component';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
+// toybaco_composer_session_v1: keep the mounted editor; never retry a post.
+type ToybacoComposerOwner = {
+  id: string;
+  orgId: string;
+  role: string;
+  providerName: string;
+};
+type ToybacoComposerSession = {
+  owner: ToybacoComposerOwner;
+  blocked: boolean;
+  notify: (message: string) => void;
+};
+let toybacoComposerSession: ToybacoComposerSession | undefined;
+const toybacoSessionExpired = '接続が切れています。入力はこの画面に残っています。別タブで再接続し、この画面に戻って接続を確認してください。';
+const toybacoSessionChanged = '利用者または店舗が変わっています。入力は残しています。元の利用者・店舗で再接続してください。';
+
+export function toybacoRegisterComposer(
+  owner: ToybacoComposerOwner | undefined,
+  notify: (message: string) => void
+) {
+  const current: ToybacoComposerSession | undefined = owner?.providerName === 'GENERIC'
+    ? { owner: { id: owner.id, orgId: owner.orgId, role: owner.role, providerName: owner.providerName }, blocked: false, notify }
+    : undefined;
+  if (current) toybacoComposerSession = current;
+  return {
+    verify(next: Partial<ToybacoComposerOwner> | null) {
+      if (!current || toybacoComposerSession !== current) return false;
+      const matches = !!next && ['id', 'orgId', 'role', 'providerName'].every(
+        (key) => typeof current.owner[key as keyof ToybacoComposerOwner] === 'string' &&
+          current.owner[key as keyof ToybacoComposerOwner].length > 0 &&
+          next[key as keyof ToybacoComposerOwner] === current.owner[key as keyof ToybacoComposerOwner]
+      );
+      current.blocked = !matches;
+      current.notify(matches ? '' : toybacoSessionChanged);
+      return matches;
+    },
+    dispose() {
+      if (toybacoComposerSession === current) toybacoComposerSession = undefined;
+    },
+  };
+}
+
+export async function toybacoComposerBeforeRequest(url: string, options: RequestInit): Promise<RequestInit> {
+  // Deliberate logout retains its existing confirmation and discard behavior.
+  if (url === '/user/logout') {
+    toybacoComposerSession = undefined;
+    return options;
+  }
+  const current = toybacoComposerSession;
+  if (!current || url === '/user/self') return options;
+  if (current.blocked) throw new Error('TOYBACO_COMPOSER_RECONNECT_REQUIRED');
+  const headers = new Headers(options.headers);
+  headers.set('x-toybaco-composer-user-id', current.owner.id);
+  headers.set('x-toybaco-composer-organization-id', current.owner.orgId);
+  headers.set('x-toybaco-composer-role', current.owner.role);
+  const requestHeaders: Record<string, string> = {};
+  headers.forEach((value, key) => { requestHeaders[key] = value; });
+  return { ...options, headers: requestHeaders };
+}
+
+export function toybacoComposerAfterResponse(url: string, response: Response): boolean {
+  if (url === '/user/logout') return false;
+  const current = toybacoComposerSession;
+  if (!current) return false;
+  const changed = response.status === 409 && response.headers.get('x-toybaco-session') === 'identity-changed';
+  if (response.status !== 401 && !response.headers.get('logout') && !changed) return false;
+  current.blocked = true;
+  current.notify(changed ? toybacoSessionChanged : toybacoSessionExpired);
+  return true;
+}
+// toybaco_composer_session_end
+
 export default function LayoutContext(params: { children: ReactNode }) {
   if (params?.children) {
     // eslint-disable-next-line react/no-children-prop
@@ -26,6 +98,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
   const { backendUrl, isGeneral, isSecured } = useVariables();
   const afterRequest = useCallback(
     async (url: string, options: RequestInit, response: Response) => {
+      if (toybacoComposerAfterResponse(url, response)) return true;
       if (
         typeof window !== 'undefined' &&
         (window.location.href.includes('/p/') ||
@@ -123,7 +196,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
     []
   );
   return (
-    <FetchWrapperComponent baseUrl={backendUrl} afterRequest={afterRequest}>
+    <FetchWrapperComponent baseUrl={backendUrl} beforeRequest={toybacoComposerBeforeRequest} afterRequest={afterRequest}>
       {params?.children || <></>}
     </FetchWrapperComponent>
   );
