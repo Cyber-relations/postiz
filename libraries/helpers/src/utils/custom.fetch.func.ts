@@ -43,30 +43,34 @@ export const customFetch = (
             .find((p) => p.includes('impersonate='))
             ?.split('=')[1];
 
+    // Merge case-insensitively: duplicate Content-Type values bypass JSON parsing.
+    const requestOptions = newRequestObject || options;
+    const requestHeaders = new Headers({
+      ...(showorg
+        ? { showorg }
+        : authNonSecuredOrg
+        ? { showorg: authNonSecuredOrg }
+        : {}),
+      ...(requestOptions.body instanceof FormData
+        ? {}
+        : { 'Content-Type': 'application/json' }),
+      Accept: 'application/json',
+      ...(loggedAuth ? { auth: loggedAuth } : {}),
+    });
+    new Headers(newRequestObject?.headers || options?.headers).forEach((value, key) => {
+      requestHeaders.set(key, value);
+    });
+    if (auth || authNonSecuredCookie) {
+      requestHeaders.set('auth', auth || authNonSecuredCookie!);
+    }
+    if (authNonSecuredImpersonate) {
+      requestHeaders.set('impersonate', authNonSecuredImpersonate);
+    }
+
     const fetchRequest = await fetch(params.baseUrl + url, {
       ...(secured ? { credentials: 'include' } : {}),
       ...(newRequestObject || options),
-      headers: {
-        ...(showorg
-          ? { showorg }
-          : authNonSecuredOrg
-          ? { showorg: authNonSecuredOrg }
-          : {}),
-        ...(options.body instanceof FormData
-          ? {}
-          : { 'Content-Type': 'application/json' }),
-        Accept: 'application/json',
-        ...(loggedAuth ? { auth: loggedAuth } : {}),
-        ...(newRequestObject?.headers || options?.headers),
-        ...(auth
-          ? { auth }
-          : authNonSecuredCookie
-          ? { auth: authNonSecuredCookie }
-          : {}),
-        ...(authNonSecuredImpersonate
-          ? { impersonate: authNonSecuredImpersonate }
-          : {}),
-      },
+      headers: requestHeaders,
       // @ts-ignore
       ...(!options.next && options.cache !== 'force-cache'
         ? { cache: options.cache || 'no-store' }

@@ -31,7 +31,7 @@ import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
 import { useCopilotAction, useCopilotReadable } from '@copilotkit/react-core';
 import { useDropzone } from 'react-dropzone';
-import { useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
+import { UploadFeedback, useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
 import { Dashboard } from '@uppy/react';
 import Link from '@tiptap/extension-link';
 import {
@@ -568,7 +568,7 @@ export const Editor: FC<{
   const uppy = useUppyUploader({
     onUploadSuccess: (result: any) => {
       appendImages(result);
-      uppy.clear();
+      // Successful files are removed by the uploader; retain any failed files.
     },
     allowedFileTypes: 'image/*,video/mp4',
     onStart: () => {},
@@ -734,6 +734,7 @@ export const Editor: FC<{
                 editorRef?.current?.editor?.commands?.focus('end');
               }}
             />
+            <UploadFeedback uppy={uppy} />
             <div className="w-full pointer-events-none">
               <div className="w-full h-[46px] overflow-hidden absolute left-0 bg-newBgColorInner uppyChange">
                 <Dashboard
