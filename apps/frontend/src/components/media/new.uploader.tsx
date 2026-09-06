@@ -36,6 +36,57 @@ export class CompressionWrapper<M = any, B = any> extends Compressor<any, any> {
   }
 }
 
+// toybaco_upload_recovery_v1
+export function toybacoUploadFailureMessage(error: string): string {
+  if (error === 'TOYBACO_UPLOAD_RECONNECT_REQUIRED' || error === 'TOYBACO_COMPOSER_RECONNECT_REQUIRED') {
+    return '未アップロードです。接続確認後に再試行してください。';
+  }
+  if (error === 'TOYBACO_UPLOAD_INVALID_FILE') return '形式・サイズを確認して、ファイルを選び直してください。';
+  if (error === 'TOYBACO_UPLOAD_SESSION_INVALID') return 'アップロード情報が無効です。再試行してください。';
+  if (error === 'TOYBACO_UPLOAD_RESULT_UNKNOWN') return '保存結果を確認できません。ライブラリを確認してから再試行してください。';
+  return 'アップロードできませんでした。接続を確認して再試行してください。';
+}
+
+export function toybacoRetryUploads(uppy: Uppy<any, any>) {
+  if (Object.keys(uppy.getState().currentUploads).length) return Promise.resolve();
+  return uppy.retryAll();
+}
+// toybaco_upload_recovery_helpers_end
+
+export function UploadFeedback({ uppy }: { uppy: Uppy<any, any> }) {
+  const [state, setState] = useState(() => uppy.getState());
+  useEffect(() => {
+    const update = () => setState(uppy.getState());
+    uppy.on('state-update', update);
+    update();
+    return () => { uppy.off('state-update', update); };
+  }, [uppy]);
+  const failed = Object.values(state.files).filter((file) => file.error);
+  if (!failed.length) return null;
+  const busy = Object.keys(state.currentUploads).length > 0;
+  return (
+    <div className="my-[8px] rounded-[8px] border border-newBorder bg-newBgColorInner p-[12px] text-textColor" data-toybaco-upload-feedback>
+      <div role="status" aria-live="polite" className="space-y-[6px] text-[13px] break-words">
+        {failed.map((file) => (
+          <p key={file.id}><strong>「{file.name}」</strong> {toybacoUploadFailureMessage(String(file.error))}</p>
+        ))}
+      </div>
+      <div className="mt-[8px] flex flex-wrap gap-[8px]">
+        <button type="button" disabled={busy} className="rounded-[8px] bg-btnSimple px-[12px] py-[8px] disabled:opacity-50" onClick={(event) => {
+          event.stopPropagation();
+          void toybacoRetryUploads(uppy).catch(() => {});
+        }}>失敗したファイルを再試行</button>
+        <button type="button" disabled={busy} className="rounded-[8px] border border-newBorder px-[12px] py-[8px] disabled:opacity-50" onClick={(event) => {
+          event.stopPropagation();
+          if (Object.keys(uppy.getState().currentUploads).length) return;
+          for (const file of uppy.getFiles().filter((item) => item.error)) uppy.removeFile(file.id);
+        }}>失敗したファイルを取り消す</button>
+      </div>
+    </div>
+  );
+}
+// toybaco_upload_feedback_view_end
+
 export function useUppyUploader(props: {
   // @ts-ignore
   onUploadSuccess: (result: UploadResult) => void;
@@ -55,7 +106,15 @@ export function useUppyUploader(props: {
 
     const uppy2 = new Uppy({
       locale: Japanese,
-      autoProceed: true,
+      autoProceed: false,
+      onBeforeFileAdded: (_file, files): boolean => {
+        if (!Object.values(files).some((file) => file.error)) {
+          return !Object.prototype.hasOwnProperty.call(files, _file.id);
+        }
+        toast.show('先に未完了のアップロードを再試行するか取り消してください。', 'warning');
+        if (!Object.keys(uppy2.getState().currentUploads).length) props.onEnd();
+        return false;
+      },
       restrictions: {
         // toybaco_upload_ui_boundary_v1: 投稿APIと同じpositive allowlist。
         allowedFileTypes: [
@@ -199,13 +258,31 @@ export function useUppyUploader(props: {
         // Add more fields as needed
       });
     });
-    uppy2.on('error', (result) => {
-      uppy2.clear();
-      setLocked(false);
-      props.onEnd();
-      fileOrderIndex = 0;
+    const finishIfIdle = () => {
+      if (!Object.keys(uppy2.getState().currentUploads).length) {
+        setLocked(false);
+        props.onEnd();
+      }
+    };
+    const keepFailedFiles = () => {
+      // Uppy emits error inside upload-error; never clear files from either event.
+      finishIfIdle();
+    };
+    uppy2.on('error', keepFailedFiles);
+    uppy2.on('upload-error', keepFailedFiles);
+    uppy2.on('file-removed', keepFailedFiles);
+    let startQueued = false;
+    uppy2.on('files-added', (files) => {
+      if (!files.length || startQueued) return;
+      startQueued = true;
+      queueMicrotask(() => {
+        startQueued = false;
+        if (uppy2.getFiles().some((file) => file.error)) return;
+        void uppy2.upload().catch(finishIfIdle);
+      });
     });
     uppy2.on('upload-start', () => {
+      setLocked(true);
       props.onStart();
     });
     uppy2.on('complete', async (result) => {
@@ -214,7 +291,9 @@ export function useUppyUploader(props: {
         uppy2.removeFile(file.id);
       }
 
-      props.onEnd();
+      finishIfIdle();
+      keepFailedFiles();
+      if (!result.successful.length) return;
       // Sort results by original add order to maintain file sequence
       const sortedSuccessful = [...result.successful].sort((a, b) => {
         const orderA = +((a.meta as any)?.addedOrder ?? 0);
@@ -224,7 +303,7 @@ export function useUppyUploader(props: {
 
       if (storageProvider === 'local') {
         setLocked(false);
-        fileOrderIndex = 0;
+        if (!uppy2.getFiles().length) fileOrderIndex = 0;
         onUploadSuccess(sortedSuccessful.map((p) => p.response.body));
         return;
       }
@@ -266,13 +345,13 @@ export function useUppyUploader(props: {
           .map((p) => p.file);
 
         setLocked(false);
-        fileOrderIndex = 0;
+        if (!uppy2.getFiles().length) fileOrderIndex = 0;
         onUploadSuccess(loadAllMedia);
         return;
       }
 
       setLocked(false);
-      fileOrderIndex = 0;
+      if (!uppy2.getFiles().length) fileOrderIndex = 0;
       onUploadSuccess(sortedSuccessful.map((p) => p.response.body.saved));
     });
     uppy2.on('upload-success', (file, response) => {

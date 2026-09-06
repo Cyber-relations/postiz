@@ -22,7 +22,7 @@ import EventEmitter from 'events';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import clsx from 'clsx';
 import { VideoFrame } from '@gitroom/react/helpers/video.frame';
-import { useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
+import { UploadFeedback, useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
 import dynamic from 'next/dynamic';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { DropFiles } from '@gitroom/frontend/components/layout/drop.files';
@@ -275,6 +275,7 @@ export const MediaBox: FC<{
   const addToUpload = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
+      e.target.value = '';
       const totalSize = files.reduce((acc, file) => acc + file.size, 0);
 
       if (totalSize > MAX_UPLOAD_SIZE) {
@@ -441,6 +442,7 @@ export const MediaBox: FC<{
             {btn}
           </div>
         </div>
+        <UploadFeedback uppy={uppy} />
         <div className="w-full pointer-events-none relative mt-[5px] mb-[5px]">
           <div className="w-full h-[46px] overflow-hidden absolute left-0 bg-newBgColorInner uppyChange">
             <Dashboard
