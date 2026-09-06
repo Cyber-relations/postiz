@@ -60,7 +60,9 @@ export async function toybacoComposerBeforeRequest(url: string, options: Request
   headers.set('x-toybaco-composer-user-id', current.owner.id);
   headers.set('x-toybaco-composer-organization-id', current.owner.orgId);
   headers.set('x-toybaco-composer-role', current.owner.role);
-  return { ...options, headers: Object.fromEntries(headers.entries()) };
+  const requestHeaders: Record<string, string> = {};
+  headers.forEach((value, key) => { requestHeaders[key] = value; });
+  return { ...options, headers: requestHeaders };
 }
 
 export function toybacoComposerAfterResponse(url: string, response: Response): boolean {
