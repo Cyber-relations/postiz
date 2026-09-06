@@ -30,7 +30,7 @@
         {
           "name": "pnpm 10.6.1・依存関係を固定",
           "shell": "bash",
-          "run": "set -Eeuo pipefail\ncorepack enable\ncorepack prepare pnpm@10.6.1 --activate >/dev/null\ntest \"$(node -p 'process.versions.node')\" = '22.23.2'\ntest \"$(pnpm --version)\" = '10.6.1'\nCI=true pnpm install --frozen-lockfile"
+          "run": "set -Eeuo pipefail\ncorepack enable\ncorepack prepare pnpm@10.6.1 --activate >/dev/null\ntest \"$(node -p 'process.versions.node')\" = '22.23.2'\ntest \"$(pnpm --version)\" = '10.6.1'\nCI=true pnpm install --frozen-lockfile\nnode var/docker/toybaco-verify-image-parsers.cjs ."
         },
         {
           "name": "production build",

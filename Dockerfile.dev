@@ -18,6 +18,16 @@ COPY . /app
 RUN pnpm install --frozen-lockfile
 RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
 
+# Reconcile the hoisted workspace against production dependencies after building.
+# Keep generated Prisma/native files; never reinstall or run lifecycle scripts at startup.
+FROM build AS production
+RUN CI=true pnpm install --prod --frozen-lockfile --offline --ignore-scripts
+RUN test ! -e node_modules/vitest \
+ && test ! -e node_modules/ts-jest \
+ && test ! -e node_modules/happy-dom \
+ && test -f node_modules/prisma/build/index.js \
+ && test -f node_modules/.prisma/client/index.js
+
 FROM nginx:1.30.4@sha256:09cc2702709e6388d979d8030e3ab4eb1ceb699b2dced26d7543e872a822e823 AS runtime
 ARG NEXT_PUBLIC_VERSION
 ARG TOYBACO_SOURCE_COMMIT
@@ -46,7 +56,7 @@ RUN groupadd --system --gid 10001 www \
 WORKDIR /app
 COPY --from=build /usr/local/bin/node /usr/local/bin/node
 COPY --from=build /usr/local/LICENSE /usr/local/share/licenses/node/LICENSE
-COPY --from=build --chown=www:www /app /app
+COPY --from=production --chown=www:www /app /app
 COPY --from=build /app/var/docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build --chmod=0555 /app/var/docker/toybaco-entrypoint.sh /usr/local/bin/toybaco-entrypoint
 

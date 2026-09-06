@@ -1,0 +1,40 @@
+diff --git a/dist/types/heif.js b/dist/types/heif.js
+index 7997d3f..6041a27 100644
+--- a/dist/types/heif.js
++++ b/dist/types/heif.js
+@@ -29,6 +29,8 @@ exports.HEIF = {
+         const ipcoBox = iprpBox && (0, utils_1.findBox)(input, 'ipco', iprpBox.offset + 8);
+         const ispeBox = ipcoBox && (0, utils_1.findBox)(input, 'ispe', ipcoBox.offset + 8);
+         if (ispeBox) {
++            if (ispeBox.size < 20)
++                throw new TypeError("Invalid HEIF ispe box size");
+             return {
+                 height: (0, utils_1.readUInt32BE)(input, ispeBox.offset + 16),
+                 width: (0, utils_1.readUInt32BE)(input, ispeBox.offset + 12),
+diff --git a/dist/types/icns.js b/dist/types/icns.js
+index f2bfafe..5e348c2 100644
+--- a/dist/types/icns.js
++++ b/dist/types/icns.js
+@@ -64,6 +64,9 @@ const ICON_TYPE_SIZE = {
+     ic10: 1024,
+ };
+ function readImageHeader(input, imageOffset) {
++    if (input.length - imageOffset < 8 || (0, utils_1.readUInt32BE)(input, imageOffset + 4) < 8) {
++        throw new TypeError("Invalid ICNS entry length");
++    }
+     const imageLengthOffset = imageOffset + ENTRY_LENGTH_OFFSET;
+     return [
+         (0, utils_1.toUTF8String)(input, imageOffset, imageLengthOffset),
+diff --git a/dist/types/jxl.js b/dist/types/jxl.js
+index f557b0a..cd2e22f 100644
+--- a/dist/types/jxl.js
++++ b/dist/types/jxl.js
+@@ -23,6 +23,8 @@ function extractPartialStreams(input) {
+         const jxlpBox = (0, utils_1.findBox)(input, 'jxlp', offset);
+         if (!jxlpBox)
+             break;
++        if (jxlpBox.size < 12)
++            throw new TypeError("Invalid JXL partial box size");
+         partialStreams.push(input.slice(jxlpBox.offset + 12, jxlpBox.offset + jxlpBox.size));
+         offset = jxlpBox.offset + jxlpBox.size;
+     }
