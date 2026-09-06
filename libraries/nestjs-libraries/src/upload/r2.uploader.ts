@@ -151,6 +151,15 @@ const R2 = new S3Client({
   ...toybacoS3.credentialOptions,
 });
 
+// 署名時にはpart本文がないため、空bodyのchecksumをURLへ付けない。
+// 本文ありのR2.sendは既存clientのchecksum既定を保持する。
+const R2Presigner = new S3Client({
+  region: process.env.S3_REGION || 'auto',
+  endpoint: toybacoS3.endpoint,
+  ...toybacoS3.credentialOptions,
+  requestChecksumCalculation: 'WHEN_REQUIRED',
+});
+
 // Function to generate a random string
 function generateRandomString() {
   return makeId(20);
@@ -620,7 +629,7 @@ export async function prepareUploadParts(organizationId: string, req: Request, r
         UploadId: session.uid,
         ContentLength: toybacoExpectedPartSize(session.size, partNumber)!,
       });
-      presignedUrls[partNumber] = await getSignedUrl(R2, command, {
+      presignedUrls[partNumber] = await getSignedUrl(R2Presigner, command, {
         expiresIn: Math.max(1, Math.min(600, session.exp - Math.floor(Date.now() / 1000) - 1)),
       });
     }
@@ -755,7 +764,7 @@ export async function signPart(organizationId: string, req: Request, res: Respon
       UploadId: session.uid,
       ContentLength: toybacoExpectedPartSize(session.size, partNumber)!,
     });
-    const url = await getSignedUrl(R2, command, {
+    const url = await getSignedUrl(R2Presigner, command, {
       expiresIn: Math.max(1, Math.min(600, session.exp - Math.floor(Date.now() / 1000) - 1)),
     });
     return res.status(200).json({ url });
