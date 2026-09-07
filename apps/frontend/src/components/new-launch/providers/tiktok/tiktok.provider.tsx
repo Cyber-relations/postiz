@@ -3,12 +3,16 @@
 import {
   FC,
   useMemo,
+  useEffect,
+  useState,
+  useRef,
 } from 'react';
 import {
   PostComment,
   withProvider,
 } from '@gitroom/frontend/components/new-launch/providers/high.order.provider';
-import { TikTokDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/tiktok.dto';
+import { TikTokDto, TikTokContentPostingDto, TikTokCreatorInfo, parseTikTokCreatorInfo } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/tiktok.dto';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useSettings } from '@gitroom/frontend/components/launches/helpers/use.values';
 import { Select } from '@gitroom/react/form/select';
 import { Checkbox } from '@gitroom/react/form/checkbox';
@@ -20,7 +24,185 @@ import { TiktokPreview } from '@gitroom/frontend/components/new-launch/providers
 import { TikTokMusicSelector } from '@gitroom/frontend/components/new-launch/providers/tiktok/tiktok.music';
 import { TikTokLocationSelector } from '@gitroom/frontend/components/new-launch/providers/tiktok/tiktok.location';
 
-const TikTokSettings: FC<{
+// Latest creator constraints belong to the normal Content Posting API only.
+export const TikTokContentPostingSettings: FC = () => {
+  const { watch, setValue, getValues, register, formState: { isReady } } = useSettings();
+  const { value, integration } = useIntegration();
+  const fetch = useFetch();
+  const [creator, setCreator] = useState<TikTokCreatorInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const [duration, setDuration] = useState<number | null>(null);
+  const [metadataState, setMetadataState] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const [metadataAttempt, setMetadataAttempt] = useState(0);
+  const [constraintNotice, setConstraintNotice] = useState('');
+  const identity = integration?.id;
+  const previousIdentity = useRef(identity);
+  const media = value?.[0]?.image ?? [];
+  const video = media.length === 1 && /\.mp4(?:[?#]|$)/i.test(media[0].path) ? media[0].path : null;
+  const contentKey = JSON.stringify(value);
+  const method = watch('content_posting_method');
+  const upload = method === 'UPLOAD';
+  const privacy = watch('privacy_level');
+  const disclose = watch('disclose') === true;
+  const branded = watch('brand_content_toggle') === true;
+  const organic = watch('brand_organic_toggle') === true;
+
+  useEffect(() => {
+    if (!isReady) return;
+    const changedAccount = previousIdentity.current !== identity;
+    previousIdentity.current = identity;
+    const saved = (field: string) => changedAccount ? undefined : getValues(field);
+    setValue('privacy_level', typeof saved('privacy_level') === 'string' ? saved('privacy_level') : '');
+    setValue('content_posting_method', saved('content_posting_method') === 'UPLOAD' ? 'UPLOAD' : 'DIRECT_POST');
+    setValue('autoAddMusic', saved('autoAddMusic') === 'yes' ? 'yes' : 'no');
+    for (const field of ['comment', 'duet', 'stitch', 'disclose', 'brand_organic_toggle', 'brand_content_toggle', 'video_made_with_ai']) setValue(field, saved(field) === true);
+    setValue('content_posting_consent', false);
+  }, [identity, isReady, setValue, getValues]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let current = true;
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    setCreator(null);
+    setConstraintNotice('');
+    setLoading(true);
+    setValue('content_posting_consent', false);
+    (async () => {
+      try {
+        if (!identity) throw new Error('missing integration');
+        const response = await fetch('/integrations/function', {
+          method: 'POST',
+          body: JSON.stringify({ id: identity, name: 'creatorInfo', data: {} }),
+          signal: controller.signal,
+        });
+        if (!response.ok || response.headers?.get('logout')) throw new Error('creator unavailable');
+        const info = parseTikTokCreatorInfo(await response.json());
+        if (!info) throw new Error('creator unavailable');
+        if (current) setCreator(info);
+      } catch {
+        if (current) setCreator(null);
+      } finally {
+        clearTimeout(timeout);
+        if (current) setLoading(false);
+      }
+    })();
+    return () => { current = false; clearTimeout(timeout); controller.abort(); };
+  }, [identity, attempt, fetch, setValue]);
+
+  useEffect(() => {
+    setDuration(null);
+    setMetadataState('loading');
+    if (!video) return;
+    const element = document.createElement('video');
+    let current = true;
+    const fail = () => {
+      if (current) { setDuration(null); setMetadataState('failed'); }
+    };
+    const timeout = setTimeout(fail, 15000);
+    element.preload = 'metadata';
+    element.onloadedmetadata = () => {
+      if (!current) return;
+      clearTimeout(timeout);
+      if (Number.isFinite(element.duration) && element.duration > 0) {
+        setDuration(element.duration);
+        setMetadataState('ready');
+      } else fail();
+    };
+    element.onerror = () => { clearTimeout(timeout); fail(); };
+    element.src = video;
+    return () => {
+      current = false;
+      clearTimeout(timeout);
+      element.onloadedmetadata = null;
+      element.onerror = null;
+      element.removeAttribute('src');
+      element.load();
+    };
+  }, [video, metadataAttempt]);
+
+  useEffect(() => {
+    // Keep saved choices while the latest constraints are loading or unavailable.
+    if (!creator) return;
+    let changed = false;
+    if (privacy && !creator.privacy_level_options.includes(privacy)) {
+      setValue('privacy_level', '');
+      changed = true;
+    }
+    for (const field of ['comment', 'duet', 'stitch'] as const) {
+      if ((creator[`${field}_disabled`] || (!video && field !== 'comment')) && getValues(field) === true) {
+        setValue(field, false);
+        changed = true;
+      }
+    }
+    if (changed) setConstraintNotice('TikTok の投稿条件が変わりました。公開範囲と交流設定を確認し、同意し直してください。');
+  }, [creator, privacy, video, setValue, getValues]);
+  useEffect(() => {
+    if (!disclose) {
+      setValue('brand_organic_toggle', false);
+      setValue('brand_content_toggle', false);
+    }
+  }, [disclose, setValue]);
+
+  const settingsKey = JSON.stringify([method, privacy, disclose, organic, branded, watch('comment'), watch('duet'), watch('stitch'), watch('autoAddMusic'), watch('video_made_with_ai'), watch('title')]);
+  useEffect(() => { setValue('content_posting_consent', false); }, [identity, contentKey, settingsKey, creator, setValue]);
+
+  const durationValid = !video || (metadataState === 'ready' && duration !== null && !!creator && duration <= creator.max_video_post_duration_sec);
+  const ready = !loading && !!creator && media.length > 0 && durationValid &&
+    (upload || (creator.privacy_level_options.includes(privacy) && (!disclose || organic || branded) && !(branded && privacy === 'SELF_ONLY')));
+  useEffect(() => { if (!ready) setValue('content_posting_consent', false); }, [ready, setValue]);
+  const labels: Record<TikTokDto['privacy_level'], string> = {
+    PUBLIC_TO_EVERYONE: '全員', MUTUAL_FOLLOW_FRIENDS: '相互フォローの友達', FOLLOWER_OF_CREATOR: 'フォロワー', SELF_ONLY: '自分のみ',
+  };
+  const checkbox = (field: string, label: string, disabled = false) => (
+    <label className={clsx('flex items-center gap-2', disabled && 'opacity-50')}>
+      <input type="checkbox" {...register(field)} checked={watch(field) === true} disabled={disabled}
+        onChange={(event) => setValue(field, event.target.checked)} />{label}
+    </label>
+  );
+
+  return <div className="flex flex-col gap-4" data-toybaco-tiktok-creator-settings>
+    {loading ? <p role="status">TikTok の最新の投稿条件を確認しています…</p> : creator ?
+      <p>TikTok 投稿先: {creator.creator_nickname} (@{creator.creator_username})</p> :
+      <div role="alert"><p>TikTok の投稿条件を取得できません。時間をおいて再確認してください。</p>
+        <button type="button" onClick={() => setAttempt((old) => old + 1)}>投稿条件を再確認</button></div>}
+    {constraintNotice && <p role="status">{constraintNotice}</p>}
+    <label className="flex flex-col gap-1">投稿方法
+      <select className="bg-newBgColorInner h-[42px] border border-newTableBorder rounded-[8px] text-textColor px-3" {...register('content_posting_method')} value={method ?? 'DIRECT_POST'} disabled={!creator || loading}
+        onChange={(event) => setValue('content_posting_method', event.target.value)}>
+        <option value="DIRECT_POST">TikTok に直接投稿</option><option value="UPLOAD">TikTok アプリで編集して投稿</option>
+      </select>
+    </label>
+    {!video && <Input label="タイトル" {...register('title')} maxLength={90} />}
+    {!upload && <>
+      <label className="flex flex-col gap-1">公開範囲
+        <select className="bg-newBgColorInner h-[42px] border border-newTableBorder rounded-[8px] text-textColor px-3" {...register('privacy_level')} value={privacy ?? ''} disabled={!creator || loading}
+          onChange={(event) => setValue('privacy_level', event.target.value)}>
+          <option value="" disabled>公開範囲を選択してください</option>
+          {creator?.privacy_level_options.map((option) => <option key={option} value={option} disabled={branded && option === 'SELF_ONLY'}>{labels[option]}</option>)}
+        </select>
+      </label>
+      {checkbox('comment', 'コメントを許可', loading || !creator || creator.comment_disabled)}
+      {video && <>{checkbox('duet', 'デュエットを許可', loading || !creator || creator.duet_disabled)}{checkbox('stitch', 'リミックス（Stitch）を許可', loading || !creator || creator.stitch_disabled)}{checkbox('video_made_with_ai', 'AI 生成コンテンツとして表示')}</>}
+      {!video && <label>音楽を自動追加 <select className="bg-newBgColorInner h-[42px] border border-newTableBorder rounded-[8px] text-textColor px-3" {...register('autoAddMusic')}><option value="no">しない</option><option value="yes">する</option></select></label>}
+      {checkbox('disclose', 'ブランド・商品・サービスを宣伝する投稿')}
+      {disclose && <div className="flex flex-col gap-2">
+        <p>該当する項目を1つ以上選択してください。</p>
+        {checkbox('brand_organic_toggle', '自分のブランドを宣伝')}{checkbox('brand_content_toggle', '第三者のブランドを宣伝（有償パートナーシップ）')}
+        {(organic || branded) && <p>{branded ? '「有償パートナーシップ」と表示されます。' : '「プロモーションコンテンツ」と表示されます。'}</p>}
+        {branded && <p>第三者のブランドを宣伝する投稿では「自分のみ」を選択できません。</p>}
+      </div>}
+    </>}
+    {video && creator && <p>動画は {creator.max_video_post_duration_sec} 秒以内です。{metadataState === 'loading' ? '動画の長さを確認しています。' : metadataState === 'ready' && !durationValid ? '動画が上限を超えています。短い動画を選択してください。' : ''}</p>}
+    {video && metadataState === 'failed' && <div role="alert"><p>動画の長さを確認できません。接続を確認して再試行するか、別の動画を選択してください。</p><button type="button" onClick={() => setMetadataAttempt((old) => old + 1)}>動画の長さを再確認</button></div>}
+    <p>内容とプレビューを確認してください。送信後、TikTok に表示されるまで数分かかる場合があります。{upload && 'この操作はアプリ内の受信箱へ送信します。公開するには TikTok アプリで編集・投稿を完了してください。'}</p>
+    <p>TikTok の <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noreferrer">音楽使用確認</a>
+      {branded && !upload && <>と <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noreferrer">ブランドコンテンツポリシー</a></>}に同意したうえで送信してください。</p>
+    {checkbox('content_posting_consent', '上記を確認・同意し、この内容を TikTok へ送信します', !ready)}
+  </div>;
+};
+
+const TikTokBusinessSettings: FC<{
   values?: any;
 }> = (props) => {
   const { watch, register } = useSettings();
@@ -380,12 +562,22 @@ const TikTokSettings: FC<{
     </div>
   );
 };
-export default withProvider({
+export const TikTokBusinessProvider = withProvider({
   postComment: PostComment.COMMENT,
   minimumCharacters: [],
-  SettingsComponent: TikTokSettings,
+  SettingsComponent: TikTokBusinessSettings,
   comments: false,
   CustomPreviewComponent: TiktokPreview,
   dto: TikTokDto,
+  maximumCharacters: 2000,
+});
+
+export default withProvider({
+  postComment: PostComment.COMMENT,
+  minimumCharacters: [],
+  SettingsComponent: TikTokContentPostingSettings,
+  comments: false,
+  CustomPreviewComponent: TiktokPreview,
+  dto: TikTokContentPostingDto,
   maximumCharacters: 2000,
 });

@@ -49,6 +49,8 @@ import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { useDebounce } from 'use-debounce';
+import { useVariables } from '@gitroom/react/helpers/variable.context';
+const DESIGN_UNAVAILABLE = '画像編集は現在利用できません。画像ファイルを添付してください。';
 const Polonto = dynamic(
   () => import('@gitroom/frontend/components/launches/polonto')
 );
@@ -673,6 +675,9 @@ export const MultiMediaComponent: FC<{
     mediaNotAvailable,
   } = props;
   const user = useUser();
+  const { plontoKey } = useVariables();
+  const hasDesignerKey = typeof plontoKey === 'string' && plontoKey.trim().length > 0;
+  const canDesignMedia = hasDesignerKey && !!user?.tier?.ai && !dummy;
   const modals = useModals();
   const t = useT();
   useEffect(() => {
@@ -736,7 +741,7 @@ export const MultiMediaComponent: FC<{
   );
 
   const designMedia = useCallback(() => {
-    if (!!user?.tier?.ai && !dummy) {
+    if (canDesignMedia) {
       modals.openModal({
         askClose: false,
         title: t('design_media', 'Design Media'),
@@ -746,7 +751,7 @@ export const MultiMediaComponent: FC<{
         ),
       });
     }
-  }, [changeMedia, t]);
+  }, [canDesignMedia, changeMedia, modals, t]);
 
   return (
     <>
@@ -835,9 +840,13 @@ export const MultiMediaComponent: FC<{
                   </div>
                 </div>
               </div>
-              <div
+              <button
+                type="button"
                 onClick={designMedia}
-                className="cursor-pointer h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
+                disabled={!canDesignMedia}
+                aria-label={t('design_media', 'Design Media')}
+                title={!hasDesignerKey ? DESIGN_UNAVAILABLE : undefined}
+                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
               >
                 <div className="flex gap-[5px] items-center">
                   <div>
@@ -847,7 +856,7 @@ export const MultiMediaComponent: FC<{
                     {t('design_media', 'Design Media')}
                   </div>
                 </div>
-              </div>
+              </button>
 
 
 
@@ -870,6 +879,7 @@ export const MultiMediaComponent: FC<{
           )}
         </div>
       </div>
+      {!mediaNotAvailable && !hasDesignerKey && <p className="px-3 text-xs text-textColor">{DESIGN_UNAVAILABLE}</p>}
       <div className="text-[12px] text-red-400">{error}</div>
     </>
   );
@@ -901,6 +911,8 @@ export const MediaComponent: FC<{
     props;
   const { getValues } = useSettings();
   const user = useUser();
+  const { plontoKey } = useVariables();
+  const hasDesignerKey = typeof plontoKey === 'string' && plontoKey.trim().length > 0;
   useEffect(() => {
     const settings = getValues()[props.name];
     if (settings) {
@@ -912,6 +924,7 @@ export const MediaComponent: FC<{
   const mediaDirectory = useMediaDirectory();
 
   const showDesignModal = useCallback(() => {
+    if (!hasDesignerKey) return;
     modals.openModal({
       title: t('media_editor', 'Media Editor'),
       askClose: false,
@@ -928,7 +941,7 @@ export const MediaComponent: FC<{
         />
       ),
     });
-  }, [t]);
+  }, [hasDesignerKey, t]);
   const changeMedia = useCallback((m: { path: string; id: string }[]) => {
     setCurrentMedia(m[0]);
     onChange({
@@ -975,13 +988,14 @@ export const MediaComponent: FC<{
       )}
       <div className="flex gap-[5px]">
         <Button onClick={showModal}>{t('select', 'Select')}</Button>
-        <Button onClick={showDesignModal} className="!bg-customColor45">
+        <Button onClick={showDesignModal} disabled={!hasDesignerKey} title={!hasDesignerKey ? DESIGN_UNAVAILABLE : undefined} className="!bg-customColor45">
           {t('editor', 'Editor')}
         </Button>
         <Button secondary={true} onClick={clearMedia}>
           {t('clear', 'Clear')}
         </Button>
       </div>
+      {!hasDesignerKey && <p className="text-xs text-textColor">{DESIGN_UNAVAILABLE}</p>}
     </div>
   );
 };
