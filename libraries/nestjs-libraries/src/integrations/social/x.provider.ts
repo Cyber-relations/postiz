@@ -56,8 +56,8 @@ type XPendingData = {
   // Media still transcoding on X's side, waiting for STATUS = succeeded.
   processingIds: string[];
   // Arm -> confirm -> publish handshake (same as the Facebook story flow):
-  // finalizePost arms without mutating, checkPostStatus witnesses, and only a
-  // witnessed attempt runs the create - so a create that dies with an unknown
+  // checkPostStatus arms without mutating, then witnesses, and only a
+  // witnessed finalizePost runs the create - so a create that dies with an unknown
   // outcome is detected instead of run again (X has no idempotency key).
   attempting?: boolean;
   confirmed?: boolean;
@@ -907,9 +907,12 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       };
     }
 
+    // Arm in this read-only check; V110 claims FINALIZE once, at the create.
     return {
-      status: 'ready',
-      pendingData: { ...pendingData, processingIds: [] },
+      status: 'pending',
+      pendingData: {
+        ...pendingData, processingIds: [], attempting: true, confirmed: false,
+      },
     };
   }
 
