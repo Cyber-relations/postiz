@@ -57,11 +57,12 @@ const FooterTagDialog: FC<{
   const isLast = useModalIsLast();
   useEffect(() => {
     const content = ref.current;
+    const fallback = fallbackFocus.current;
     return () => {
       const active = document.activeElement;
       const dialog = content?.closest('[data-toybaco-tag-dialog]');
       if (active && active !== document.body && !dialog?.contains(active)) return;
-      const target = returnFocus.isConnected ? returnFocus : fallbackFocus.current;
+      const target = returnFocus.isConnected ? returnFocus : fallback;
       if (target?.isConnected) target.focus({ preventScroll: true });
     };
   }, [returnFocus, fallbackFocus]);
