@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useCallback, useMemo, useState } from 'react';
+import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ReactTags } from 'react-tag-autocomplete';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
@@ -10,9 +10,9 @@ import { Button } from '@gitroom/react/form/button';
 import { uniqBy } from 'lodash';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useClickOutside } from '@mantine/hooks';
-import { useFooterPopupPosition } from '@gitroom/frontend/components/launches/helpers/date.picker';
+import { useFooterPopupFocus, useFooterPopupPosition } from '@gitroom/frontend/components/launches/helpers/date.picker';
 import clsx from 'clsx';
-import { useModals } from '@gitroom/frontend/components/layout/new-modal';
+import { useModalIsLast, useModals } from '@gitroom/frontend/components/layout/new-modal';
 import {
   TagIcon,
   DropdownArrowIcon,
@@ -44,6 +44,53 @@ export const TagsComponent: FC<{
   }
 
   return <TagsComponentInner {...props} allTags={data} mutate={mutate} />;
+};
+
+const FooterTagDialog: FC<{
+  children: ReactNode;
+  initialFocus: 'input' | 'button';
+  onCancel: () => void;
+  returnFocus: HTMLElement;
+  fallbackFocus: { current: HTMLButtonElement | null };
+}> = ({ children, initialFocus, onCancel, returnFocus, fallbackFocus }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const isLast = useModalIsLast();
+  useEffect(() => {
+    const content = ref.current;
+    return () => {
+      const active = document.activeElement;
+      const dialog = content?.closest('[data-toybaco-tag-dialog]');
+      if (active && active !== document.body && !dialog?.contains(active)) return;
+      const target = returnFocus.isConnected ? returnFocus : fallbackFocus.current;
+      if (target?.isConnected) target.focus({ preventScroll: true });
+    };
+  }, [returnFocus, fallbackFocus]);
+  useEffect(() => {
+    if (!isLast) return;
+    const content = ref.current;
+    const dialog = content?.closest<HTMLElement>('[data-toybaco-tag-dialog]');
+    if (!dialog) return;
+    (content?.querySelector<HTMLElement>(initialFocus) || content)?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        if (!event.isComposing) { event.preventDefault(); onCancel(); }
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(dialog.querySelectorAll<HTMLElement>(
+        'button, input, select, textarea, [tabindex]'
+      )).filter((element) => element.tabIndex >= 0 && !element.hasAttribute('disabled') && element.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first) { event.preventDefault(); content?.focus(); }
+      else if (event.shiftKey && (document.activeElement === first || document.activeElement === content)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    dialog.addEventListener('keydown', keydown);
+    return () => dialog.removeEventListener('keydown', keydown);
+  }, [isLast, initialFocus, onCancel]);
+  return <div ref={ref} tabIndex={-1} className="flex flex-col gap-[16px]">{children}</div>;
 };
 
 export const TagsComponentInner: FC<{
@@ -78,16 +125,26 @@ export const TagsComponentInner: FC<{
   });
 
   const popupStyle = useFooterPopupPosition(isOpen, ref, 240);
-  const addTag = useCallback(async () => {
+  const keyboard = useFooterPopupFocus(isOpen, setIsOpen);
+  const addTag = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
+    const returnFocus = event.currentTarget;
+    setAllowClose(false);
     const val: string | undefined = await new Promise((resolve) => {
       modals.openModal({
         title: t('add_new_tag', 'Add New Tag'),
+        size: 'min(600px, calc(100vw - 32px))',
+        toybacoTagDialog: true,
+        onClose: () => resolve(undefined),
         children: (close) => (
-          <ShowModal tag="" close={close} resolve={resolve} />
+          <FooterTagDialog initialFocus="input" onCancel={close} returnFocus={returnFocus} fallbackFocus={keyboard.triggerRef}>
+            <ShowModal tag="" close={close} resolve={resolve} />
+            <Button onClick={close}>{t('cancel', 'Cancel')}</Button>
+          </FooterTagDialog>
         ),
       });
     });
 
+    setAllowClose(true);
     const newValues = await mutate();
 
     if (!val) {
@@ -105,21 +162,27 @@ export const TagsComponentInner: FC<{
         },
       });
     }
-  }, []);
+  }, [keyboard.triggerRef]);
 
   const deleteTag = useCallback(
     async (tag: any, e: React.MouseEvent) => {
+      const returnFocus = e.currentTarget as HTMLElement;
       setAllowClose(false);
       e.stopPropagation();
       const confirmed: boolean = await new Promise((resolve) => {
         modals.openModal({
           title: t('delete_tag', 'Delete Tag'),
+          size: 'min(600px, calc(100vw - 32px))',
+          toybacoTagDialog: true,
+          onClose: () => resolve(false),
           children: (close) => (
-            <ConfirmDeleteModal
-              tagName={tag.name}
-              close={close}
-              resolve={resolve}
-            />
+            <FooterTagDialog initialFocus="button" onCancel={close} returnFocus={returnFocus} fallbackFocus={keyboard.triggerRef}>
+              <ConfirmDeleteModal
+                tagName={tag.name}
+                close={close}
+                resolve={resolve}
+              />
+            </FooterTagDialog>
           ),
         });
       });
@@ -156,49 +219,59 @@ export const TagsComponentInner: FC<{
         setAllowClose(true);
       }, 500);
     },
-    [tagValue, name, onChange, mutate, fetch, modals, t]
+    [tagValue, name, onChange, mutate, fetch, modals, t, keyboard.triggerRef]
   );
 
   return (
     <div
       ref={ref}
+      onKeyDown={keyboard.onKeyDown}
+      onBlur={allowClose ? keyboard.onBlur : undefined}
       className={clsx(
         'border rounded-[8px] justify-center flex items-center relative h-[44px] text-[15px] font-[600] select-none',
         isOpen ? 'border-[#612BD3]' : 'border-newTextColor/10'
       )}
     >
-      <div
-        onClick={() => setIsOpen(!isOpen)}
-        className="px-[16px] justify-center flex gap-[8px] items-center h-full select-none flex-1"
+      <button
+        type="button"
+        ref={keyboard.triggerRef}
+        onClick={keyboard.toggle}
+        onKeyDown={keyboard.onTriggerKeyDown}
+        aria-expanded={isOpen}
+        aria-controls={keyboard.popupId}
+        className="px-[16px] justify-center flex gap-[8px] items-center h-full select-none flex-1 rounded-[8px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B5B]"
       >
-        <div className="cursor-pointer">
+        <span className="cursor-pointer">
           <TagIcon />
-        </div>
-        <div className="cursor-pointer flex gap-[4px]">
+        </span>
+        <span className="cursor-pointer flex gap-[4px]">
           {tagValue.length === 0 ? (
             t('add_new_tag', 'Add New Tag')
           ) : (
             <>
-              <div
+              <span
                 className="h-full flex justify-center items-center px-[8px] rounded-[4px]"
                 style={{ backgroundColor: tagValue[0].color }}
               >
                 <span className="text-shadow-tags text-[#fff]">
                   {tagValue[0].name}
                 </span>
-              </div>
+              </span>
               {tagValue.length > 1 ? <span>+{tagValue.length - 1}</span> : null}
             </>
           )}
-        </div>
-        <div className="cursor-pointer">
+        </span>
+        <span className="cursor-pointer">
           <DropdownArrowIcon rotated={isOpen} />
-        </div>
-      </div>
+        </span>
+      </button>
       {isOpen && (
-        <div data-toybaco-footer-popup="tags" style={popupStyle} className="bg-newBgColorInner p-[12px] menu-shadow flex flex-col">
+        <div data-toybaco-footer-popup="tags" id={keyboard.popupId} ref={keyboard.popupRef} style={popupStyle} className="bg-newBgColorInner p-[12px] menu-shadow flex flex-col">
           {(data?.tags || []).map((p: any) => (
-            <div
+            <div key={p.name} className="min-h-[40px] -mx-[12px] flex gap-[8px] items-center group">
+              <button
+                type="button"
+                aria-pressed={!!tagValue.find((a) => a.id === p.id)}
               onClick={() => {
                 const exists = !!tagValue.find((a) => a.id === p.id);
                 let modify = [];
@@ -218,62 +291,52 @@ export const TagsComponentInner: FC<{
                   },
                 });
               }}
-              key={p.name}
-              className="min-h-[40px] py-[8px] px-[20px] -mx-[12px] flex gap-[8px] items-center group"
-            >
-              <Check
-                onChange={() => {}}
-                value={!!tagValue.find((a) => a.id === p.id)}
-              />
-              <div className="h-full flex items-center flex-1 break-all">
-                <span
-                  className="text-[#fff] px-[8px] rounded-[8px] text-shadow-tags"
-                  style={{ backgroundColor: p.color }}
-                >
-                  {p.name}
+                className="min-h-[40px] py-[8px] pl-[20px] pr-[8px] flex gap-[8px] items-center flex-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF6B5B]"
+              >
+                <Check value={!!tagValue.find((a) => a.id === p.id)} />
+                <span className="h-full flex items-center flex-1 break-all">
+                  <span className="text-[#fff] px-[8px] rounded-[8px] text-shadow-tags" style={{ backgroundColor: p.color }}>{p.name}</span>
                 </span>
-              </div>
+              </button>
               {!tagValue.find((a) => a.id === p.id) && (
-                <div
+                <button
+                  type="button"
+                  aria-label={`${p.name}を削除`}
                   onClick={(e) => deleteTag(p, e)}
-                  className="ms-auto transition-opacity cursor-pointer text-red-500 text-[14px] font-[600]"
-                >
-                  ×
-                </div>
+                  className="ms-auto mr-[20px] cursor-pointer text-red-500 text-[14px] font-[600] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF6B5B]"
+                >×</button>
               )}
             </div>
           ))}
-          <div
+          <button
+            type="button"
             onClick={addTag}
-            className="cursor-pointer gap-[8px] flex w-full h-[34px] rounded-[8px] mt-[12px] px-[16px] justify-center items-center bg-[#612BD3] text-white"
+            className="cursor-pointer gap-[8px] flex w-full h-[34px] rounded-[8px] mt-[12px] px-[16px] justify-center items-center bg-[#612BD3] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B5B]"
           >
-            <div>
+            <span aria-hidden="true">
               <PlusIcon />
-            </div>
-            <div className="text-[13px] font-[600]">
+            </span>
+            <span className="text-[13px] font-[600]">
               {t('add_new_tag', 'Add New Tag')}
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       )}
     </div>
   );
 };
 
-const Check: FC<{ value: boolean; onChange: (value: boolean) => void }> = ({
-  value,
-  onChange,
-}) => {
+const Check: FC<{ value: boolean }> = ({ value }) => {
   return (
-    <div
-      onClick={() => onChange(!value)}
+    <span
+      aria-hidden="true"
       className={clsx(
         'text-[10px] font-[500] text-center flex border border-btnSimple rounded-[6px] min-w-[20px] min-h-[20px] w-[20px] h-[20px] justify-center items-center',
         value && 'bg-[#612BD3]'
       )}
     >
       {value ? <CheckmarkIcon className="text-white" /> : ''}
-    </div>
+    </span>
   );
 };
 export const TagsComponentA: FC<{

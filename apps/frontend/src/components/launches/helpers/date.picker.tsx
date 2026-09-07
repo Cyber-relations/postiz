@@ -1,4 +1,4 @@
-import { CSSProperties, FC, useCallback, useEffect, useState } from 'react';
+import { CSSProperties, FC, FocusEvent, KeyboardEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ja';
 import { Calendar, TimeInput } from '@mantine/dates';
@@ -40,6 +40,49 @@ export function useFooterPopupPosition(open: boolean, ref: { current: HTMLElemen
   return popupStyle;
 }
 
+export function useFooterPopupFocus(open: boolean, setOpen: (value: boolean) => void) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const popupId = useId();
+  const focusFirst = useCallback(() => popupRef.current?.querySelector<HTMLElement>(
+    'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]'
+  )?.focus({ preventScroll: true }), []);
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement;
+    // Positioning renders first. Do not steal focus if another control/dialog took it.
+    const frame = window.requestAnimationFrame(() => {
+      if (document.activeElement === previous || document.activeElement === triggerRef.current) focusFirst();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, focusFirst]);
+  const closeAndFocus = () => {
+    setOpen(false);
+    if (triggerRef.current?.isConnected) triggerRef.current.focus({ preventScroll: true });
+  };
+  const toggle = () => open ? closeAndFocus() : setOpen(true);
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (!open || event.key !== 'Escape') return;
+    if (event.nativeEvent.isComposing) {
+      event.stopPropagation();
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    closeAndFocus();
+  };
+  const onBlur = (event: FocusEvent<HTMLElement>) => {
+    if (open && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+  };
+  const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'ArrowDown' || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    if (open) focusFirst();
+    else setOpen(true);
+  };
+  return { triggerRef, popupRef, popupId, toggle, closeAndFocus, onKeyDown, onBlur, onTriggerKeyDown };
+}
+
 export const DatePicker: FC<{
   date: dayjs.Dayjs;
   onChange: (day: dayjs.Dayjs) => void;
@@ -48,13 +91,11 @@ export const DatePicker: FC<{
   const [open, setOpen] = useState(false);
   const t = useT();
 
-  const changeShow = useCallback(() => {
-    setOpen((prev) => !prev);
-  }, []);
   const ref = useClickOutside<HTMLDivElement>(() => {
     setOpen(false);
   });
   const popupStyle = useFooterPopupPosition(open, ref);
+  const keyboard = useFooterPopupFocus(open, setOpen);
   const changeDate = useCallback(
     (type: 'date' | 'time') => (day: Date) => {
       onChange(
@@ -69,20 +110,30 @@ export const DatePicker: FC<{
   );
   return (
     <div
-      className="px-[16px] border border-newTextColor/10 rounded-[8px] justify-center flex gap-[8px] items-center relative h-[44px] text-[15px] font-[600] ml-[7px] select-none flex-1"
-      onClick={changeShow}
+      className="border border-newTextColor/10 rounded-[8px] justify-center flex items-center relative h-[44px] text-[15px] font-[600] ml-[7px] select-none flex-1"
+      onKeyDown={keyboard.onKeyDown}
+      onBlur={keyboard.onBlur}
       ref={ref}
     >
-      <div className="cursor-pointer">
-        <CalendarIcon />
-      </div>
-      <div className="cursor-pointer">
-        {date.format('YYYY/MM/DD HH:mm')}
-      </div>
+      <button
+        type="button"
+        ref={keyboard.triggerRef}
+        onClick={keyboard.toggle}
+        onKeyDown={keyboard.onTriggerKeyDown}
+        aria-label="投稿日時"
+        aria-expanded={open}
+        aria-controls={keyboard.popupId}
+        className="px-[16px] flex gap-[8px] items-center justify-center w-full h-full rounded-[8px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B5B]"
+      >
+        <span aria-hidden="true"><CalendarIcon /></span>
+        <span>{date.format('YYYY/MM/DD HH:mm')}</span>
+      </button>
       {open && (
         <div
           onClick={(e) => e.stopPropagation()}
           data-toybaco-date-popup=""
+          id={keyboard.popupId}
+          ref={keyboard.popupRef}
           style={popupStyle}
           className="animate-fadeIn bg-sixth border border-tableBorder text-textColor rounded-[16px] p-[16px] flex flex-col"
         >
@@ -133,7 +184,7 @@ export const DatePicker: FC<{
             }}
             defaultValue={date.toDate()}
           />
-          <Button className="mt-[12px]" onClick={changeShow}>
+          <Button className="mt-[12px]" onClick={keyboard.closeAndFocus}>
             {t('close', 'Close')}
           </Button>
         </div>

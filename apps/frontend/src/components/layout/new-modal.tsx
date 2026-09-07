@@ -27,6 +27,7 @@ interface OpenModalInterface {
   withCloseButton?: boolean;
   askClose?: boolean;
   toybacoDecision?: boolean;
+  toybacoTagDialog?: boolean;
   onClose?: () => void;
   children: ReactNode | ((close: () => void) => ReactNode);
   classNames?: {
@@ -68,7 +69,8 @@ const useModalStore = create<State>((set) => ({
   closeAll: () => set({ modalManager: [] }),
 }));
 
-const CurrentModalContext = createContext({ id: '' });
+const CurrentModalContext = createContext({ id: '', isLast: false });
+export const useModalIsLast = () => useContext(CurrentModalContext).isLast;
 
 interface ModalManagerInterface extends ModalManagerStoreInterface {
   closeCurrent(): void;
@@ -219,7 +221,7 @@ export const Component: FC<{
   }
 
   return (
-    <CurrentModalContext.Provider value={{ id: modal.id }}>
+    <CurrentModalContext.Provider value={{ id: modal.id, isLast }}>
       <div
         onClick={closeModalFunction}
         style={{ zIndex }}
@@ -257,6 +259,12 @@ export const Component: FC<{
                 'aria-describedby': `toybaco-decision-description-${modal.id}`,
                 'data-toybaco-decision': modal.id,
               })}
+              {...(modal.toybacoTagDialog && {
+                role: 'dialog',
+                'aria-modal': isLast,
+                'aria-labelledby': `toybaco-tag-title-${modal.id}`,
+                'data-toybaco-tag-dialog': modal.id,
+              })}
               className={clsx(
                 !modal.removeLayout && 'gap-[40px] p-[32px]',
                 'bg-newBgColorInner mx-auto flex flex-col w-fit rounded-[24px] relative',
@@ -273,7 +281,7 @@ export const Component: FC<{
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center">
-                <div id={modal.toybacoDecision ? `toybaco-decision-title-${modal.id}` : undefined} className="text-[24px] font-[600] flex-1">
+                <div id={modal.toybacoDecision ? `toybaco-decision-title-${modal.id}` : modal.toybacoTagDialog ? `toybaco-tag-title-${modal.id}` : undefined} className="text-[24px] font-[600] flex-1">
                   {modal.title}
                 </div>
                 {typeof modal.withCloseButton === 'undefined' ||
@@ -282,6 +290,7 @@ export const Component: FC<{
                     <button
                       className="outline-none absolute end-[20px] top-[20px] mantine-UnstyledButton-root mantine-ActionIcon-root hover:bg-tableBorder cursor-pointer mantine-Modal-close mantine-1dcetaa"
                       type="button"
+                      aria-label={modal.toybacoTagDialog ? '閉じる' : undefined}
                       onClick={closeModalFunction}
                     >
                       <svg
