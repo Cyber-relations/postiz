@@ -4,7 +4,7 @@ import { FC, useMemo, useState } from 'react';
 import { Select } from '@gitroom/react/form/select';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useClickOutside } from '@mantine/hooks';
-import { useFooterPopupPosition } from '@gitroom/frontend/components/launches/helpers/date.picker';
+import { useFooterPopupFocus, useFooterPopupPosition } from '@gitroom/frontend/components/launches/helpers/date.picker';
 import { isUSCitizen } from '@gitroom/frontend/components/launches/helpers/isuscitizen.utils';
 import clsx from 'clsx';
 import { RepeatIcon, DropdownArrowIcon } from '@gitroom/frontend/components/ui/icons';
@@ -67,6 +67,7 @@ export const RepeatComponent: FC<{
   });
 
   const popupStyle = useFooterPopupPosition(isOpen, ref, 240);
+  const keyboard = useFooterPopupFocus(isOpen, setIsOpen);
   const everyLabel = useMemo(() => {
     if (!repeat) {
       return '';
@@ -77,40 +78,48 @@ export const RepeatComponent: FC<{
   return (
     <div
       ref={ref}
+      onKeyDown={keyboard.onKeyDown}
+      onBlur={keyboard.onBlur}
       className={clsx(
         'border rounded-[8px] justify-center flex items-center relative h-[44px] text-[15px] font-[600] select-none',
         isOpen ? 'border-[#612BD3]' : 'border-newTextColor/10',
       )}
     >
-      <div
-        onClick={() => setIsOpen(!isOpen)}
-        className="px-[16px] justify-center flex gap-[8px] items-center h-full select-none flex-1"
+      <button
+        type="button"
+        ref={keyboard.triggerRef}
+        onClick={keyboard.toggle}
+        onKeyDown={keyboard.onTriggerKeyDown}
+        aria-expanded={isOpen}
+        aria-controls={keyboard.popupId}
+        className="px-[16px] justify-center flex gap-[8px] items-center h-full select-none flex-1 rounded-[8px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B5B]"
       >
-        <div className="cursor-pointer">
+        <span className="cursor-pointer">
           <RepeatIcon />
-        </div>
-        <div className="cursor-pointer">
+        </span>
+        <span className="cursor-pointer">
           {repeat
             ? `${t('repeat_post_every_label', 'Repeat Post Every')} ${everyLabel}`
             : t('repeat_post_every', 'Repeat Post Every...')}
-        </div>
-        <div className="cursor-pointer">
+        </span>
+        <span className="cursor-pointer">
           <DropdownArrowIcon rotated={isOpen} />
-        </div>
-      </div>
+        </span>
+      </button>
       {isOpen && (
-        <div data-toybaco-footer-popup="repeat" style={popupStyle} className="bg-newBgColorInner p-[12px] menu-shadow flex flex-col">
+        <div data-toybaco-footer-popup="repeat" id={keyboard.popupId} ref={keyboard.popupRef} style={popupStyle} className="bg-newBgColorInner p-[12px] menu-shadow flex flex-col">
           {list.map((p) => (
-            <div
+            <button
+              type="button"
               onClick={() => {
                 props.onChange(Number(p.value));
-                setIsOpen(false);
+                keyboard.closeAndFocus();
               }}
               key={p.label}
-              className="h-[40px] py-[8px] px-[20px] -mx-[12px] hover:bg-newBgColor"
+              className="h-[40px] py-[8px] px-[20px] -mx-[12px] hover:bg-newBgColor text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF6B5B]"
             >
               {p.label}
-            </div>
+            </button>
           ))}
         </div>
       )}
