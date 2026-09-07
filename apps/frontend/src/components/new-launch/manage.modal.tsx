@@ -300,9 +300,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
     if (
       await deleteDialog(
-        t('composer_discard_description', 'この画面の未保存の変更だけが破棄されます。保存済みの投稿は残ります。'),
-        t('composer_discard_confirm', '破棄して閉じる'),
-        t('composer_discard_title', '未保存の変更を破棄して閉じますか？'),
+        t('composer_discard_description', '保存していない変更がある場合は破棄されます。保存済みの投稿は残ります。'),
+        t('composer_discard_confirm', '保存せずに閉じる'),
+        t('composer_discard_title', 'この画面を閉じますか？'),
         t('composer_discard_cancel', '編集を続ける')
       )
     ) {
