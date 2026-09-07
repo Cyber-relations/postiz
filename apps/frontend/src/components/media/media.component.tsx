@@ -755,7 +755,7 @@ export const MultiMediaComponent: FC<{
 
   return (
     <>
-      <div className="b1 flex flex-col gap-[8px] rounded-bl-[8px] select-none w-full">
+      <div className="b1 flex min-w-0 flex-col gap-[8px] rounded-bl-[8px] select-none w-full">
         <div className="flex gap-[10px] px-[12px]">
           {!!currentMedia && (
             <ReactSortable
@@ -824,12 +824,12 @@ export const MultiMediaComponent: FC<{
             </ReactSortable>
           )}
         </div>
-        <div className="flex gap-[8px] px-[12px] border-t border-newColColor w-full b1 text-textColor">
+        <div className="flex flex-wrap items-center gap-[8px] px-[12px] border-t border-newColColor w-full b1 text-textColor">
           {!mediaNotAvailable && (
-            <div className="flex py-[10px] b2 items-center gap-[4px]">
+            <div className="flex max-w-full flex-wrap py-[10px] b2 items-center gap-[4px]">
               <div
                 onClick={showModal}
-                className="cursor-pointer h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
+                className="cursor-pointer shrink-0 whitespace-nowrap h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
               >
                 <div className="flex gap-[8px] items-center">
                   <div>
@@ -846,7 +846,7 @@ export const MultiMediaComponent: FC<{
                 disabled={!canDesignMedia}
                 aria-label={t('design_media', 'Design Media')}
                 title={!hasDesignerKey ? DESIGN_UNAVAILABLE : undefined}
-                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
+                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 shrink-0 whitespace-nowrap h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
               >
                 <div className="flex gap-[5px] items-center">
                   <div>
@@ -878,8 +878,8 @@ export const MultiMediaComponent: FC<{
             </div>
           )}
         </div>
+        {!mediaNotAvailable && !hasDesignerKey && <p className="px-3 pb-2 text-xs whitespace-normal text-textColor">{DESIGN_UNAVAILABLE}</p>}
       </div>
-      {!mediaNotAvailable && !hasDesignerKey && <p className="px-3 text-xs text-textColor">{DESIGN_UNAVAILABLE}</p>}
       <div className="text-[12px] text-red-400">{error}</div>
     </>
   );
