@@ -7,13 +7,12 @@ import { FC, ReactNode } from 'react';
 import { SliderComponent } from '@gitroom/frontend/components/third-parties/slider.component';
 import { VideoOrImage } from '@gitroom/react/helpers/video.or.image';
 
-const TikTokItem: FC<{ icon: ReactNode; num: string }> = ({ icon, num }) => {
+const TikTokItem: FC<{ icon: ReactNode }> = ({ icon }) => {
   return (
     <div className="flex items-center flex-col">
       <div className="w-[29px] h-[29px] rounded-full bg-bgTiktokItem flex justify-center items-center text-bgTiktokItemIcon">
         {icon}
       </div>
-      <div className="text-[8px] font-[700] text-bgTiktokItemIcon">{num}</div>
     </div>
   );
 };
@@ -48,7 +47,7 @@ export const TiktokPreview: FC<{
         .replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
           return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
         }) +
-      `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="This text will be cropped">` +
+      `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="文字数制限を超えた部分は省略されます">` +
       newContent.slice(end).replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
         return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
       }) +
@@ -57,29 +56,29 @@ export const TiktokPreview: FC<{
     return { text: finalValue, images: p.image };
   });
   return (
-    <div className="p-[15px] absolute left-0 top-0 w-full h-full flex justify-center bg-newBgColorInner">
-      <div className="relative">
+    <div data-toybaco-tiktok-preview="" className="p-[12px] w-full min-w-0 grid grid-cols-[minmax(0,1fr)_32px] items-end gap-[12px] bg-newBgColorInner [@media(max-width:767px)]:max-w-[224px] [@media(max-width:767px)]:mx-auto">
+      <div className="relative min-w-0 w-full">
         <SliderComponent
           list={renderContent?.[0]?.images.map((image, index) => (
             <a
               key={`image_${index}`}
-              className="flex-1"
+              className="block w-full h-full"
               href={mediaDir.set(image.path)}
               target="_blank"
             >
-              <VideoOrImage autoplay={true} src={mediaDir.set(image.path)} />
+              <VideoOrImage autoplay={true} isContain={true} videoClassName="object-contain" src={mediaDir.set(image.path)} />
             </a>
           ))}
-          className="h-full bg-black aspect-[calc(9/16)] rounded-[3px] overflow-hidden"
+          className="w-full bg-black aspect-[9/16] rounded-[3px] overflow-hidden"
         />
-        <div className="absolute pointer-events-none w-full h-full start-0 top-0 px-[12px] py-[25px] justify-end items-start text-white flex flex-col">
+        <div className="absolute pointer-events-none w-full max-h-full overflow-hidden start-0 bottom-0 px-[12px] pt-[32px] pb-[20px] items-start text-white flex flex-col bg-gradient-to-t from-black/90 to-black/70">
           <div className="text-[14px] font-[500]">@{integration?.name}</div>
-          <div className="text-[13px] font-[400] whitespace-pre-line line-clamp-6 w-full"
+          <div className="text-[13px] font-[400] whitespace-pre-line break-words line-clamp-6 w-full"
             dangerouslySetInnerHTML={{ __html: renderContent?.[0]?.text || '' }}
           />
         </div>
       </div>
-      <div className="flex flex-col justify-end gap-[10px] ml-[18px]">
+      <div aria-hidden="true" className="flex w-[32px] min-w-0 flex-col items-center justify-end gap-[10px]">
         <div className="relative">
           <img
             src={integration?.picture || '/no-picture.jpg'}
@@ -103,7 +102,6 @@ export const TiktokPreview: FC<{
           </div>
         </div>
         <TikTokItem
-          num="1.3M"
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -120,7 +118,6 @@ export const TiktokPreview: FC<{
           }
         />
         <TikTokItem
-          num="10.7M"
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -137,7 +134,6 @@ export const TiktokPreview: FC<{
           }
         />
         <TikTokItem
-          num="1.2M"
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -154,7 +150,6 @@ export const TiktokPreview: FC<{
           }
         />
         <TikTokItem
-          num="1.2M"
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"

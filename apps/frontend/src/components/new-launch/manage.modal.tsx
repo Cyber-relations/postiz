@@ -76,24 +76,21 @@ function toybacoProviderLabel(identifier: unknown): string {
 function ToybacoCopilotButton() {
   const { open, setOpen, icons } = useChatContext();
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={clsx(
-          'copilotKitButton',
-          open ? 'open !hidden' : '!bottom-28'
-        )}
-        aria-label={open ? 'AIチャットを閉じる' : 'AIチャットを開く'}
-      >
-        <div className="copilotKitButtonIcon copilotKitButtonIconOpen">
-          {icons.openIcon}
-        </div>
-        <div className="copilotKitButtonIcon copilotKitButtonIconClose">
-          {icons.closeIcon}
-        </div>
-      </button>
-    </div>
+    <button
+      type="button"
+      data-toybaco-composer-ai=""
+      hidden={open}
+      onClick={() => setOpen(!open)}
+      className={clsx(
+        'h-[36px] shrink-0 items-center gap-[6px] whitespace-nowrap rounded-[8px] border border-newBorder px-[10px] text-[12px] font-[600] text-textColor hover:bg-newBgColorInner',
+        open ? 'hidden' : 'inline-flex'
+      )}
+      aria-label="AIチャットを開く"
+      aria-expanded={open}
+    >
+      <span aria-hidden="true" className="flex h-[16px] w-[16px] items-center justify-center [&_svg]:h-full [&_svg]:w-full">{icons.openIcon}</span>
+      AIに相談
+    </button>
   );
 }
 
@@ -303,11 +300,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
     if (
       await deleteDialog(
-        t(
-          'are_you_sure_you_want_to_close_this_modal_all_data_will_be_lost',
-          'Are you sure you want to close this modal? (all data will be lost)'
-        ),
-        t('yes_close_it', 'Yes, close it!')
+        t('composer_discard_description', 'この画面の未保存の変更だけが破棄されます。保存済みの投稿は残ります。'),
+        t('composer_discard_confirm', '破棄して閉じる'),
+        t('composer_discard_title', '未保存の変更を破棄して閉じますか？'),
+        t('composer_discard_cancel', '編集を続ける')
       )
     ) {
       if (customClose) {
@@ -647,7 +643,46 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         <div data-toybaco-composer-body="" className="flex-1 flex">
           <div data-toybaco-composer-editor="" className="flex flex-col flex-1 border-e border-newBorder">
             <div data-toybaco-composer-heading="" className="bg-newBgColor h-[65px] rounded-s-[20px] !rounded-b-[0] flex items-center gap-[12px] px-[20px] text-[20px] font-[600]">
-              <h2 id="toybaco-composer-title">{existingData.integration ? '投稿を編集' : '新しいお知らせ'}</h2>
+              <h2 id="toybaco-composer-title">{existingData.integration ? '投稿を編集' : '投稿を作成'}</h2>
+      <CopilotPopup
+        className="!relative !inset-auto ml-auto shrink-0 [&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
+        Button={ToybacoCopilotButton}
+        Header={ToybacoCopilotHeader}
+        hitEscapeToClose={false}
+        clickOutsideToClose={true}
+        instructions={`
+You are an assistant that help the user to schedule their social media posts,
+Here are the things you can do:
+- Add a new comment / post to the list of posts
+- Delete a comment / post from the list of posts
+- Add content to the comment / post
+- Activate or deactivate the comment / post
+
+Post content can be added using the addPostContentFor{num} function.
+After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} function.
+`}
+        labels={{
+          title: t('your_assistant', 'AIアシスタント'),
+          initial: t(
+            'assistant_initial_message',
+            'こんにちは！SNS投稿の作成をお手伝いします。'
+          ),
+          placeholder: t(
+            'ai_chat_placeholder',
+            'AIアシスタントにメッセージを入力…'
+          ),
+          error: t(
+            'ai_chat_error',
+            'エラーが発生しました。もう一度お試しください。'
+          ),
+          stopGenerating: t('ai_chat_stop', '生成を停止'),
+          regenerateResponse: t('ai_chat_regenerate', '回答を再生成'),
+          copyToClipboard: t('ai_chat_copy', 'クリップボードにコピー'),
+          thumbsUp: t('ai_chat_helpful', '役に立った'),
+          thumbsDown: t('ai_chat_not_helpful', '役に立たなかった'),
+          copied: t('ai_chat_copied', 'コピーしました'),
+        }}
+      />
               <button type="button" data-toybaco-composer-close="" aria-label="投稿作成を閉じる" onClick={askClose} disabled={loading}>
                 <CloseIcon />
               </button>
@@ -890,45 +925,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           </div>
         </div>
       </div>
-      <CopilotPopup
-        className="[&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0 [&_.copilotKitWindow]:!bottom-28"
-        Button={ToybacoCopilotButton}
-        Header={ToybacoCopilotHeader}
-        hitEscapeToClose={false}
-        clickOutsideToClose={true}
-        instructions={`
-You are an assistant that help the user to schedule their social media posts,
-Here are the things you can do:
-- Add a new comment / post to the list of posts
-- Delete a comment / post from the list of posts
-- Add content to the comment / post
-- Activate or deactivate the comment / post
 
-Post content can be added using the addPostContentFor{num} function.
-After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} function.
-`}
-        labels={{
-          title: t('your_assistant', 'AIアシスタント'),
-          initial: t(
-            'assistant_initial_message',
-            'こんにちは！SNS投稿の作成をお手伝いします。'
-          ),
-          placeholder: t(
-            'ai_chat_placeholder',
-            'AIアシスタントにメッセージを入力…'
-          ),
-          error: t(
-            'ai_chat_error',
-            'エラーが発生しました。もう一度お試しください。'
-          ),
-          stopGenerating: t('ai_chat_stop', '生成を停止'),
-          regenerateResponse: t('ai_chat_regenerate', '回答を再生成'),
-          copyToClipboard: t('ai_chat_copy', 'クリップボードにコピー'),
-          thumbsUp: t('ai_chat_helpful', '役に立った'),
-          thumbsDown: t('ai_chat_not_helpful', '役に立たなかった'),
-          copied: t('ai_chat_copied', 'コピーしました'),
-        }}
-      />
     </div>
   );
 };

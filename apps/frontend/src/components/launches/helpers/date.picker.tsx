@@ -1,5 +1,6 @@
 import { FC, useCallback, useState } from 'react';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ja';
 import { Calendar, TimeInput } from '@mantine/dates';
 import { useClickOutside } from '@mantine/hooks';
 import { Button } from '@gitroom/react/form/button';
@@ -50,6 +51,22 @@ export const DatePicker: FC<{
           className="animate-fadeIn absolute bottom-[100%] mb-[16px] start-[50%] -translate-x-[50%] bg-sixth border border-tableBorder text-textColor rounded-[16px] z-[300] p-[16px] flex flex-col"
         >
           <Calendar
+            locale="ja"
+            labelFormat="YYYY年M月"
+            yearLabelFormat="YYYY年"
+            weekdayLabelFormat="dd"
+            nextMonthLabel="翌月"
+            previousMonthLabel="前月"
+            nextYearLabel="翌年"
+            previousYearLabel="前年"
+            nextDecadeLabel="次の10年"
+            previousDecadeLabel="前の10年"
+            renderDay={(day) => (
+              <span>
+                <span aria-hidden="true">{day.getDate()}</span>
+                <span className="sr-only">{dayjs(day).locale('ja').format('YYYY年M月D日 dddd')}</span>
+              </span>
+            )}
             onChange={changeDate('date')}
             value={date.toDate()}
             dayClassName={(date, modifiers) => {
