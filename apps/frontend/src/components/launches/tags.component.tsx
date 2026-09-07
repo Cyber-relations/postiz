@@ -10,6 +10,7 @@ import { Button } from '@gitroom/react/form/button';
 import { uniqBy } from 'lodash';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useClickOutside } from '@mantine/hooks';
+import { useFooterPopupPosition } from '@gitroom/frontend/components/launches/helpers/date.picker';
 import clsx from 'clsx';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import {
@@ -76,6 +77,7 @@ export const TagsComponentInner: FC<{
     setIsOpen(false);
   });
 
+  const popupStyle = useFooterPopupPosition(isOpen, ref, 240);
   const addTag = useCallback(async () => {
     const val: string | undefined = await new Promise((resolve) => {
       modals.openModal({
@@ -194,7 +196,7 @@ export const TagsComponentInner: FC<{
         </div>
       </div>
       {isOpen && (
-        <div className="z-[300] absolute start-0 bottom-[100%] w-[240px] bg-newBgColorInner p-[12px] menu-shadow -translate-y-[10px] flex flex-col">
+        <div data-toybaco-footer-popup="tags" style={popupStyle} className="bg-newBgColorInner p-[12px] menu-shadow flex flex-col">
           {(data?.tags || []).map((p: any) => (
             <div
               onClick={() => {

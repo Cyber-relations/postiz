@@ -4,6 +4,7 @@ import { FC, useMemo, useState } from 'react';
 import { Select } from '@gitroom/react/form/select';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useClickOutside } from '@mantine/hooks';
+import { useFooterPopupPosition } from '@gitroom/frontend/components/launches/helpers/date.picker';
 import { isUSCitizen } from '@gitroom/frontend/components/launches/helpers/isuscitizen.utils';
 import clsx from 'clsx';
 import { RepeatIcon, DropdownArrowIcon } from '@gitroom/frontend/components/ui/icons';
@@ -65,6 +66,7 @@ export const RepeatComponent: FC<{
     setIsOpen(false);
   });
 
+  const popupStyle = useFooterPopupPosition(isOpen, ref, 240);
   const everyLabel = useMemo(() => {
     if (!repeat) {
       return '';
@@ -97,7 +99,7 @@ export const RepeatComponent: FC<{
         </div>
       </div>
       {isOpen && (
-        <div className="z-[300] absolute start-0 bottom-[100%] w-[240px] bg-newBgColorInner p-[12px] menu-shadow -translate-y-[10px] flex flex-col">
+        <div data-toybaco-footer-popup="repeat" style={popupStyle} className="bg-newBgColorInner p-[12px] menu-shadow flex flex-col">
           {list.map((p) => (
             <div
               onClick={() => {

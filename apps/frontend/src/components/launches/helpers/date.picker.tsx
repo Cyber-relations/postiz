@@ -1,4 +1,4 @@
-import { FC, useCallback, useState } from 'react';
+import { CSSProperties, FC, useCallback, useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ja';
 import { Calendar, TimeInput } from '@mantine/dates';
@@ -7,6 +7,39 @@ import { Button } from '@gitroom/react/form/button';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { CalendarIcon } from '@gitroom/frontend/components/ui/icons';
+export function useFooterPopupPosition(open: boolean, ref: { current: HTMLElement | null }, preferredWidth = 320): CSSProperties {
+  const [popupStyle, setPopupStyle] = useState<CSSProperties>({ visibility: 'hidden' });
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => {
+      const anchor = ref.current?.getBoundingClientRect();
+      if (!anchor) return;
+      const margin = 8;
+      const width = Math.min(preferredWidth, window.innerWidth - margin * 2);
+      const above = anchor.top >= window.innerHeight - anchor.bottom;
+      setPopupStyle({
+        position: 'fixed',
+        left: Math.max(margin, Math.min(anchor.left + anchor.width / 2 - width / 2, window.innerWidth - width - margin)),
+        width,
+        ...(above
+          ? { bottom: window.innerHeight - anchor.top + margin, top: 'auto', maxHeight: Math.max(0, anchor.top - margin * 2) }
+          : { top: anchor.bottom + margin, bottom: 'auto', maxHeight: Math.max(0, window.innerHeight - anchor.bottom - margin * 2) }),
+        overflowY: 'auto',
+        overscrollBehavior: 'contain',
+        zIndex: 300,
+      });
+    };
+    reposition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open, ref, preferredWidth]);
+  return popupStyle;
+}
+
 export const DatePicker: FC<{
   date: dayjs.Dayjs;
   onChange: (day: dayjs.Dayjs) => void;
@@ -21,6 +54,7 @@ export const DatePicker: FC<{
   const ref = useClickOutside<HTMLDivElement>(() => {
     setOpen(false);
   });
+  const popupStyle = useFooterPopupPosition(open, ref);
   const changeDate = useCallback(
     (type: 'date' | 'time') => (day: Date) => {
       onChange(
@@ -48,7 +82,9 @@ export const DatePicker: FC<{
       {open && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="animate-fadeIn absolute bottom-[100%] mb-[16px] start-[50%] -translate-x-[50%] bg-sixth border border-tableBorder text-textColor rounded-[16px] z-[300] p-[16px] flex flex-col"
+          data-toybaco-date-popup=""
+          style={popupStyle}
+          className="animate-fadeIn bg-sixth border border-tableBorder text-textColor rounded-[16px] p-[16px] flex flex-col"
         >
           <Calendar
             locale="ja"

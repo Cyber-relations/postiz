@@ -872,12 +872,12 @@ export const MultiMediaComponent: FC<{
               {toolBar}
             </div>
           )}
-          {information && (
-            <div className="flex-1 justify-end flex py-[10px] b2 items-center gap-[4px]">
-              {information}
-            </div>
-          )}
         </div>
+        {information && (
+          <div data-toybaco-media-information="" className="flex shrink-0 justify-end px-[12px] pb-[8px] b2 items-center gap-[4px]">
+            {information}
+          </div>
+        )}
         {!mediaNotAvailable && !hasDesignerKey && <p className="px-3 pb-2 text-xs whitespace-normal text-textColor">{DESIGN_UNAVAILABLE}</p>}
       </div>
       <div className="text-[12px] text-red-400">{error}</div>

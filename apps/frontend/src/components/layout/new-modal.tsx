@@ -26,6 +26,7 @@ interface OpenModalInterface {
   closeOnEscape?: boolean;
   withCloseButton?: boolean;
   askClose?: boolean;
+  toybacoDecision?: boolean;
   onClose?: () => void;
   children: ReactNode | ((close: () => void) => ReactNode);
   classNames?: {
@@ -105,16 +106,28 @@ export const Component: FC<{
   const decision = useDecisionModal();
   const toybacoDialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (modal.id !== 'add-edit-modal') return;
+    if (!toybacoDialogRef.current || modal.id !== 'add-edit-modal') return;
+    const composer = toybacoDialogRef.current?.querySelector('[data-toybaco-composer][role="dialog"]');
+    if (!composer) return;
+    const previous = composer.getAttribute('aria-modal');
+    composer.setAttribute('aria-modal', String(isLast));
+    return () => {
+      if (previous === null) composer.removeAttribute('aria-modal');
+      else composer.setAttribute('aria-modal', previous);
+    };
+  }, [modal.id, isLast]);
+  useEffect(() => {
+    if (modal.id !== 'add-edit-modal' && !modal.toybacoDecision) return;
     const previous = document.activeElement as HTMLElement | null;
     const dialog = toybacoDialogRef.current;
-    dialog?.focus();
+    const cancel = modal.toybacoDecision ? dialog?.querySelector<HTMLElement>('[data-toybaco-decision-cancel]') : null;
+    (cancel || dialog)?.focus();
     return () => {
       if (previous?.isConnected) previous.focus();
     };
-  }, [modal.id]);
+  }, [modal.id, modal.toybacoDecision]);
   useEffect(() => {
-    if (!isLast || modal.id !== 'add-edit-modal') return;
+    if (!isLast || (modal.id !== 'add-edit-modal' && !modal.toybacoDecision)) return;
     const dialog = toybacoDialogRef.current;
     if (!dialog) return;
     // ネストした確認画面が開いている間は、その画面のフォーカス管理に任せる。
@@ -138,7 +151,7 @@ export const Component: FC<{
     };
     dialog.addEventListener('keydown', keepFocus);
     return () => dialog.removeEventListener('keydown', keepFocus);
-  }, [isLast, modal.id]);
+  }, [isLast, modal.id, modal.toybacoDecision]);
   const closeModalFunction = useCallback(async () => {
     if (modal.askClose) {
       const open = await decision.open();
@@ -235,6 +248,15 @@ export const Component: FC<{
             )}
           >
             <div
+              {...(modal.toybacoDecision && {
+                ref: toybacoDialogRef,
+                tabIndex: -1,
+                role: 'dialog',
+                'aria-modal': isLast,
+                'aria-labelledby': `toybaco-decision-title-${modal.id}`,
+                'aria-describedby': `toybaco-decision-description-${modal.id}`,
+                'data-toybaco-decision': modal.id,
+              })}
               className={clsx(
                 !modal.removeLayout && 'gap-[40px] p-[32px]',
                 'bg-newBgColorInner mx-auto flex flex-col w-fit rounded-[24px] relative',
@@ -251,7 +273,7 @@ export const Component: FC<{
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center">
-                <div className="text-[24px] font-[600] flex-1">
+                <div id={modal.toybacoDecision ? `toybaco-decision-title-${modal.id}` : undefined} className="text-[24px] font-[600] flex-1">
                   {modal.title}
                 </div>
                 {typeof modal.withCloseButton === 'undefined' ||
@@ -379,10 +401,11 @@ export const DecisionModal: FC<{
   resolution: (value: boolean) => void;
 }> = ({ description, cancelLabel, approveLabel, resolution, onlyApprove }) => {
   const { closeCurrent } = useModals();
+  const { id } = useContext(CurrentModalContext);
   return (
     <div className="flex flex-col">
-      <div className="max-w-[600px]">{description}</div>
-      <div className="flex gap-[12px] mt-[16px]">
+      <div id={`toybaco-decision-description-${id}`} className="max-w-[600px]">{description}</div>
+      <div className="flex flex-wrap gap-[12px] mt-[16px]">
         <Button
           onClick={() => {
             resolution(true);
@@ -393,6 +416,7 @@ export const DecisionModal: FC<{
         </Button>
         {!onlyApprove && (
           <Button
+            data-toybaco-decision-cancel=""
             onClick={() => {
               resolution(false);
               closeCurrent();
@@ -447,6 +471,8 @@ export const useDecisionModal = () => {
       return new Promise<boolean>((res) => {
         modals.openModal({
           title,
+          size: 'min(600px, calc(100vw - 32px))',
+          toybacoDecision: true,
           askClose: false,
           onClose: () => res(false),
           children: (
