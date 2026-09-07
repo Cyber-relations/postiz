@@ -285,7 +285,7 @@ export function toybacoWorkflowStopMarker(workflowIds: any) {
 }
 
 export function toybacoParseWorkflowStopMarker(marker: string) {
-  const match = /^TOYBACO_STOP_V2\\|([^|]+)\\|(READY|ACKED)$/.exec(marker || '');
+  const match = /^TOYBACO_STOP_V2\|([^|]+)\|(READY|ACKED)$/.exec(marker || '');
   if (!match) return null;
   try {
     const encoded = decodeURIComponent(match[1]);
