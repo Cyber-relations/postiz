@@ -645,7 +645,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             <div data-toybaco-composer-heading="" className="bg-newBgColor h-[65px] rounded-s-[20px] !rounded-b-[0] flex items-center gap-[12px] px-[20px] text-[20px] font-[600]">
               <h2 id="toybaco-composer-title">{existingData.integration ? '投稿を編集' : '投稿を作成'}</h2>
       <CopilotPopup
-        className="!relative !inset-auto ml-auto shrink-0 [&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
+        className="!relative !z-[200] !inset-auto ml-auto shrink-0 [&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
         Button={ToybacoCopilotButton}
         Header={ToybacoCopilotHeader}
         hitEscapeToClose={false}
