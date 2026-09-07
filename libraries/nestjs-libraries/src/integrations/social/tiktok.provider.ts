@@ -14,7 +14,7 @@ import {
   SocialAbstract,
   ValidityMedia,
 } from '@gitroom/nestjs-libraries/integrations/social.abstract';
-import { TikTokDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/tiktok.dto';
+import { TikTokDto, TikTokContentPostingDto, TikTokCreatorInfo, parseTikTokCreatorInfo, hasTikTokPostingConsent } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/tiktok.dto';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 import { createReadStream } from 'fs';
@@ -44,7 +44,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     'user.info.stats',
   ];
   override maxConcurrentJob = 10000;
-  dto = TikTokDto;
+  dto = TikTokContentPostingDto;
   editor = 'normal' as const;
   maxLength() {
     return 2000;
@@ -399,25 +399,40 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
-  async maxVideoLength(accessToken: string) {
-    const {
-      data: { max_video_post_duration_sec },
-    } = await (
-      await fetch(
+  async creatorInfo(accessToken: string): Promise<TikTokCreatorInfo> {
+    let creator: TikTokCreatorInfo | null = null;
+    let tokenExpired = false;
+    try {
+      const response = await fetch(
         'https://open.tiktokapis.com/v2/post/publish/creator_info/query/',
         {
           method: 'POST',
+          signal: AbortSignal.timeout(10000),
           headers: {
             'Content-Type': 'application/json; charset=UTF-8',
             Authorization: `Bearer ${accessToken}`,
           },
         }
-      )
-    ).json();
+      );
+      tokenExpired = response.status === 401;
+      const result = await response.json();
+      if (result?.error?.code === 'access_token_invalid') tokenExpired = true;
+      if (response.ok && result?.error?.code === 'ok') creator = parseTikTokCreatorInfo(result.data);
+    } catch {
+      // Neither provider error bodies nor credentials leave this boundary.
+    }
+    if (tokenExpired) {
+      throw new RefreshToken('tiktok-creator-token-expired', '{}', '', 'TikTok の認証を更新してください。');
+    }
+    if (!creator) {
+      throw new BadBody('tiktok-creator-unavailable', '{}', '', 'TikTok の投稿条件を取得できません。時間をおいて再確認してください。');
+    }
+    return creator;
+  }
 
-    return {
-      maxDurationSeconds: max_video_post_duration_sec,
-    };
+  async maxVideoLength(accessToken: string) {
+    const creator = await this.creatorInfo(accessToken);
+    return { maxDurationSeconds: creator.max_video_post_duration_sec };
   }
 
   // Single status check for a publish_id, no loops and no timers: `post` returns
@@ -536,8 +551,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
             ? { title: firstPost.message }
             : {}),
           ...(isPhoto ? { description: firstPost.message } : {}),
-          privacy_level:
-            firstPost.settings.privacy_level || 'PUBLIC_TO_EVERYONE',
+          privacy_level: firstPost.settings.privacy_level,
           ...(isPhoto
             ? {}
             : { disable_duet: !this.assetBoolean(firstPost.settings.duet) }),
@@ -811,6 +825,21 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
   ): Promise<PostResponse[]> {
     const [firstPost] = postDetails;
     const isPhoto = !hasExtension(firstPost?.media?.[0]?.path, 'mp4');
+    const settings = firstPost.settings;
+    if (!hasTikTokPostingConsent(settings as unknown as Record<string, unknown>)) {
+      throw new BadBody('tiktok-consent-required', '{}', '', 'TikTok の送信内容と投稿条件を確認し、同意し直してください。');
+    }
+    if (this.contentPostingMethod(firstPost) === 'DIRECT_POST') {
+      // Re-check at delivery: scheduled posts can outlive creator permissions.
+      // Reject before init/upload; never silently choose a different audience.
+      const creator = await this.creatorInfo(accessToken);
+      if (!creator.privacy_level_options.includes(settings.privacy_level) ||
+          (settings.comment && creator.comment_disabled) ||
+          (settings.duet && (creator.duet_disabled || isPhoto)) ||
+          (settings.stitch && (creator.stitch_disabled || isPhoto))) {
+        throw new BadBody('tiktok-creator-settings-changed', '{}', '', 'TikTok の投稿条件が変わりました。公開範囲と交流設定を確認してください。');
+      }
+    }
     const videoPath = firstPost?.media?.[0]?.path!;
 
     // For videos we only need the total size up front (HEAD / statSync) so we

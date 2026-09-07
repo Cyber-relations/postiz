@@ -1,5 +1,5 @@
 import {
-  IsBoolean, ValidateIf, IsIn, IsString, MaxLength, IsOptional, IsDefined, IsNumber, Min, Max, ValidateNested
+  IsBoolean, ValidateIf, IsIn, IsString, MaxLength, IsOptional, IsDefined, IsNumber, Min, Max, ValidateNested, Equals, Validate, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JSONSchema } from 'class-validator-jsonschema';
@@ -175,4 +175,68 @@ export class TikTokDto {
       'Only use "UPLOAD" when the user explicitly asks to review or edit the post inside the TikTok app before publishing.',
   })
   content_posting_method: 'DIRECT_POST' | 'UPLOAD';
+}
+// Content Posting API only. Business keeps its existing DTO and API contract.
+export type TikTokCreatorInfo = {
+  creator_username: string;
+  creator_nickname: string;
+  privacy_level_options: TikTokDto['privacy_level'][];
+  comment_disabled: boolean;
+  duet_disabled: boolean;
+  stitch_disabled: boolean;
+  max_video_post_duration_sec: number;
+};
+
+export function parseTikTokCreatorInfo(value: unknown): TikTokCreatorInfo | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const info = value as Record<string, unknown>;
+  const options = info.privacy_level_options;
+  if (
+    typeof info.creator_username !== 'string' || !info.creator_username.trim() || info.creator_username.length > 256 ||
+    typeof info.creator_nickname !== 'string' || !info.creator_nickname.trim() || info.creator_nickname.length > 256 ||
+    !Array.isArray(options) || options.length === 0 || options.length > 4 || new Set(options).size !== options.length ||
+    !options.every((option) => ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'].includes(option)) ||
+    !['comment_disabled', 'duet_disabled', 'stitch_disabled'].every((key) => typeof info[key] === 'boolean') ||
+    !Number.isSafeInteger(info.max_video_post_duration_sec) || (info.max_video_post_duration_sec as number) <= 0
+  ) return null;
+  return {
+    creator_username: info.creator_username,
+    creator_nickname: info.creator_nickname,
+    privacy_level_options: [...options],
+    comment_disabled: info.comment_disabled as boolean,
+    duet_disabled: info.duet_disabled as boolean,
+    stitch_disabled: info.stitch_disabled as boolean,
+    max_video_post_duration_sec: info.max_video_post_duration_sec as number,
+  };
+}
+
+export function hasTikTokPostingConsent(settings: Record<string, unknown>): boolean {
+  if (settings.content_posting_consent !== true || typeof settings.disclose !== 'boolean') return false;
+  if (settings.content_posting_method === 'UPLOAD') return true;
+  if (settings.content_posting_method !== 'DIRECT_POST') return false;
+  const organic = settings.brand_organic_toggle === true;
+  const branded = settings.brand_content_toggle === true;
+  return settings.disclose === (organic || branded) && !(branded && settings.privacy_level === 'SELF_ONLY');
+}
+
+@ValidatorConstraint({ name: 'tikTokPostingConsent', async: false })
+class TikTokPostingConsentConstraint implements ValidatorConstraintInterface {
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    return hasTikTokPostingConsent(args.object as Record<string, unknown>);
+  }
+  defaultMessage(): string {
+    return 'TikTok の公開範囲・商用表示を確認し、送信に同意してください。';
+  }
+}
+
+export class TikTokContentPostingDto extends TikTokDto {
+  @ValidateIf((settings) => settings.content_posting_method !== 'UPLOAD')
+  declare privacy_level: TikTokDto['privacy_level'];
+
+  @IsBoolean()
+  disclose: boolean;
+
+  @Equals(true)
+  @Validate(TikTokPostingConsentConstraint)
+  content_posting_consent: boolean;
 }
