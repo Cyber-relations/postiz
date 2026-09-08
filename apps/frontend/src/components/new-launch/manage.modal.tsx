@@ -585,7 +585,11 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       }
 
       const data = {
-        type,
+        // Saving an existing draft updates its persisted IDs without publishing.
+        // Keep draft validation above so incomplete provider settings can be saved.
+        type: type === 'draft' && existingData.integration && existingData.posts?.[0]?.state === 'DRAFT'
+          ? 'update'
+          : type,
         ...(republish ? { republish } : {}),
         ...(repeater ? { inter: repeater } : {}),
         tags,
