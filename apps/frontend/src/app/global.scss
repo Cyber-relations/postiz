@@ -1086,9 +1086,39 @@ html[data-toybaco-embed] [data-toybaco-composer] [data-toybaco-save-error] { wid
   html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] > div { width: 100%; }
 }
 @media (max-width: 767px) {
+  html[data-toybaco-embed] [data-toybaco-header] {
+    height: auto;
+    min-height: 80px;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px 12px;
+  }
+  html[data-toybaco-embed] [data-toybaco-header-title] {
+    flex: 0 0 auto;
+    min-width: 0;
+    line-height: 24px;
+    white-space: nowrap;
+  }
+  html[data-toybaco-embed] [data-toybaco-header-controls] {
+    width: 100%;
+    min-width: 0;
+    min-height: 32px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  html[data-toybaco-embed] [data-toybaco-header-controls] [data-toybaco-org-selector] { flex: 1 1 auto; min-width: 0; }
+  html[data-toybaco-embed] [data-toybaco-header-controls] [data-toybaco-org-trigger] { min-width: 0; }
+  html[data-toybaco-embed] [data-toybaco-header-controls] [data-toybaco-org-trigger] > svg { flex-shrink: 0; }
+  html[data-toybaco-embed] [data-toybaco-header-controls] [data-toybaco-org-name] { min-width: 0; max-width: 100%; }
   html[data-toybaco-embed] [data-toybaco-channel-sidebar] { width: 150px; }
   html[data-toybaco-embed] [data-toybaco-channel-sidebar].sidebar { width: 64px; }
   html[data-toybaco-embed] [data-toybaco-channel-sidebar] > div { padding: 10px; }
+  html[data-toybaco-embed] [data-toybaco-channel-heading] { font-size: 16px; line-height: 24px; white-space: nowrap; }
+  html[data-toybaco-embed] [data-toybaco-channel-toggle] { width: 44px; height: 44px; flex-shrink: 0; border: 1px solid var(--toybaco-hairline); border-radius: 8px; background: var(--toybaco-wash); }
+  html[data-toybaco-embed] [data-toybaco-channel-toggle]:focus-visible { outline: 2px solid var(--toybaco-navy); outline-offset: 2px; }
   html[data-toybaco-embed] [data-toybaco-calendar-main] { padding: 10px; }
   html[data-toybaco-embed] [data-toybaco-composer-body] { display: block; overflow-y: auto; }
   html[data-toybaco-embed] [data-toybaco-composer-editor] { min-height: 460px; height: 60dvh; border-right: 0; }
