@@ -455,7 +455,11 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         group,
         settings: { ...(post.settings || {}) },
         value: post.values.map((value: any) => ({
-          ...(value.id ? { id: value.id } : {}),
+          // Global editor values share makeId(10) IDs across channels. Keep
+          // persisted IDs intact; scope only new composer IDs to their channel.
+          ...(value.id ? { id: !existingData.integration && !existingData.group && !existingData.posts?.length && /^[A-Za-z0-9]{10}$/.test(value.id)
+            ? `${post.id}:${value.id}`
+            : value.id } : {}),
           content: value.content,
           delay: value.delay || 0,
           image:
