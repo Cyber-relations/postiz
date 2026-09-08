@@ -57,11 +57,33 @@ export function ToybacoEmbedReady({
         window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CLOSE' }, appOrigin);
       }, 0);
     };
+    let closePending = false;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== appOrigin || event.source !== window.parent ||
+          !event.data || typeof event.data !== 'object' || event.data.type !== 'TOYBACO_POSTIZ_REQUEST_CLOSE' ||
+          !Number.isSafeInteger(event.data.requestId) || event.data.requestId <= 0 || closePending) return;
+      closePending = true;
+      const requestId = event.data.requestId;
+      let responded = false;
+      const respond = (allowed: boolean) => {
+        if (responded) return;
+        responded = true;
+        closePending = false;
+        if (active) window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CLOSE_RESULT', requestId, allowed }, appOrigin);
+      };
+      // composer自身に既存のaskCloseを委ねる。まだeffect未接続なら本文を残す。
+      const request = new CustomEvent('toybaco:request-posting-close', { cancelable: true, detail: respond });
+      document.dispatchEvent(request);
+      if (!request.defaultPrevented) respond(!document.querySelector('[data-toybaco-composer]'));
+      else if (!responded) window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CLOSE_PENDING', requestId }, appOrigin);
+    };
+    window.addEventListener('message', onMessage);
     document.addEventListener('keydown', onKeydown, true);
     return () => {
       active = false;
       observer.disconnect();
       document.removeEventListener('keydown', onKeydown, true);
+      window.removeEventListener('message', onMessage);
     };
   }, [appOrigin]);
 

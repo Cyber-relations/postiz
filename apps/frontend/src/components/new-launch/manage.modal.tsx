@@ -295,7 +295,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
   const askClose = useCallback(async () => {
     if (!activateExitButton || dummy || toybacoSaving.current) {
-      return;
+      return false;
     }
 
     if (
@@ -306,13 +306,22 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         t('composer_discard_cancel', '編集を続ける')
       )
     ) {
-      if (customClose) {
-        customClose();
-        return;
-      }
-      modal.closeAll();
+      if (customClose) customClose();
+      else modal.closeAll();
+      return true;
     }
-  }, [activateExitButton, dummy]);
+    return false;
+  }, [activateExitButton, dummy, customClose, modal, t]);
+
+  useEffect(() => {
+    const onRequestClose = (event: Event) => {
+      event.preventDefault();
+      const respond = (event as CustomEvent<(allowed: boolean) => void>).detail;
+      void askClose().then(respond, () => respond(false));
+    };
+    document.addEventListener('toybaco:request-posting-close', onRequestClose);
+    return () => document.removeEventListener('toybaco:request-posting-close', onRequestClose);
+  }, [askClose]);
 
   const deletePost = useCallback(async () => {
     if (toybacoSaving.current || !toybacoCanEditDraft || toybacoConnectionError) return;
