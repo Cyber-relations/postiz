@@ -105,7 +105,16 @@ export function useUppyUploader(props: {
     let fileOrderIndex = 0;
 
     const uppy2 = new Uppy({
-      locale: Japanese,
+      locale: {
+        ...Japanese,
+        strings: {
+          ...Japanese.strings,
+          filesUploadedOfTotal: {
+            0: '%{smart_count}件中%{complete}件をアップロード済み',
+            1: '%{smart_count}件中%{complete}件をアップロード済み',
+          },
+        },
+      },
       autoProceed: false,
       onBeforeFileAdded: (_file, files): boolean => {
         if (!Object.values(files).some((file) => file.error)) {

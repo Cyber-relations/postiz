@@ -57,6 +57,7 @@ import { useVariables } from '@gitroom/react/helpers/variable.context';
 import copy from 'copy-to-clipboard';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
+import { toybacoPostingFailure } from '@gitroom/helpers/utils/posts.list.minify';
 import { Button } from '@gitroom/react/form/button';
 
 // Extend dayjs with necessary plugins
@@ -1002,6 +1003,7 @@ const CalendarItem: FC<{
   display: 'day' | 'week' | 'month';
   showTime?: boolean;
   post: Post & {
+    toybacoFailureCode?: unknown;
     integration: Integration;
     tags: {
       tag: Tags;
@@ -1026,6 +1028,7 @@ const CalendarItem: FC<{
   const { disableXAnalytics } = useVariables();
   const user = useUser();
   const toybacoCanManagePost = !!user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN' || state === 'DRAFT');
+  const toybacoFailure = toybacoPostingFailure({ ...post, state });
   const showCreationMethodBadge =
     user?.impersonate &&
     post.creationMethod &&
@@ -1066,7 +1069,7 @@ const CalendarItem: FC<{
         <div
           className="absolute -top-[6px] -left-[6px] z-20 w-[18px] h-[18px] rounded-full bg-red-500 flex items-center justify-center text-white text-[11px] font-bold cursor-pointer"
           data-tooltip-id="tooltip"
-          data-tooltip-content="投稿の公開に失敗しました。連携先を確認して、もう一度お試しください。"
+          data-tooltip-content={`${toybacoFailure?.reason} ${toybacoFailure?.nextAction}`}
         >
           !
         </div>
@@ -1128,7 +1131,11 @@ const CalendarItem: FC<{
         </div>
       )}
       <div data-toybaco-post-footer="">
-        <span data-toybaco-post-status="">{toybacoPostStatus(state)}</span>
+        {toybacoFailure ? (
+          <button type="button" data-toybaco-post-status="" data-toybaco-post-failure-open="" onClick={editPost} title={`${toybacoFailure.reason} ${toybacoFailure.nextAction}`} aria-label={`公開に失敗。${toybacoFailure.reason} 理由と対処を確認`}>
+            公開に失敗 <span aria-hidden="true">›</span>
+          </button>
+        ) : <span data-toybaco-post-status="">{toybacoPostStatus(state)}</span>}
         <PostActionsMenu position="top-end" withinPortal returnFocus width={168} zIndex={1000}>
           <PostActionsMenu.Target>
             <button type="button" data-toybaco-post-actions-trigger="" aria-label={`${post.integration.name}の投稿の操作`}>

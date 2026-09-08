@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
   ValidationPipe,
 } from '@nestjs/common';
-import { PostsRepository } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
+import { PostsRepository, toybacoParseTerminalMarker } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
 import { CreatePostDto } from '@gitroom/nestjs-libraries/dtos/posts/create.post.dto';
 import dayjs from 'dayjs';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
@@ -182,6 +182,39 @@ function toybacoWorkflowAlreadyClosed(error: unknown) {
     error instanceof WorkflowNotFoundError ||
     (error as any)?.cause instanceof WorkflowNotFoundError
   );
+}
+
+export function toybacoPostReadFeedback<T extends {
+  state?: unknown;
+  error?: unknown;
+  childrenPost?: unknown;
+  integration?: { providerIdentifier?: unknown };
+}>(post: T) {
+  const { error, ...safePost } = post;
+  let toybacoFailureCode: 'TIKTOK_PUBLIC_POSTING_NOT_APPROVED' | 'POST_PUBLICATION_UNCONFIRMED' | null = null;
+  if (post.state === 'ERROR') {
+    toybacoFailureCode = 'POST_PUBLICATION_UNCONFIRMED';
+    // The stored reason can be a truncated Temporal JSON failure. Match only
+    // the observed provider message, after the existing marker validator.
+    const terminal = typeof error === 'string' && error.length <= 2048
+      ? toybacoParseTerminalMarker(error)
+      : null;
+    const reason = terminal?.state === 'ERROR'
+      ? decodeURIComponent((error as string).split('|')[4])
+      : '';
+    if (
+      post.integration?.providerIdentifier === 'tiktok' &&
+      /^(?:App not approved for public posting\b|\{"cause":\{"failure":\{"message":"App not approved for public posting\b)/.test(reason)
+    ) toybacoFailureCode = 'TIKTOK_PUBLIC_POSTING_NOT_APPROVED';
+  }
+  return {
+    ...safePost,
+    toybacoFailureCode,
+    // getPost includes one level of child rows as well as the flattened posts.
+    ...(Array.isArray(post.childrenPost) ? {
+      childrenPost: post.childrenPost.map(({ error: _error, ...child }) => child),
+    } : {}),
+  };
 }
 
 @Injectable()
@@ -589,19 +622,18 @@ export class PostsService {
   }
 
   async getPosts(orgId: string, query: GetPostsDto) {
-    return this._postRepository.getPosts(orgId, query);
+    return (await this._postRepository.getPosts(orgId, query)).map(toybacoPostReadFeedback);
   }
 
   async getPostsMinified(orgId: string, query: GetPostsDto) {
     return minifyPosts({
-      posts: await this._postRepository.getPosts(orgId, query),
+      posts: (await this._postRepository.getPosts(orgId, query)).map(toybacoPostReadFeedback),
     });
   }
 
   async getPostsList(orgId: string, query: GetPostsListDto) {
-    return minifyPostsList(
-      await this._postRepository.getPostsList(orgId, query)
-    );
+    const list = await this._postRepository.getPostsList(orgId, query);
+    return minifyPostsList({ ...list, posts: list.posts.map(toybacoPostReadFeedback) });
   }
 
   async updateMedia(id: string, imagesList: any[], convertToJPEG = false) {
@@ -772,7 +804,7 @@ export class PostsService {
       group: posts?.[0]?.group,
       posts: await Promise.all(
         (posts || []).map(async (post) => ({
-          ...post,
+          ...toybacoPostReadFeedback(post),
           image: await this.updateMedia(
             post.id,
             JSON.parse(post.image || '[]'),
@@ -810,7 +842,7 @@ export class PostsService {
       group: posts?.[0]?.group,
       posts: await Promise.all(
         (posts || []).map(async (post) => ({
-          ...post,
+          ...toybacoPostReadFeedback(post),
           image: await this.updateMedia(
             post.id,
             JSON.parse(post.image || '[]'),

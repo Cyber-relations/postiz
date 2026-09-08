@@ -1,6 +1,21 @@
 // Key mappings for minifying post list/calendar responses to reduce payload size.
 // Both backend (minify) and frontend (expand) import from here.
 
+// Customer-facing wording accepts only closed server codes, never raw errors.
+export function toybacoPostingFailure(post: { state?: unknown; toybacoFailureCode?: unknown } | undefined) {
+  if (post?.state !== 'ERROR') return null;
+  if (post.toybacoFailureCode === 'TIKTOK_PUBLIC_POSTING_NOT_APPROVED') {
+    return {
+      reason: 'TikTok側でアプリの公開投稿が許可されていません。',
+      nextAction: '管理者にTikTokの公開投稿の利用条件・アプリ承認状況の確認を依頼してください。確認が終わるまで再送を控えてください。',
+    };
+  }
+  return {
+    reason: '投稿の公開結果を確認できませんでした。',
+    nextAction: '投稿先で公開済みでないか確認し、連携状態と投稿内容を管理者に確認してもらってください。重複投稿を避けるため、確認が終わるまで再送を控えてください。',
+  };
+}
+
 const POST_LIST_KEYS: Record<string, string> = {
   posts: 'p',
   total: 't',
