@@ -870,11 +870,11 @@ html[data-toybaco-embed] {
   --toybaco-offwhite: #FAF7F2;
   --toybaco-surface: #FCFBF8;
   --toybaco-ink: #24303F;
-  --toybaco-muted: #6B7684;
+  --toybaco-muted: #596675;
   --toybaco-hairline: #E7E4DC;
   --toybaco-wash: #E9EFF6;
   --toybaco-wait-bg: #FDF2E3;
-  --toybaco-wait-fg: #B26A00;
+  --toybaco-wait-fg: #8A5200;
   --toybaco-done-bg: #E7F6EC;
   --toybaco-done-fg: #0B7A35;
 }
@@ -979,11 +979,11 @@ html[data-toybaco-embed] [data-toybaco-calendar-main] {
   padding: 16px;
   background: var(--toybaco-surface);
 }
-html[data-toybaco-embed] [data-toybaco-calendar-main] > div:first-child {
+html[data-toybaco-embed] [data-toybaco-calendar-toolbar] {
   flex-wrap: wrap;
   gap: 12px;
 }
-html[data-toybaco-embed] [data-toybaco-calendar-main] > div:first-child > div { max-width: 100%; flex-wrap: wrap; }
+html[data-toybaco-embed] [data-toybaco-calendar-toolbar] > div { max-width: 100%; flex-wrap: wrap; }
 html[data-toybaco-embed] [data-toybaco-calendar-main] .min-w-\[200px\] { min-width: 0; flex: 1; }
 html[data-toybaco-embed] [data-toybaco-channel-sidebar] {
   width: 196px;
@@ -1018,7 +1018,7 @@ html[data-toybaco-embed] [data-toybaco-post-content] .line-clamp-1 {
 }
 html[data-toybaco-embed] [data-toybaco-post-actions] { background: var(--toybaco-offwhite); color: var(--toybaco-muted); }
 html[data-toybaco-embed] :is(button, [role='button'], a, input, textarea, select):focus-visible {
-  outline: 2px solid #FF6B5B;
+  outline: 2px solid #C84435 !important;
   outline-offset: 3px;
 }
 html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] {
@@ -1130,4 +1130,121 @@ html[data-toybaco-embed] [data-toybaco-composer] [data-toybaco-save-error] { wid
 }
 @media (prefers-reduced-motion: reduce) {
   html[data-toybaco-embed] [data-toybaco-modal='add-edit-modal'] { animation: none; transition: none; }
+}
+
+/* LP製品デモの文字と余白の階層を、実際に読んで操作する寸法へ揃える。 */
+html[data-toybaco-embed] body { font-size: 13px; line-height: 1.5; }
+html[data-toybaco-embed] [data-toybaco-header] { height: 44px; min-height: 44px; padding: 0 12px; }
+html[data-toybaco-embed] [data-toybaco-header-title] { font-size: 15px; font-weight: 600; line-height: 22px; }
+html[data-toybaco-embed] [data-toybaco-header-controls] { gap: 8px; font-size: 12px; }
+html[data-toybaco-embed] [data-toybaco-calendar-main] { padding: 12px; gap: 8px; }
+html[data-toybaco-embed] [data-toybaco-calendar-toolbar] { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+html[data-toybaco-embed] [data-toybaco-calendar-toolbar] > div { flex-wrap: nowrap; }
+html[data-toybaco-embed] [data-toybaco-calendar-toolbar] > [data-toybaco-list-controls] { flex-wrap: wrap; }
+html[data-toybaco-embed] [data-toybaco-list-controls] > [data-toybaco-date-range] { flex: 0 0 auto; min-width: 160px; }
+html[data-toybaco-embed] [data-toybaco-date-controls] { gap: 6px; min-width: 0; }
+html[data-toybaco-embed] [data-toybaco-date-range],
+html[data-toybaco-embed] [data-toybaco-today] { height: 32px; font-size: 13px; }
+html[data-toybaco-embed] [data-toybaco-date-range] { border-color: #82878F; }
+html[data-toybaco-embed] [data-toybaco-date-range] > div:first-child,
+html[data-toybaco-embed] [data-toybaco-date-range] > div:last-child { min-width: 30px; padding: 0 8px; }
+html[data-toybaco-embed] [data-toybaco-date-range] .min-w-\[200px\] > div { font-size: inherit; padding: 0 6px; }
+html[data-toybaco-embed] [data-toybaco-today] > div { font-size: inherit; border-color: #82878F; }
+html[data-toybaco-embed] [data-toybaco-toolbar-group] { padding: 2px; font-size: 13px; border-color: #82878F; }
+html[data-toybaco-embed] [data-toybaco-toolbar-group] > div { display: flex; align-items: center; justify-content: center; min-height: 26px; padding: 2px 8px; }
+html[data-toybaco-embed] [data-toybaco-toolbar-group] > .w-\[74px\] { width: 48px; }
+html[data-toybaco-embed] [data-toybaco-toolbar-group] > .w-\[34px\] { width: 28px; }
+html[data-toybaco-embed] [data-toybaco-toolbar-group] > .min-w-\[80px\] { min-width: 64px; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar] > div { padding: 12px; gap: 10px; }
+html[data-toybaco-embed] [data-toybaco-channel-heading] { font-size: 14px; line-height: 22px; font-weight: 600; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar].sidebar { width: 56px; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar].sidebar > div { padding: 8px 6px; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar] button { font-size: 13px; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar] [data-toybaco-create-post],
+html[data-toybaco-embed] [data-toybaco-add-channel] { min-height: 32px; max-height: 32px; height: 32px; padding: 4px 8px; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar]:not(.sidebar) [data-toybaco-add-channel] > div:first-child { display: none; }
+html[data-toybaco-embed] [data-toybaco-add-channel] + button { min-width: 32px; min-height: 32px; height: 32px; }
+html[data-toybaco-embed] [data-toybaco-channel-sidebar] [data-toybaco-create-post] > div,
+html[data-toybaco-embed] [data-toybaco-add-channel] > div { font-size: 13px; }
+html[data-toybaco-embed] [data-toybaco-channel-row] { min-height: 36px; gap: 8px; font-size: 13px; }
+html[data-toybaco-embed] [data-toybaco-channel-list] { gap: 6px; }
+html[data-toybaco-embed] [data-toybaco-channel-avatar] { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
+/* 非表示でも52pxを取っていた装飾を通常フローから外す。線そのものは残す。 */
+html[data-toybaco-embed] [data-toybaco-channel-decoration] { position: absolute; inset-inline-start: -7px; top: 0; bottom: 0; margin: 0; height: 100%; pointer-events: none; }
+html[data-toybaco-embed] [data-toybaco-channel-decoration] svg { width: 3px; height: 100%; }
+html[data-toybaco-embed] [data-toybaco-calendar-grid='month'] { grid-template-rows: 36px auto; }
+html[data-toybaco-embed] [data-toybaco-calendar-grid] > .sticky { height: 36px; padding: 3px 4px; font-size: 12px; font-weight: 500; }
+html[data-toybaco-embed] [data-toybaco-calendar-grid] > .sticky .text-\[14px\] { font-size: 12px; line-height: 15px; }
+html[data-toybaco-embed] [data-toybaco-calendar-grid] .repeated-strip { background: #F8F6F1; }
+html[data-toybaco-embed] [data-toybaco-calendar-grid] .col-calendar:hover:before { color: var(--toybaco-muted); opacity: 1; font-size: 12px; }
+html[data-toybaco-embed] [data-toybaco-post-content] { padding: 7px; font-size: 13px; gap: 5px; }
+html[data-toybaco-embed] [data-toybaco-post-content] > .flex-1 { min-height: 36px; }
+html[data-toybaco-embed] [data-toybaco-post-content] .line-clamp-1 { font-size: 13px; line-height: 1.4; font-weight: 400; }
+html[data-toybaco-embed] [data-toybaco-post-tags] { padding: 3px 7px; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+html[data-toybaco-embed] [data-toybaco-post-footer] { display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 0 5px 5px 7px; }
+html[data-toybaco-embed] [data-toybaco-post-status] { margin: 0; font-size: 11px; font-weight: 600; line-height: 1.4; padding: 2px 5px; }
+html[data-toybaco-embed] [data-toybaco-post-actions-trigger] { display: grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; border-radius: 6px; color: var(--toybaco-muted); background: transparent; font-size: 18px; line-height: 1; }
+html[data-toybaco-embed] [data-toybaco-post-actions-trigger]:hover { background: var(--toybaco-wash); color: var(--toybaco-navy); }
+html[data-toybaco-embed] [data-toybaco-post-actions] { border: 1px solid var(--toybaco-hairline); border-radius: 8px; padding: 4px; background: var(--toybaco-surface); color: var(--toybaco-ink); box-shadow: 0 6px 24px rgba(31,58,95,.15); }
+html[data-toybaco-embed] [data-toybaco-post-actions] .mantine-Menu-item { min-height: 32px; padding: 6px 8px; font-size: 13px; line-height: 1.4; color: var(--toybaco-ink); }
+html[data-toybaco-embed] [data-toybaco-post-actions] .mantine-Menu-item[data-hovered] { background: var(--toybaco-wash); }
+html[data-toybaco-embed] [data-toybaco-composer-heading],
+html[data-toybaco-embed] [data-toybaco-composer-preview] > div:first-child { height: 44px; padding: 8px 12px; font-size: 14px; }
+html[data-toybaco-embed] [data-toybaco-composer-heading] h2 { font-size: 14px; font-weight: 600; }
+html[data-toybaco-embed] [data-toybaco-composer-close] { width: 28px; height: 28px; }
+html[data-toybaco-embed] [data-toybaco-composer] #social-content { gap: 12px; padding: 12px; }
+html[data-toybaco-embed] [data-toybaco-composer-channels] { gap: 8px; padding: 8px 0; }
+html[data-toybaco-embed] [data-toybaco-composer-channels] > h3 { font-size: 13px; font-weight: 600; }
+html[data-toybaco-embed] [data-toybaco-composer-footer] { gap: 8px; padding: 10px 12px; }
+@media (max-width: 767px) {
+  html[data-toybaco-embed] [data-toybaco-header] { height: 48px; min-height: 48px; flex-direction: row; align-items: center; gap: 8px; padding: 0 10px; }
+  html[data-toybaco-embed] [data-toybaco-header-title] { font-size: 14px; line-height: 20px; }
+  html[data-toybaco-embed] [data-toybaco-header-controls] { width: auto; flex: 1; min-height: 44px; gap: 6px; }
+  html[data-toybaco-embed] [data-toybaco-header-controls] [data-toybaco-org-name] { max-width: 112px; }
+  html[data-toybaco-embed] [data-toybaco-calendar-main] { padding: 8px; gap: 6px; }
+  html[data-toybaco-embed] [data-toybaco-calendar-toolbar] { justify-content: space-between; gap: 4px; }
+  html[data-toybaco-embed] [data-toybaco-date-controls] { flex-basis: 100%; }
+  html[data-toybaco-embed] [data-toybaco-date-controls] > div:last-child { flex: 0 0 auto; }
+  html[data-toybaco-embed] [data-toybaco-list-controls] > [data-toybaco-date-range] { flex-basis: 100%; }
+  html[data-toybaco-embed] [data-toybaco-channel-sidebar]:not(.sidebar) + [data-toybaco-calendar-main] [data-toybaco-list-controls] > [data-toybaco-toolbar-group] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    height: auto;
+  }
+  html[data-toybaco-embed] [data-toybaco-date-range],
+  html[data-toybaco-embed] [data-toybaco-today] { height: 44px; }
+  html[data-toybaco-embed] [data-toybaco-date-range],
+  html[data-toybaco-embed] [data-toybaco-today] > div,
+  html[data-toybaco-embed] [data-toybaco-toolbar-group] { position: relative; border: 0; background: transparent; }
+  html[data-toybaco-embed] [data-toybaco-date-range]::before,
+  html[data-toybaco-embed] [data-toybaco-today] > div::before,
+  html[data-toybaco-embed] [data-toybaco-toolbar-group]::before { content: ''; position: absolute; inset: 4px 0; border: 1px solid #82878F; border-radius: 8px; pointer-events: none; z-index: 1; }
+  html[data-toybaco-embed] [data-toybaco-date-range] { flex: 1; min-width: 0; }
+  html[data-toybaco-embed] [data-toybaco-date-range] > div { height: 44px; padding-block: 4px; background-clip: content-box; }
+  html[data-toybaco-embed] [data-toybaco-date-range] > div:first-child,
+  html[data-toybaco-embed] [data-toybaco-date-range] > div:last-child { min-width: 44px; }
+  html[data-toybaco-embed] [data-toybaco-today] > div { min-width: 44px; padding-block: 4px; background-clip: content-box; }
+  html[data-toybaco-embed] [data-toybaco-toolbar-group] { height: 44px; padding: 0; }
+  html[data-toybaco-embed] [data-toybaco-toolbar-group] > div { min-height: 44px; padding: 4px 0; background-clip: content-box; }
+  html[data-toybaco-embed] [data-toybaco-toolbar-group] > .w-\[74px\],
+  html[data-toybaco-embed] [data-toybaco-toolbar-group] > .w-\[34px\] { width: 44px; }
+  html[data-toybaco-embed] [data-toybaco-channel-sidebar] > div { padding: 8px; gap: 8px; }
+  html[data-toybaco-embed] [data-toybaco-channel-sidebar].sidebar > div { padding: 4px 6px; }
+  html[data-toybaco-embed] [data-toybaco-channel-heading] { font-size: 14px; font-weight: 600; }
+  html[data-toybaco-embed] [data-toybaco-channel-toggle],
+  html[data-toybaco-embed] [data-toybaco-channel-sidebar] [data-toybaco-create-post],
+  html[data-toybaco-embed] [data-toybaco-add-channel] { height: 44px; min-height: 44px; max-height: 44px; padding: 6px !important; border: 0; background-clip: content-box !important; }
+  html[data-toybaco-embed] [data-toybaco-channel-sidebar] [data-toybaco-add-channel] { min-width: 0; white-space: normal; }
+  html[data-toybaco-embed] [data-toybaco-add-channel] > div { font-size: 12px; line-height: 16px; }
+  html[data-toybaco-embed] [data-toybaco-add-channel] + button { min-width: 44px; min-height: 44px; height: 44px; padding: 6px; background-clip: content-box; }
+  html[data-toybaco-embed] [data-toybaco-channel-row] { min-height: 44px; }
+  html[data-toybaco-embed] [data-toybaco-channel-list] { gap: 2px; }
+  html[data-toybaco-embed] [data-toybaco-channel-toggle] { width: 44px; border-radius: 12px; }
+  html[data-toybaco-embed] [data-toybaco-post-footer] { padding-inline: 2px; gap: 1px; }
+  html[data-toybaco-embed] [data-toybaco-post-status] { min-width: 0; padding: 1px 0; }
+  html[data-toybaco-embed] [data-toybaco-post-state='DRAFT'] [data-toybaco-post-status] { text-wrap: balance; }
+  html[data-toybaco-embed] [data-toybaco-post-actions-trigger] { width: 32px; height: 32px; position: relative; margin-left: auto; }
+  html[data-toybaco-embed] [data-toybaco-post-actions] .mantine-Menu-item { min-height: 44px; }
+  html[data-toybaco-embed] [data-toybaco-composer-close] { width: 36px; height: 36px; }
 }
