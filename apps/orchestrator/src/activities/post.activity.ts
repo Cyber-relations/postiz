@@ -31,6 +31,7 @@ import {
 import {
   BadBody,
   Disconnect,
+  RefreshToken,
 } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { toybacoNotificationJa } from '@gitroom/nestjs-libraries/toybaco/notification.ja';
 
@@ -395,7 +396,7 @@ export class PostActivity {
     expectedPublishMarker: string,
     expectedState: State
   ) {
-    await this._postService.claimProviderPost(
+    const claimed = await this._postService.claimProviderPost(
       organizationId,
       rootPostId,
       expectedPublishMarker,
@@ -406,13 +407,77 @@ export class PostActivity {
     if (!integration || posts.length === 0) {
       throw new Error('claim後のpublish payloadを再取得できません。');
     }
-    return this.postSocialInternal(
-      integration,
-      posts,
-      true,
-      expectedPublishMarker,
-      expectedState
-    );
+    try {
+      return await this.postSocialInternal(
+        integration,
+        posts,
+        true,
+        expectedPublishMarker,
+        expectedState
+      );
+    } catch (error) {
+      // Google localPosts.create is one remote write. Only its explicit
+      // HTTP 401 proves rejection before creation; an unknown outcome must
+      // retain the one-way claim and must never cause another provider call.
+      if (integration.providerIdentifier !== 'gmb' || posts.length !== 1 ||
+          !(error instanceof RefreshToken)) {
+        throw error;
+      }
+      const detail = error.details?.[0] as {
+        identifier?: string; json?: string; httpStatus?: number;
+      } | undefined;
+      let rejected = false;
+      try {
+        const response = JSON.parse(detail?.json || '{}');
+        rejected = detail?.identifier === 'create local post' &&
+          detail.httpStatus === 401 && response.error?.code === 401 &&
+          response.error?.status === 'UNAUTHENTICATED';
+      } catch { /* A missing or truncated response is not proof of rejection. */ }
+      if (!rejected) throw error;
+
+      const reconnect = () => new BadBody(
+        'gmb', '{}', '{}',
+        'Googleの認証を更新できませんでした。接続を確認してから再度予約してください。'
+      );
+      const readClaimedPosts = async () => {
+        // getPostsList intentionally removes error/deletedAt. Read the raw
+        // owned row to validate the original MAIN claim before every retry.
+        const fresh = await this._postService.getPostsRecursively(
+          rootPostId, true, organizationId
+        );
+        const root = fresh[0];
+        const current = root?.integration as Integration | undefined;
+        if (fresh.length !== 1 || !root || root.id !== rootPostId ||
+            root.organizationId !== organizationId || root.parentPostId ||
+            root.deletedAt || root.state !== expectedState ||
+            root.error !== claimed || root.integrationId !== integration.id ||
+            !current || current.id !== integration.id ||
+            current.organizationId !== organizationId ||
+            current.providerIdentifier !== 'gmb' ||
+            current.internalId !== integration.internalId ||
+            current.disabled || current.deletedAt || current.refreshNeeded) {
+          throw reconnect();
+        }
+        return fresh;
+      };
+      await readClaimedPosts();
+      if (!await this.refreshTokenWithCause(integration, error.message)) {
+        throw reconnect();
+      }
+      const fresh = await readClaimedPosts();
+      const current = fresh[0].integration as Integration;
+      if (!current.token || current.token === integration.token) throw reconnect();
+      try {
+        return await this.postSocialInternal(
+          current, fresh.map(slimPost), true, expectedPublishMarker, expectedState
+        );
+      } catch (retryError) {
+        // The frozen workflow must not refresh and re-enter an already
+        // claimed activity again when the single refresh did not suffice.
+        if (retryError instanceof RefreshToken) throw reconnect();
+        throw retryError;
+      }
+    }
   }
 
   // A Disconnect error means the platform will keep rejecting this channel no
