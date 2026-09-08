@@ -45,6 +45,7 @@ import { groupBy, random, sortBy } from 'lodash';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { extend } from 'dayjs';
 import { useInterval } from '@mantine/hooks';
+import { Menu as PostActionsMenu } from '@mantine/core';
 import { StatisticsModal } from '@gitroom/frontend/components/launches/statistics';
 import { MissingReleaseModal } from '@gitroom/frontend/components/launches/missing-release.modal';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -1079,91 +1080,6 @@ const CalendarItem: FC<{
         </div>
       )}
       <div
-        data-toybaco-post-actions=""
-        className={clsx(
-          'text-white text-[11px] max-h-[24px] h-[24px] min-h-[24px] w-full rounded-tr-[10px] rounded-tl-[10px] flex items-center justify-center gap-[10px] px-[5px] bg-btnPrimary'
-        )}
-        style={{
-          backgroundColor: post?.tags?.[0]?.tag?.color,
-        }}
-      >
-        <div
-          className={clsx(
-            post?.tags?.[0]?.tag?.color ? 'mix-blend-difference' : '',
-            'group-hover:hidden cursor-pointer'
-          )}
-        >
-          {post.tags.map((p) => p.tag.name).join(', ')}
-        </div>
-        {copyDebugJson && (
-          <div
-            className={clsx(
-              'hidden group-hover:block hover:underline cursor-pointer',
-              post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
-            )}
-            onClick={copyDebugJson}
-          >
-            <CopyDebug />
-          </div>
-        )}
-        <div
-          className={clsx(
-            'hidden group-hover:block hover:underline cursor-pointer',
-            post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
-          )}
-          onClick={duplicatePost}
-        >
-          <Duplicate />
-        </div>
-        <div
-          className={clsx(
-            'hidden group-hover:block hover:underline cursor-pointer',
-            post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
-          )}
-          onClick={preview}
-        >
-          <Preview />
-        </div>{' '}
-        {((post.integration.providerIdentifier === 'x' && disableXAnalytics) || !post.releaseId) ? (
-          <></>
-        ) : post.releaseId === 'missing' && missingRelease ? (
-          <div
-            className={clsx(
-              'hidden group-hover:block hover:underline cursor-pointer',
-              post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
-            )}
-            onClick={missingRelease}
-          >
-            <Statistics />
-          </div>
-        ) : post.releaseId !== 'missing' ? (
-          <div
-            className={clsx(
-              'hidden group-hover:block hover:underline cursor-pointer',
-              post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
-            )}
-            onClick={statistics}
-          >
-            <Statistics />
-          </div>
-        ) : (
-          <></>
-        )}{' '}
-        {toybacoCanManagePost && (
-          <button
-            type="button"
-            aria-label="投稿を削除"
-            className={clsx(
-              'hidden group-hover:block group-focus-within:block hover:underline cursor-pointer',
-              post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
-            )}
-            onClick={deletePost}
-          >
-            <DeletePost />
-          </button>
-        )}
-      </div>
-      <div
         data-toybaco-post-content=""
         onClick={editPost}
         role="button"
@@ -1206,7 +1122,34 @@ const CalendarItem: FC<{
           </div>
         )}
       </div>
-      <span data-toybaco-post-status="">{toybacoPostStatus(state)}</span>
+      {post.tags.length > 0 && (
+        <div data-toybaco-post-tags="" style={{ borderInlineStart: `3px solid ${post.tags[0].tag.color}` }}>
+          {post.tags.map((item) => item.tag.name).join(', ')}
+        </div>
+      )}
+      <div data-toybaco-post-footer="">
+        <span data-toybaco-post-status="">{toybacoPostStatus(state)}</span>
+        <PostActionsMenu position="top-end" withinPortal returnFocus width={168} zIndex={1000}>
+          <PostActionsMenu.Target>
+            <button type="button" data-toybaco-post-actions-trigger="" aria-label={`${post.integration.name}の投稿の操作`}>
+              <span aria-hidden="true">···</span>
+            </button>
+          </PostActionsMenu.Target>
+          <PostActionsMenu.Dropdown data-toybaco-post-actions="">
+            {copyDebugJson && <PostActionsMenu.Item icon={<CopyDebug />} onClick={copyDebugJson}>診断情報をコピー</PostActionsMenu.Item>}
+            <PostActionsMenu.Item icon={<Duplicate />} onClick={duplicatePost}>複製</PostActionsMenu.Item>
+            <PostActionsMenu.Item icon={<Preview />} onClick={preview}>プレビュー</PostActionsMenu.Item>
+            {((post.integration.providerIdentifier === 'x' && disableXAnalytics) || !post.releaseId) ? null : post.releaseId === 'missing' && missingRelease ? (
+              <PostActionsMenu.Item icon={<Statistics />} onClick={missingRelease}>公開結果を確認</PostActionsMenu.Item>
+            ) : post.releaseId !== 'missing' ? (
+              <PostActionsMenu.Item icon={<Statistics />} onClick={statistics}>統計</PostActionsMenu.Item>
+            ) : null}
+            {toybacoCanManagePost && (
+              <PostActionsMenu.Item icon={<DeletePost />} onClick={deletePost} aria-label="投稿を削除">削除</PostActionsMenu.Item>
+            )}
+          </PostActionsMenu.Dropdown>
+        </PostActionsMenu>
+      </div>
     </div>
   );
 });

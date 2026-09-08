@@ -193,6 +193,7 @@ export const MenuGroupComponent: FC<
         </div>
       )}
       <div
+        data-toybaco-channel-list=""
         className={clsx(
           'gap-[12px] flex flex-col relative',
           !isOpen && 'hidden'
@@ -243,6 +244,7 @@ export const MenuComponent: FC<
   }));
   return (
     <div
+      data-toybaco-channel-row=""
       // @ts-ignore
       ref={dragPreview}
       {...(integration.refreshNeeded && {
@@ -270,7 +272,7 @@ export const MenuComponent: FC<
           integration.disabled && 'opacity-50'
         )}
       >
-        <div className="h-full w-[4px] -ms-[12px] rounded-s-[3px] opacity-0 group-hover/profile:opacity-100 transition-opacity">
+        <div data-toybaco-channel-decoration="" aria-hidden="true" className="h-full w-[4px] -ms-[12px] rounded-s-[3px] opacity-0 group-hover/profile:opacity-100 transition-opacity">
           <SVGLine />
         </div>
         {(integration.inBetweenSteps || integration.refreshNeeded) && (
@@ -289,6 +291,7 @@ export const MenuComponent: FC<
           </div>
         )}
         <ImageWithFallback
+          data-toybaco-channel-avatar=""
           fallbackSrc={'/no-picture.jpg'}
           src={integration.picture || '/no-picture.jpg'}
           className="rounded-[8px] min-w-[36px] min-h-[36px]"
