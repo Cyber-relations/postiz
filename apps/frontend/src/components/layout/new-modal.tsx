@@ -483,7 +483,7 @@ export const useDecisionModal = () => {
           size: 'min(600px, calc(100vw - 32px))',
           toybacoDecision: true,
           askClose: false,
-          onClose: () => res(false),
+          onClose: () => (newRes ? newRes(false) : res(false)),
           children: (
             <DecisionModal
               onlyApprove={onlyApprove}
