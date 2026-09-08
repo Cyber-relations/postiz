@@ -51,7 +51,7 @@ export function truncateForTemporal(value: any, max: number): string {
 }
 
 export class RefreshToken extends ApplicationFailure {
-  constructor(identifier: string, json: string, body: BodyInit, message = '') {
+  constructor(identifier: string, json: string, body: BodyInit, message = '', httpStatus?: number) {
     super(
       truncateForTemporal(message, MAX_FAILURE_MESSAGE),
       'refresh_token',
@@ -59,6 +59,7 @@ export class RefreshToken extends ApplicationFailure {
       [
         {
           identifier,
+          ...(httpStatus === undefined ? {} : { httpStatus }),
           json: truncateForTemporal(json, MAX_FAILURE_FIELD),
           body: truncateForTemporal(body, MAX_FAILURE_FIELD),
         },
@@ -540,7 +541,8 @@ export abstract class SocialAbstract {
         identifier,
         json,
         options.body!,
-        handleError?.value
+        handleError?.value,
+        request.status
       );
     }
 
