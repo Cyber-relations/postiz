@@ -44,13 +44,13 @@ export const OrganizationSelector: FC<{ asOpenSelect?: boolean }> = ({
   }
   return (
     <>
-      <div className="hover:text-newTextColor">
+      <div data-toybaco-org-selector="" className="hover:text-newTextColor">
         <div className="group text-[12px] relative">
           {asOpenSelect && (
             <div className="bg-btnPrimary !flex !relative max-w-[500px] mx-auto py-[12px] px-[12px]">組織を選択</div>
           )}
           {!asOpenSelect && (
-            <div className="flex items-center gap-[6px]">
+            <div data-toybaco-org-trigger="" className="flex items-center gap-[6px]">
               <svg
                 className={user?.tier.current === 'FREE' ? 'animate-bounce drop-shadow-glow': ''}
                 width="24"
@@ -65,7 +65,7 @@ export const OrganizationSelector: FC<{ asOpenSelect?: boolean }> = ({
                 />
               </svg>
               {!!current?.name && (
-                <div className="max-w-[240px] truncate">{current?.name}</div>
+                <div data-toybaco-org-name="" className="max-w-[240px] truncate">{current?.name}</div>
               )}
             </div>
           )}

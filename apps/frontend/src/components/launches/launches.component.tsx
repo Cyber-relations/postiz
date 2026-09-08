@@ -349,6 +349,30 @@ export const MenuComponent: FC<
     </div>
   );
 };
+// Mobile embed uses the same native rail without changing the desktop cookie.
+function useToybacoChannelSidebar() {
+  const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
+  const [embeddedMobile, setEmbeddedMobile] = useState(false);
+  const [mobileCollapsed, setMobileCollapsed] = useState(true);
+  useEffect(() => {
+    const viewport = window.matchMedia('(max-width: 767px)');
+    const updateViewport = () => {
+      setEmbeddedMobile(
+        document.documentElement.dataset.toybacoEmbed === '1' && viewport.matches
+      );
+    };
+    updateViewport();
+    viewport.addEventListener('change', updateViewport);
+    return () => viewport.removeEventListener('change', updateViewport);
+  }, []);
+  const collapsed = embeddedMobile ? mobileCollapsed : collapseMenu === '1';
+  const toggle = useCallback(() => {
+    if (embeddedMobile) setMobileCollapsed((value) => !value);
+    else setCollapseMenu(collapseMenu === '1' ? '0' : '1');
+  }, [embeddedMobile, collapseMenu, setCollapseMenu]);
+  return { collapsed, toggle };
+}
+
 export const LaunchesComponent = () => {
   const fetch = useFetch();
   const user = useUser();
@@ -359,7 +383,7 @@ export const LaunchesComponent = () => {
   const fireEvents = useFireEvents();
   const t = useT();
   const [reload, setReload] = useState(false);
-  const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
+  const { collapsed: toybacoChannelsCollapsed, toggle: toybacoToggleChannels } = useToybacoChannelSidebar();
   const { isLoading, data: integrations, mutate } = useIntegrationList();
 
   const totalNonDisabledChannels = useMemo(() => {
@@ -610,7 +634,7 @@ export const LaunchesComponent = () => {
           data-toybaco-channel-sidebar=""
           className={clsx(
             'flex relative flex-col',
-            collapseMenu === '1' ? 'group sidebar w-[100px]' : 'w-[260px]'
+            toybacoChannelsCollapsed ? 'group sidebar w-[100px]' : 'w-[260px]'
           )}
         >
           <div
@@ -619,16 +643,20 @@ export const LaunchesComponent = () => {
             )}
           >
             <div className="flex items-center">
-              <h2 className="group-[.sidebar]:hidden flex-1 text-[20px] font-[500]">
+              <h2 data-toybaco-channel-heading="" className="group-[.sidebar]:hidden flex-1 text-[20px] font-[500]">
                 {t('channels')}
               </h2>
-              <div
-                onClick={() =>
-                  setCollapseMenu(collapseMenu === '1' ? '0' : '1')
-                }
+              <button
+                type="button"
+                data-toybaco-channel-toggle=""
+                aria-label={toybacoChannelsCollapsed ? 'チャンネルを展開' : 'チャンネルを折りたたむ'}
+                aria-expanded={!toybacoChannelsCollapsed}
+                title={toybacoChannelsCollapsed ? 'チャンネルを展開' : 'チャンネルを折りたたむ'}
+                onClick={toybacoToggleChannels}
                 className="group-[.sidebar]:rotate-[180deg] group-[.sidebar]:mx-auto text-btnText bg-btnSimple rounded-[6px] w-[24px] h-[24px] flex items-center justify-center cursor-pointer select-none"
               >
                 <svg
+                  aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   width="7"
                   height="13"
@@ -643,7 +671,7 @@ export const LaunchesComponent = () => {
                     strokeLinejoin="round"
                   />
                 </svg>
-              </div>
+              </button>
             </div>
             <div className="flex flex-col gap-[8px] group-[.sidebar]:mx-auto group-[.sidebar]:w-[44px]">
               <AddProviderButton update={() => update(true)} />
@@ -655,7 +683,7 @@ export const LaunchesComponent = () => {
               </div>
             </div>
             <div className="gap-[32px] flex flex-col select-none flex-1">
-              {sortedIntegrations.length === 0 && collapseMenu === '0' && (
+              {sortedIntegrations.length === 0 && !toybacoChannelsCollapsed && (
                 <div className="flex-1 max-h-[500px] justify-center items-center flex">
                   <div className="flex flex-col gap-[12px] text-center">
                     <div
@@ -698,7 +726,7 @@ export const LaunchesComponent = () => {
               )}
               {menuIntegrations.map((menu) => (
                 <MenuGroupComponent
-                  collapsed={collapseMenu === '1'}
+                  collapsed={toybacoChannelsCollapsed}
                   changeItemGroup={changeItemGroup}
                   key={menu.name}
                   group={menu}
