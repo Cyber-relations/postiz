@@ -564,6 +564,7 @@ export async function toybacoWriteTenantPost(
       (draftOnly && existingPost.state !== 'DRAFT') ||
       !(
         state === 'update' ||
+        (state === 'draft' && existingPost.state === 'DRAFT') ||
         ((state === 'schedule' || state === 'now') &&
           (existingPost.state !== 'PUBLISHED' || allowRepublish))
       ) ||
