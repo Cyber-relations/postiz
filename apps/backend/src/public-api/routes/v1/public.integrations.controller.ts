@@ -11,6 +11,10 @@ import {
   Query,
   UploadedFile,
   UseGuards,
+  ArgumentsHost,
+  BadRequestException,
+  Catch,
+  UseFilters,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
@@ -25,6 +29,9 @@ import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/in
 import { CheckPolicies } from '@gitroom/backend/services/auth/permissions/permissions.ability';
 import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
+import { BaseExceptionFilter } from '@nestjs/core';
+import { MulterError } from 'multer';
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
 import { GetPostsDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.dto';
@@ -65,6 +72,26 @@ import { SuperAdminGuard } from '@gitroom/backend/services/auth/super.admin.guar
 import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 
+// toybaco_public_upload_boundary_v1: reject sparse array indices before append-field.
+const toybacoPublicUploadOptions: MulterOptions & {
+  limits: { fieldArrayIndexLimit: number };
+} = {
+  limits: { fieldArrayIndexLimit: 0 },
+};
+
+@Catch(MulterError)
+class ToybacoPublicUploadExceptionFilter extends BaseExceptionFilter {
+  catch(exception: Error & { code?: string }, host: ArgumentsHost) {
+    if (exception.code === 'LIMIT_FIELD_ARRAY_INDEX') {
+      return super.catch(
+        new BadRequestException('メディアをアップロードできませんでした'),
+        host
+      );
+    }
+    return super.catch(exception, host);
+  }
+}
+
 function toybacoRejectMediaGeneration(): void {
   throw new ForbiddenException('この機能は利用できません');
 }
@@ -85,7 +112,8 @@ export class PublicIntegrationsController {
   ) {}
 
   @Post('/upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', toybacoPublicUploadOptions))
+  @UseFilters(ToybacoPublicUploadExceptionFilter)
   @UsePipes(new CustomFileValidationPipe())
   async uploadSimple(
     @GetOrgFromRequest() org: Organization,

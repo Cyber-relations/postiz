@@ -26,6 +26,7 @@ import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/me
 import { ApiTags } from '@nestjs/swagger';
 import handleR2Upload from '@gitroom/nestjs-libraries/upload/r2.uploader';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { CustomFileValidationPipe } from '@gitroom/nestjs-libraries/upload/custom.upload.validation';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
@@ -34,8 +35,12 @@ import { VideoDto } from '@gitroom/nestjs-libraries/dtos/videos/video.dto';
 import { VideoFunctionDto } from '@gitroom/nestjs-libraries/dtos/videos/video.function.dto';
 
 // toybaco_memory_upload_boundary_v1: multerがbufferを確保する前に止める。
-const toybacoMemoryUploadOptions = {
+const toybacoMemoryUploadOptions: MulterOptions & {
+  limits: { fieldArrayIndexLimit: number };
+} = {
   limits: {
+    // These routes use flat fields only; Multer 2.3 requires explicit opt-in.
+    fieldArrayIndexLimit: 0,
     fileSize: 10 * 1024 * 1024,
     files: 1,
     fields: 4,
@@ -60,9 +65,11 @@ class ToybacoUploadExceptionFilter implements ExceptionFilter {
     const tooLarge = exception?.code === 'LIMIT_FILE_SIZE';
     const status = tooLarge
       ? 413
-      : exception instanceof HttpException && exception.getStatus() < 500
-        ? exception.getStatus()
-        : 500;
+      : exception?.code === 'LIMIT_FIELD_ARRAY_INDEX'
+        ? 400
+        : exception instanceof HttpException && exception.getStatus() < 500
+          ? exception.getStatus()
+          : 500;
     response.status(status).json({
       code: tooLarge ? 'UPLOAD_TOO_LARGE' : status >= 500 ? 'UPLOAD_FAILED' : 'UPLOAD_INVALID_FILE',
       message: tooLarge
