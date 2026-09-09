@@ -205,7 +205,12 @@ export class IntegrationService {
   }
 
   async disconnectChannel(orgId: string, integration: Integration, err = '') {
-    await this._integrationRepository.disconnectChannel(orgId, integration.id);
+    if (
+      integration.organizationId !== orgId ||
+      !(await this.markRefreshNeeded(integration))
+    ) {
+      return;
+    }
     await this.informAboutRefreshError(orgId, integration, err);
   }
 
@@ -340,8 +345,8 @@ export class IntegrationService {
     return this._integrationRepository.refreshNeeded(org, id);
   }
 
-  async setBetweenRefreshSteps(id: string) {
-    return this._integrationRepository.setBetweenRefreshSteps(id);
+  async setBetweenRefreshSteps(integration: Integration) {
+    return this._integrationRepository.setBetweenRefreshSteps(integration);
   }
 
   async refreshTokens() {
@@ -354,33 +359,52 @@ export class IntegrationService {
       const data = await this.refreshToken(provider, integration.refreshToken!);
 
       if (!data) {
-        await this.informAboutRefreshError(
-          integration.organizationId,
-          integration
-        );
-        await this._integrationRepository.refreshNeeded(
-          integration.organizationId,
-          integration.id
-        );
+        if (await this.markRefreshNeeded(integration)) {
+          await this.informAboutRefreshError(
+            integration.organizationId,
+            integration
+          );
+        }
         return;
       }
 
       const { refreshToken, accessToken, expiresIn } = data;
 
-      await this.createOrUpdateIntegration(
-        undefined,
+      await this.saveRefreshedIntegration(
+        integration,
         !!provider.oneTimeToken,
-        integration.organizationId,
-        integration.name,
-        undefined,
-        'social',
-        integration.internalId,
-        integration.providerIdentifier,
         accessToken,
         refreshToken,
         expiresIn
       );
     }
+  }
+
+  async saveRefreshedIntegration(
+    integration: Integration,
+    oneTimeToken: boolean,
+    token: string,
+    refreshToken = '',
+    expiresIn?: number
+  ) {
+    if (
+      !this._integrationManager
+        .getAllowedSocialsIntegrations()
+        .includes(integration.providerIdentifier)
+    ) {
+      throw new HttpException('Integration not allowed', HttpStatus.FORBIDDEN);
+    }
+    return this._integrationRepository.saveRefreshedIntegration(
+      integration,
+      oneTimeToken,
+      token,
+      refreshToken,
+      expiresIn
+    );
+  }
+
+  async markRefreshNeeded(integration: Integration) {
+    return this._integrationRepository.markRefreshNeeded(integration);
   }
 
   async disableChannel(org: string, id: string) {

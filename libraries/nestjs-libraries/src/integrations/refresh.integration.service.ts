@@ -27,25 +27,21 @@ export class RefreshIntegrationService {
       return false as const;
     }
 
-    await this._integrationService.createOrUpdateIntegration(
-      undefined,
+    const saved = await this._integrationService.saveRefreshedIntegration(
+      integration,
       !!socialProvider.oneTimeToken,
-      integration.organizationId,
-      integration.name,
-      integration.picture!,
-      'social',
-      integration.internalId,
-      integration.providerIdentifier,
       refresh.accessToken,
       refresh.refreshToken,
       refresh.expiresIn
     );
 
-    return refresh;
+    return saved ? refresh : false;
   }
 
   public async setBetweenSteps(integration: Integration, cause = '') {
-    await this._integrationService.setBetweenRefreshSteps(integration.id);
+    if (!(await this._integrationService.setBetweenRefreshSteps(integration))) {
+      return;
+    }
     await this._integrationService.informAboutRefreshError(
       integration.organizationId,
       integration,
@@ -78,20 +74,14 @@ export class RefreshIntegrationService {
       .catch((err) => false);
 
     if (!refresh || !refresh.accessToken) {
-      await this._integrationService.refreshNeeded(
-        integration.organizationId,
-        integration.id
-      );
+      if (!(await this._integrationService.markRefreshNeeded(integration))) {
+        return false;
+      }
 
       await this._integrationService.informAboutRefreshError(
         integration.organizationId,
         integration,
         cause
-      );
-
-      await this._integrationService.disconnectChannel(
-        integration.organizationId,
-        integration
       );
 
       return false;
