@@ -388,6 +388,9 @@ export class IntegrationRepository {
             not: upsert.id,
           },
           rootInternalId: rootId,
+          organizationId: org,
+          providerIdentifier: provider,
+          deletedAt: null,
         },
         data: {
           token,
@@ -403,6 +406,67 @@ export class IntegrationRepository {
     return upsert;
   }
 
+  private refreshCredentialWhere(integration: Integration) {
+    return {
+      id: integration.id,
+      organizationId: integration.organizationId,
+      providerIdentifier: integration.providerIdentifier,
+      internalId: integration.internalId,
+      deletedAt: null,
+      token: integration.token,
+      refreshToken: integration.refreshToken,
+    };
+  }
+
+  async saveRefreshedIntegration(
+    integration: Integration,
+    oneTimeToken: boolean,
+    token: string,
+    refreshToken = '',
+    expiresIn = 999999999
+  ) {
+    const data = {
+      token,
+      refreshToken,
+      refreshNeeded: false,
+      ...(expiresIn
+        ? { tokenExpiration: new Date(Date.now() + expiresIn * 1000) }
+        : {}),
+    };
+    // A refresh belongs to the credentials it read. Delete and reconnect win.
+    const saved = await this._integration.model.integration.updateMany({
+      where: this.refreshCredentialWhere(integration),
+      data,
+    });
+    if (saved.count !== 1) {
+      return false;
+    }
+
+    if (oneTimeToken) {
+      await this._integration.model.integration.updateMany({
+        where: {
+          id: { not: integration.id },
+          organizationId: integration.organizationId,
+          providerIdentifier: integration.providerIdentifier,
+          rootInternalId: integration.rootInternalId || integration.internalId,
+          deletedAt: null,
+          token: integration.token,
+          refreshToken: integration.refreshToken,
+        },
+        data,
+      });
+    }
+    return true;
+  }
+
+  async markRefreshNeeded(integration: Integration) {
+    const result = await this._integration.model.integration.updateMany({
+      where: this.refreshCredentialWhere(integration),
+      data: { refreshNeeded: true },
+    });
+    return result.count === 1;
+  }
+
   needsToBeRefreshed() {
     return this._integration.model.integration.findMany({
       where: {
@@ -416,15 +480,14 @@ export class IntegrationRepository {
     });
   }
 
-  async setBetweenRefreshSteps(id: string) {
-    return this._integration.model.integration.update({
-      where: {
-        id,
-      },
+  async setBetweenRefreshSteps(integration: Integration) {
+    const result = await this._integration.model.integration.updateMany({
+      where: this.refreshCredentialWhere(integration),
       data: {
         inBetweenSteps: true,
       },
     });
+    return result.count === 1;
   }
   refreshNeeded(org: string, id: string) {
     return this._integration.model.integration.update({
@@ -661,7 +724,13 @@ export class IntegrationRepository {
       });
       await database.integration.update({
         where: { id, organizationId: org, deletedAt: null },
-        data: { deletedAt: new Date() },
+        data: {
+          deletedAt: new Date(),
+          token: '',
+          refreshToken: null,
+          tokenExpiration: null,
+          customInstanceDetails: null,
+        },
       });
       return { integration, posts, workflowIds: [...workflowIds] };
     });
