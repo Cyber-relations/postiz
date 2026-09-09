@@ -15,6 +15,7 @@ import {
 import {
   PostsService,
   toybacoCanMutatePost,
+  toybacoPreparePostSaveRequest,
 } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { Organization, User } from '@prisma/client';
@@ -185,8 +186,12 @@ export class PostsController {
   @CheckPolicies([AuthorizationActions.Create, Sections.POSTS_PER_MONTH])
   async createPost(
     @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
     @Body() rawBody: any
   ) {
+    // WEB metadata is removed before validation/DTO mapping; identity is server-owned.
+    const toybacoSave = toybacoPreparePostSaveRequest(rawBody, org.id, user?.id);
+    rawBody = toybacoSave.body;
     // Server-side validation — never trust the client to have validated.
     const validation = await this._postsService.validatePosts(
       org.id,
@@ -249,7 +254,8 @@ export class PostsController {
       body,
       'WEB',
       false,
-      toybacoRole
+      toybacoRole,
+      toybacoSave.context
     );
   }
 
