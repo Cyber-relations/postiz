@@ -16,7 +16,7 @@ import { PicksSocialsComponent } from '@gitroom/frontend/components/new-launch/p
 import { EditorWrapper } from '@gitroom/frontend/components/new-launch/editor';
 import { SelectCurrent } from '@gitroom/frontend/components/new-launch/select.current';
 import { ShowAllProviders } from '@gitroom/frontend/components/new-launch/providers/show.all.providers';
-import { useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
+import { ToybacoPostingFailureNotice, useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { DatePicker } from '@gitroom/frontend/components/launches/helpers/date.picker';
 import { useShallow } from 'zustand/react/shallow';
@@ -713,6 +713,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                   className="gap-[32px] flex flex-col pe-[8px] pt-[20px] ps-[20px] absolute top-0 left-0 w-full h-full overflow-x-hidden overflow-y-scroll scrollbar scrollbar-thumb-newColColor scrollbar-track-newBgColorInner"
                 >
                   <div data-toybaco-composer-content="" className="flex flex-1 gap-[6px] flex-col">
+                    {!dummy && !addEditSets && <ToybacoPostingFailureNotice />}
                     <div>{!existingData.integration && <SelectCurrent />}</div>
                     <div className="flex-1 flex">
                       {!hide && <EditorWrapper totalPosts={1} value="" />}
@@ -817,7 +818,9 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
           )}
           {!dummy && !addEditSets && (
             <p data-toybaco-approval-note="">
-              {toybacoCanPublish
+              {existingData.posts.some((post) => post.state === 'ERROR')
+                ? '上の案内と投稿先の公開状況を確認してください。再送する場合は管理者が判断します。'
+                : toybacoCanPublish
                 ? '下書きを確認し、投稿先と日時を選んで予約してください。'
                 : toybacoCanEditDraft
                 ? 'スタッフは下書きを保存できます。公開は管理者が確認してから行います。'
