@@ -54,6 +54,10 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
   const toybacoImportRequestId = useRef('');
   const [toybacoImportSaved, setToybacoImportSaved] = useState(false);
   const toybacoImportDate = useRef(new Date().toISOString());
+  const toybacoFinishImport = useCallback(() => {
+    toybacoImporting.current = false;
+    setImporting(false);
+  }, []);
   const { data: integrations } = useIntegrationList();
   const { mutate } = useSWRConfig();
 
@@ -147,10 +151,9 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
         'warning'
       );
     } finally {
-      toybacoImporting.current = false;
-      setImporting(false);
+      toybacoFinishImport();
     }
-  }, [parsed, selectedIntegrationId, fetch, toaster, t, close, mutate, toybacoImportSaved]);
+  }, [parsed, selectedIntegrationId, fetch, toaster, t, close, mutate, toybacoImportSaved, toybacoFinishImport]);
 
   return (
     <div className="flex flex-col gap-[16px] min-w-[500px]">
