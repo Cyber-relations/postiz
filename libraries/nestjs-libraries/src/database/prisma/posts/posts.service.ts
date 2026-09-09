@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -135,16 +137,105 @@ export function toybacoCanMutatePost(
 }
 // toybaco_approval_flow_v5_matrix_end
 
+// toybaco_post_save_request_v1_start
+export type ToybacoPostSaveContext = {
+  organizationId: string;
+  actorId: string;
+  requestId: string;
+  payloadHash: string;
+};
+
+function toybacoCanonicalSavePayload(value: any): any {
+  if (Array.isArray(value)) return value.map(toybacoCanonicalSavePayload);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, toybacoCanonicalSavePayload(value[key])])
+    );
+  }
+  return value;
+}
+
+export function toybacoPreparePostSaveRequest(
+  rawBody: any,
+  organizationId: string,
+  actorId: string
+): { body: any; context: ToybacoPostSaveContext } {
+  if (
+    !rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody) ||
+    typeof organizationId !== 'string' || !organizationId ||
+    typeof actorId !== 'string' || !actorId ||
+    typeof rawBody.toybacoRequestId !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawBody.toybacoRequestId)
+  ) {
+    throw new BadRequestException({
+      code: 'TOYBACO_POST_SAVE_RELOAD_REQUIRED',
+      message: '画面を再読み込みしてから投稿を保存してください。',
+    });
+  }
+  const { toybacoRequestId, ...body } = rawBody;
+  return {
+    body,
+    context: {
+      organizationId,
+      actorId,
+      requestId: toybacoRequestId.toLowerCase(),
+      payloadHash: createHash('sha256')
+        .update(JSON.stringify(toybacoCanonicalSavePayload(body)))
+        .digest('hex'),
+    },
+  };
+}
+
+async function toybacoClaimPostSaveRequest(database: any, context: ToybacoPostSaveContext) {
+  // The unique insert waits for a concurrent owner to commit or roll back.
+  // An empty receipt is never visible outside the transaction that writes all posts.
+  const inserted = await database.$queryRawUnsafe(
+    `INSERT INTO "ToybacoPostSaveRequest" ("organizationId", "actorId", "requestId", "payloadHash", "postsJson", "createdAt") VALUES ($1, $2, $3, $4, '[]'::jsonb, CURRENT_TIMESTAMP) ON CONFLICT ("organizationId", "actorId", "requestId") DO NOTHING RETURNING "requestId"`,
+    context.organizationId, context.actorId, context.requestId, context.payloadHash
+  );
+  if (inserted.length === 1) return;
+  const receipt = await database.toybacoPostSaveRequest.findUniqueOrThrow({
+    where: { organizationId_actorId_requestId: {
+      organizationId: context.organizationId,
+      actorId: context.actorId,
+      requestId: context.requestId,
+    } },
+  });
+  const unchanged = receipt.payloadHash === context.payloadHash;
+  throw new ConflictException({
+    code: unchanged
+      ? 'TOYBACO_POST_SAVE_ALREADY_COMMITTED'
+      : 'TOYBACO_POST_SAVE_REQUEST_CHANGED',
+    message: unchanged
+      ? 'この投稿は保存済みです。カレンダーで投稿の状態を確認してください。'
+      : '変更前の投稿は保存済みです。入力内容を控えてカレンダーを確認してください。',
+    posts: receipt.postsJson,
+  });
+}
+// toybaco_post_save_request_v1_end
+
 // service層の全channel DB書き込みは、1つのPrisma transactionのみを境界とする。
 export async function toybacoRunCreatePostServiceTransaction(
   repository: any,
   preparedPosts: any[],
-  writeOne: any
+  writeOne: any,
+  saveContext: any = null
 ) {
   return repository.runPostTransaction(async (database: any) => {
+    if (saveContext) await toybacoClaimPostSaveRequest(database, saveContext);
     const committed: any[] = [];
     for (const post of preparedPosts) {
       committed.push(await writeOne(database, post));
+    }
+    if (saveContext) {
+      await database.toybacoPostSaveRequest.update({
+        where: { organizationId_actorId_requestId: {
+          organizationId: saveContext.organizationId,
+          actorId: saveContext.actorId,
+          requestId: saveContext.requestId,
+        } },
+        data: { postsJson: committed.flatMap((item: any) => item.postList) },
+      });
     }
     return committed;
   });
@@ -1258,7 +1349,8 @@ export class PostsService {
     body: CreatePostDto,
     creationMethod: CreationMethod,
     keepGroup = false,
-    toybacoActorRole = 'UNKNOWN'
+    toybacoActorRole = 'UNKNOWN',
+    toybacoSaveContext: ToybacoPostSaveContext | null = null
   ): Promise<any[]> {
     const toybacoIsUpdate = body.type === 'update';
     const toybacoCreateTarget =
@@ -1275,6 +1367,10 @@ export class PostsService {
         toybacoCreateTarget
       )
     ) {
+      throw new ForbiddenException(TOYBACO_APPROVAL_DENIED_MESSAGE);
+    }
+
+    if (toybacoSaveContext && toybacoSaveContext.organizationId !== orgId) {
       throw new ForbiddenException(TOYBACO_APPROVAL_DENIED_MESSAGE);
     }
 
@@ -1355,11 +1451,13 @@ export class PostsService {
                 }
               : null,
         };
-      }
+      },
+      toybacoSaveContext
     );
 
-    // TemporalはDB commit後にdispatchし、失敗時は全対象をERRORへ記録して
-    // 同じpost idで安全に再試行できるようにする。API成功でQUEUEだけ残さない。
+    // TemporalはDB commit後にdispatchする。dispatchとDB ACKを終えた先行分を保ち、
+    // 失敗した対象以降は同じpost idのworkflow outboxへ失敗理由を残す。
+    // WEB保存の再送はreceiptで止め、カレンダーから既存投稿の状態を確認する。
     const postList = committed.flatMap((item: any) => item.postList);
     const workflows = committed
       .map((item: any) => item.workflow)

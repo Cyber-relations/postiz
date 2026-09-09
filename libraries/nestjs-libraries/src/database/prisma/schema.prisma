@@ -44,6 +44,7 @@ model Organization {
   webhooks            Webhooks[]
   oauthApp            OAuthApp[]
   oauthAuthorizations OAuthAuthorization[]
+  toybacoPostSaveRequests ToybacoPostSaveRequest[]
 
   @@index([apiKey])
   @@index([streakSince])
@@ -116,6 +117,7 @@ model User {
   sendFailureEmails     Boolean              @default(true)
   sendStreakEmails      Boolean              @default(true)
   oauthAuthorizations   OAuthAuthorization[]
+  toybacoPostSaveRequests ToybacoPostSaveRequest[]
 
   @@unique([email, providerName])
   @@index([lastReadNotifications])
@@ -822,4 +824,19 @@ model Announcement {
   description String
   color       AnnouncementColor @default(INFO)
   createdAt   DateTime          @default(now())
+}
+
+// toybaco_post_save_request_v1: receipts outlive individual posts; no TTL.
+model ToybacoPostSaveRequest {
+  organizationId String
+  actorId        String
+  requestId      String
+  payloadHash    String
+  postsJson      Json
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor          User         @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, actorId, requestId])
+  @@index([actorId])
 }

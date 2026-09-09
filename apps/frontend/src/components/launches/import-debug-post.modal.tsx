@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useCallback, useMemo, useState } from 'react';
+import { FC, useCallback, useMemo, useRef, useState } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -50,6 +50,14 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
   const [parseError, setParseError] = useState('');
   const [selectedIntegrationId, setSelectedIntegrationId] = useState('');
   const [importing, setImporting] = useState(false);
+  const toybacoImporting = useRef(false);
+  const toybacoImportRequestId = useRef('');
+  const [toybacoImportSaved, setToybacoImportSaved] = useState(false);
+  const toybacoImportDate = useRef(new Date().toISOString());
+  const toybacoFinishImport = useCallback(() => {
+    toybacoImporting.current = false;
+    setImporting(false);
+  }, []);
   const { data: integrations } = useIntegrationList();
   const { mutate } = useSWRConfig();
 
@@ -81,7 +89,8 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
   }, [parsed, integrations]);
 
   const handleImport = useCallback(async () => {
-    if (!parsed || !selectedIntegrationId) return;
+    if (!parsed || !selectedIntegrationId || toybacoImporting.current || toybacoImportSaved) return;
+    toybacoImporting.current = true;
 
     setImporting(true);
     try {
@@ -89,7 +98,8 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
       const importPayload = {
         ...payload,
         type: 'draft',
-        date: new Date().toISOString(),
+        date: toybacoImportDate.current,
+        toybacoRequestId: toybacoImportRequestId.current ||= crypto.randomUUID(),
         tags: [] as { value: string; label: string }[],
         posts: payload.posts.map((post) => ({
           ...post,
@@ -97,10 +107,19 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
         })),
       };
 
-      await fetch('/posts', {
+      const response = await fetch('/posts', {
         method: 'POST',
         body: JSON.stringify(importPayload),
       });
+      if (!response.ok || response.headers?.get('logout')) {
+        const result = response.status === 409 && !response.headers?.get('logout')
+          ? await response.clone().json().catch(() => null)
+          : null;
+        if (result?.code === 'TOYBACO_POST_SAVE_ALREADY_COMMITTED' || result?.code === 'TOYBACO_POST_SAVE_REQUEST_CHANGED') {
+          throw new Error('TOYBACO_IMPORT_ALREADY_SAVED');
+        }
+        throw new Error('TOYBACO_IMPORT_RESULT_UNKNOWN');
+      }
 
       await mutate(
         (key: string) =>
@@ -115,15 +134,26 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
         'success'
       );
       close();
-    } catch {
+    } catch (error) {
+      const alreadySaved = error instanceof Error && error.message === 'TOYBACO_IMPORT_ALREADY_SAVED';
+      if (alreadySaved) {
+        setToybacoImportSaved(true);
+        await mutate(
+          (key: string) => typeof key === 'string' && (key.startsWith('/posts-') || key.startsWith('/posts-list-')),
+          undefined,
+          { revalidate: true }
+        );
+      }
       toaster.show(
-        t('debug_post_import_failed', 'Failed to import post'),
+        alreadySaved
+          ? '前の取り込みは保存済みです。今回の変更は保存していません。この画面を閉じてカレンダーから保存済みの下書きを確認してください。'
+          : '取り込み結果を確認できません。入力内容は残しています。カレンダーで保存状況を確認してください。',
         'warning'
       );
     } finally {
-      setImporting(false);
+      toybacoFinishImport();
     }
-  }, [parsed, selectedIntegrationId, fetch, toaster, t, close, mutate]);
+  }, [parsed, selectedIntegrationId, fetch, toaster, t, close, mutate, toybacoImportSaved, toybacoFinishImport]);
 
   return (
     <div className="flex flex-col gap-[16px] min-w-[500px]">
@@ -243,7 +273,7 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
           <Button
             onClick={handleImport}
             loading={importing}
-            disabled={!selectedIntegrationId}
+            disabled={!selectedIntegrationId || importing || toybacoImportSaved}
             className="rounded-[4px]"
           >
             {t('import_as_draft', 'Import as Draft')}

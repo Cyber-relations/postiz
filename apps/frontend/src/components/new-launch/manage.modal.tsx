@@ -132,6 +132,15 @@ async function toybacoCheckedPostRequest(
       }),
     ]);
     if (!response.ok || response.headers?.get('logout')) {
+      if (url === '/posts' && options.method === 'POST' && !response.headers?.get('logout') && (response.status === 400 || response.status === 409)) {
+        const body = await response.clone?.().json().catch(() => null);
+        if ((response.status === 409 && (
+          body?.code === 'TOYBACO_POST_SAVE_ALREADY_COMMITTED' ||
+          body?.code === 'TOYBACO_POST_SAVE_REQUEST_CHANGED'
+        )) || (response.status === 400 && body?.code === 'TOYBACO_POST_SAVE_RELOAD_REQUIRED')) {
+          throw new Error(body.code);
+        }
+      }
       throw new Error(response.status === 401 || response.status === 403 || response.headers?.get('logout')
         ? 'TOYBACO_POST_NOT_ALLOWED'
         : response.status >= 500
@@ -154,6 +163,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const user = useUser();
   const toybacoCanPublish = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
   const toybacoSaving = useRef(false);
+  const toybacoSaveRequestId = useRef('');
+  const toybacoComposerGroup = useRef(makeId(10));
+  const [toybacoSavedResult, setToybacoSavedResult] = useState(false);
   const [toybacoSaveError, setToybacoSaveError] = useState('');
   const [toybacoSessionOwner] = useState(() => user && ({ id: user.id, orgId: user.orgId, role: user.role, providerName: user.providerName }));
   const [toybacoConnectionError, setToybacoConnectionError] = useState('');
@@ -357,6 +369,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     (type: 'draft' | 'now' | 'schedule' | 'update') => async () => {
       if (toybacoSaving.current) return;
       if (toybacoConnectionError) return;
+      if (toybacoSavedResult) return;
       if (!toybacoCanEditDraft || (!dummy && !addEditSets && type !== 'draft' && !toybacoCanPublish)) {
         setToybacoSaveError('予約・公開済みの投稿の変更と公開は管理者が行います。');
         return;
@@ -446,7 +459,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       const integrationById = (id: string) =>
         selectedIntegrations.find((p) => p.integration.id === id);
 
-      const group = existingData.group || makeId(10);
+      const group = existingData.group || toybacoComposerGroup.current;
 
       const posts = allValues.map((post: any) => ({
         integration: {
@@ -615,7 +628,12 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           ? addEditSets(data)
           : await fetch('/posts', {
               method: 'POST',
-              body: JSON.stringify(data),
+              body: JSON.stringify({
+                ...data,
+                // A timeout or rejection keeps this save identity. Only a new
+                // composer starts a new logical save operation.
+                toybacoRequestId: toybacoSaveRequestId.current ||= crypto.randomUUID(),
+              }),
             });
 
         if (!addEditSets) {
@@ -638,7 +656,18 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       }
       } catch (error) {
         const code = error instanceof Error ? error.message : '';
-        setToybacoSaveError(code === 'TOYBACO_POST_NOT_ALLOWED'
+        const saved = code === 'TOYBACO_POST_SAVE_ALREADY_COMMITTED' || code === 'TOYBACO_POST_SAVE_REQUEST_CHANGED';
+        if (saved) {
+          setToybacoSavedResult(true);
+          mutate();
+        }
+        setToybacoSaveError(code === 'TOYBACO_POST_SAVE_ALREADY_COMMITTED'
+          ? 'この操作の投稿は保存済みです。重複した投稿は作成していません。カレンダーで保存済みの投稿と公開状況を確認してください。'
+          : code === 'TOYBACO_POST_SAVE_REQUEST_CHANGED'
+          ? '前の操作の投稿は保存済みです。今回の変更は保存していません。入力内容は残しています。カレンダーから保存済みの投稿を開いて変更してください。'
+          : code === 'TOYBACO_POST_SAVE_RELOAD_REQUIRED'
+          ? 'この保存は受け付けていません。入力内容を控えてから、この画面を閉じて再読み込みしてください。'
+          : code === 'TOYBACO_POST_NOT_ALLOWED'
           ? '保存する権限を確認できません。入力内容は残しています。管理者に確認してください。'
           : code === 'TOYBACO_POST_REJECTED'
           ? '保存できませんでした。入力内容は残しています。投稿先・本文・日時を確認してください。'
@@ -647,7 +676,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         toybacoFinishSaving();
       }
     },
-    [ref, repeater, tags, date, addEditSets, dummy, shortlinkPreferenceData, fetch, selectedIntegrations, existingData, mutate, modal, customClose, toaster, t, toybacoCanPublish, toybacoCanEditDraft, toybacoFinishSaving, toybacoConnectionError]
+    [ref, repeater, tags, date, addEditSets, dummy, shortlinkPreferenceData, fetch, selectedIntegrations, existingData, mutate, modal, customClose, toaster, t, toybacoCanPublish, toybacoCanEditDraft, toybacoFinishSaving, toybacoConnectionError, toybacoSavedResult]
   );
 
   return (
@@ -804,7 +833,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
           </div>
         </div>
         <div data-toybaco-composer-footer="" aria-busy={loading} style={toybacoConnectionError ? { height: 'auto', flexWrap: 'wrap', maxHeight: '40dvh', overflowY: 'auto' } : undefined} className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
-          {toybacoSaveError && !toybacoConnectionError && <p data-toybaco-save-error="" role="alert">{toybacoSaveError}</p>}
+          {toybacoSaveError && !toybacoConnectionError && <p data-toybaco-save-error="" role="alert">{toybacoSaveError}{toybacoSavedResult && <button type="button" className="block mt-[8px] underline" onClick={() => { void askClose(); }}>カレンダーで保存済み投稿を確認</button>}</p>}
           {toybacoConnectionError && (
             <div data-toybaco-session-recovery="" style={{ flexBasis: '100%', minWidth: 0, padding: '8px 16px' }}>
               <p role="alert">{toybacoConnectionError}</p>
@@ -860,7 +889,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
             {!addEditSets && (
               <button
                 disabled={
-                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError
+                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
                 }
                 onClick={schedule('draft')}
                 className="relative cursor-pointer disabled:cursor-not-allowed px-[20px] h-[44px] bg-btnSimple justify-center items-center flex rounded-[8px] text-[15px] font-[600]"
@@ -879,7 +908,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
               <button
                 className="text-white text-[15px] font-[600] min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
                 disabled={
-                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError
+                  selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
                 }
                 onClick={schedule('draft')}
               >
@@ -890,7 +919,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
               <div className="group cursor-pointer relative">
                 <button
                   disabled={
-                    selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError
+                    selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
                   }
                   onClick={schedule('schedule')}
                   className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
@@ -927,7 +956,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                   <button
                     onClick={schedule('now')}
                     disabled={
-                      selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError
+                      selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
                     }
                     className="rounded-[8px] z-[300] disabled:cursor-not-allowed disabled:opacity-80 hidden group-hover:flex absolute bottom-[100%] -left-[12px] p-[12px] w-[206px] bg-newBgColorInner"
                   >
