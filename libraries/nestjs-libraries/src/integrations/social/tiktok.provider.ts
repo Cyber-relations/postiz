@@ -17,7 +17,8 @@ import {
 import { TikTokDto, TikTokContentPostingDto, TikTokCreatorInfo, parseTikTokCreatorInfo, hasTikTokPostingConsent } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/tiktok.dto';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
-import { createReadStream } from 'fs';
+import { TIKTOK_INIT_UNCONFIRMED_MESSAGE } from '@gitroom/helpers/utils/tiktok.posting.error';
+import { isSafePublicHttpsUrl } from '@gitroom/nestjs-libraries/dtos/webhooks/webhook.url.validator';
 import { getSsrfSafeDispatcher } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
@@ -222,7 +223,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
       return {
         type: 'bad-body' as const,
         value:
-          'You have to upload the picture/video to Postiz when sending a URL',
+          'TikTok が動画・画像の配信元 URL を確認できていません。管理者に配信ドメインまたは URL プレフィックスの所有確認を依頼してください。',
       };
     }
 
@@ -594,198 +595,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
-  // ---------------------------------------------------------------------------
-  // OLD PULL_FROM_URL IMPLEMENTATION (kept for when the TikTok PULL bug is fixed)
-  // ---------------------------------------------------------------------------
-  // private buildTikokSourceInfoBody(firstPost: PostDetails<TikTokDto>) {
-  //   const isPhoto = !hasExtension(firstPost?.media?.[0]?.path, 'mp4');
-  //
-  //   if (isPhoto) {
-  //     return {
-  //       post_mode:
-  //         firstPost?.settings?.content_posting_method === 'DIRECT_POST'
-  //           ? 'DIRECT_POST'
-  //           : 'MEDIA_UPLOAD',
-  //       media_type: 'PHOTO',
-  //       source_info: {
-  //         source: 'PULL_FROM_URL',
-  //         photo_cover_index: 0,
-  //         photo_images: firstPost.media?.map((p) => p.path),
-  //       },
-  //     };
-  //   }
-  //
-  //   return {
-  //     source_info: {
-  //       source: 'PULL_FROM_URL',
-  //       video_url: firstPost?.media?.[0]?.path!,
-  //       ...(firstPost?.media?.[0]?.thumbnailTimestamp!
-  //         ? {
-  //             video_cover_timestamp_ms:
-  //               firstPost?.media?.[0]?.thumbnailTimestamp!,
-  //           }
-  //         : {}),
-  //     },
-  //   };
-  // }
-  //
-  // async post(
-  //   id: string,
-  //   accessToken: string,
-  //   postDetails: PostDetails<TikTokDto>[],
-  //   integration: Integration
-  // ): Promise<PostResponse[]> {
-  //   const [firstPost] = postDetails;
-  //   const isPhoto = !hasExtension(firstPost?.media?.[0]?.path, 'mp4');
-  //
-  //   console.log({
-  //     ...this.buildTikokPostInfoBody(firstPost),
-  //     ...this.buildTikokSourceInfoBody(firstPost),
-  //   });
-  //   const {
-  //     data: { publish_id },
-  //   } = await (
-  //     await this.fetch(
-  //       `https://open.tiktokapis.com/v2/post/publish${this.postingMethod(
-  //         firstPost.settings.content_posting_method,
-  //         !hasExtension(firstPost?.media?.[0]?.path, 'mp4')
-  //       )}`,
-  //       {
-  //         method: 'POST',
-  //         headers: {
-  //           'Content-Type': 'application/json; charset=UTF-8',
-  //           Authorization: `Bearer ${accessToken}`,
-  //         },
-  //         body: JSON.stringify({
-  //           ...this.buildTikokPostInfoBody(firstPost),
-  //           ...this.buildTikokSourceInfoBody(firstPost),
-  //         }),
-  //       }
-  //     )
-  //   ).json();
-  //
-  //   const { url, id: videoId } = await this.uploadedVideoSuccess(
-  //     integration.profile!,
-  //     publish_id,
-  //     accessToken
-  //   );
-  //
-  //   return [
-  //     {
-  //       id: firstPost.id,
-  //       releaseURL: url,
-  //       postId: String(videoId),
-  //       status: 'success',
-  //     },
-  //   ];
-  // }
-
-  // ---------------------------------------------------------------------------
-  // NEW FILE_UPLOAD IMPLEMENTATION (no PULL_FROM_URL for videos)
-  // ---------------------------------------------------------------------------
-  // TikTok video chunk constraints: a chunk must be between 5MB and 64MB.
-  // When the whole file fits in a single chunk (<= 64MB) we upload it in one
-  // request; otherwise we split it into 10MB chunks (the final chunk carries
-  // the remainder, which TikTok allows to exceed chunk_size).
-  private static readonly TIKTOK_MAX_SINGLE_CHUNK = 64 * 1024 * 1024;
-  private static readonly TIKTOK_CHUNK_SIZE = 10 * 1024 * 1024;
-
-  private tiktokChunkPlan(videoSize: number) {
-    if (videoSize <= TiktokProvider.TIKTOK_MAX_SINGLE_CHUNK) {
-      return { chunkSize: videoSize, totalChunkCount: 1 };
-    }
-
-    const chunkSize = TiktokProvider.TIKTOK_CHUNK_SIZE;
-    return {
-      chunkSize,
-      totalChunkCount: Math.floor(videoSize / chunkSize),
-    };
-  }
-
-  // Returns a streaming body for the [start, end] byte range of the media so we
-  // never hold the whole file in memory: a ranged GET for remote URLs, a ranged
-  // read stream for local files.
-  private async tiktokChunkStream(path: string, start: number, end: number) {
-    if (path.indexOf('http') === 0) {
-      // identity encoding so the store keeps content-length and can answer
-      // with the requested range, matching every other media read
-      const response = await fetch(path, {
-        headers: {
-          Range: `bytes=${start}-${end}`,
-          'accept-encoding': 'identity',
-        },
-        dispatcher: getSsrfSafeDispatcher(),
-      } as any);
-
-      // A store that ignores Range (200 with the full file) or answers with an
-      // error page would corrupt the upload at this offset.
-      if (response.status !== 206) {
-        throw new BadBody(
-          'tiktok-error-upload',
-          '{}',
-          '{}',
-          'The media storage did not return the requested byte range, please try again'
-        );
-      }
-
-      return response.body;
-    }
-
-    return createReadStream(path, { start, end });
-  }
-
-  // Streams the video bytes to the upload_url returned by the init call.
-  // We use the global fetch (not this.fetch) because chunked uploads answer
-  // with 206 (Partial Content), which this.fetch would treat as an error.
-  private async uploadTikTokVideoBytes(
-    uploadUrl: string,
-    path: string,
-    videoSize: number,
-    contentType: string
-  ) {
-    const { chunkSize, totalChunkCount } = this.tiktokChunkPlan(videoSize);
-
-    for (let i = 0; i < totalChunkCount; i++) {
-      const start = i * chunkSize;
-      const end =
-        i === totalChunkCount - 1 ? videoSize - 1 : start + chunkSize - 1;
-      const contentLength = end - start + 1;
-
-      const body = await this.tiktokChunkStream(path, start, end);
-
-      const upload = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': contentType,
-          'Content-Length': String(contentLength),
-          'Content-Range': `bytes ${start}-${end}/${videoSize}`,
-        },
-        body,
-        // Required by undici when streaming a request body.
-        duplex: 'half',
-      } as any);
-
-      if (
-        upload.status !== 200 &&
-        upload.status !== 201 &&
-        upload.status !== 206
-      ) {
-        const text = await upload.text().catch(() => '{}');
-        const handleError = this.handleErrors(text);
-        throw new BadBody(
-          'tiktok-error-upload',
-          text,
-          Buffer.from(text),
-          handleError?.value || 'Failed to upload the video to TikTok'
-        );
-      }
-    }
-  }
-
-  private buildTikokSourceInfoBody(
-    firstPost: PostDetails<TikTokDto>,
-    videoSize?: number
-  ) {
+  private async buildTikokSourceInfoBody(firstPost: PostDetails<TikTokDto>) {
     const isPhoto = !hasExtension(firstPost?.media?.[0]?.path, 'mp4');
 
     // TikTok photo posts only support PULL_FROM_URL, there is no FILE_UPLOAD
@@ -805,16 +615,97 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
       };
     }
 
-    const { chunkSize, totalChunkCount } = this.tiktokChunkPlan(videoSize || 0);
+    // Both storage providers return server-hosted media URLs, including files
+    // originally selected on the user's device. TikTok requires PULL_FROM_URL
+    // here; FILE_UPLOAD is only for a transfer directly from the user's device.
+    // The URL's domain/prefix must also be verified in the TikTok app, and the
+    // resource must stay accessible without redirects for the download (1 hour).
+    const videoUrl = firstPost.media?.[0]?.path;
+    let parsed: URL | undefined;
+    try {
+      parsed = new URL(videoUrl || '');
+    } catch {
+      // Local server paths cannot be downloaded by TikTok.
+    }
+    if (
+      !parsed ||
+      parsed.username ||
+      parsed.password ||
+      !(await isSafePublicHttpsUrl(videoUrl))
+    ) {
+      throw new BadBody(
+        'tiktok-media-url-required',
+        '{}',
+        '',
+        'TikTok 用の動画を公開 HTTPS URL で配信できません。動画をアップロードし直すか、管理者にお問い合わせください。'
+      );
+    }
 
     return {
       source_info: {
-        source: 'FILE_UPLOAD',
-        video_size: videoSize,
-        chunk_size: chunkSize,
-        total_chunk_count: totalChunkCount,
+        source: 'PULL_FROM_URL',
+        video_url: videoUrl,
       },
     };
+  }
+
+  private async initializeTikTokPost(
+    url: string,
+    accessToken: string,
+    body: Record<string, unknown>
+  ): Promise<string> {
+    const unconfirmed = () => new BadBody(
+      'tiktok-init-unconfirmed',
+      '{}',
+      '',
+      TIKTOK_INIT_UNCONFIRMED_MESSAGE
+    );
+    let response: Response;
+    let result: any;
+    try {
+      // PULL init starts the transfer immediately. Do not use this.fetch's
+      // automatic retries, which could create a second post after acceptance.
+      response = await fetch(url, {
+        method: 'POST',
+        signal: AbortSignal.timeout(30000),
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+        // @ts-ignore - undici option, not in lib.dom fetch types
+        dispatcher: getSsrfSafeDispatcher(),
+      });
+      result = await response.json();
+    } catch {
+      // No publish_id means status polling cannot reconcile acceptance. Fail
+      // non-retryably without exposing the token, media URL or response body.
+      throw unconfirmed();
+    }
+
+    if (
+      response.ok &&
+      (!result?.error?.code || result.error.code === 'ok') &&
+      typeof result?.data?.publish_id === 'string' &&
+      result.data.publish_id.trim()
+    ) {
+      return result.data.publish_id;
+    }
+
+    if (response.status >= 500 || result?.error?.code === 'internal_error') {
+      throw unconfirmed();
+    }
+    const error = this.handleErrors(JSON.stringify(result) || '{}');
+    if (error?.type === 'disconnect') {
+      throw new Disconnect('tiktok-init-rejected', '{}', '', error.value);
+    }
+    if (response.status === 401 || error?.type === 'refresh-token') {
+      throw new RefreshToken('tiktok-init-rejected', '{}', '', error?.value, response.status);
+    }
+    if (error?.type === 'bad-body') {
+      throw new BadBody('tiktok-init-rejected', '{}', '', error.value);
+    }
+    throw unconfirmed();
   }
 
   async postPending(
@@ -840,58 +731,19 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
         throw new BadBody('tiktok-creator-settings-changed', '{}', '', 'TikTok の投稿条件が変わりました。公開範囲と交流設定を確認してください。');
       }
     }
-    const videoPath = firstPost?.media?.[0]?.path!;
+    const sourceInfo = await this.buildTikokSourceInfoBody(firstPost);
 
-    // For videos we only need the total size up front (HEAD / statSync) so we
-    // can init the upload; the bytes themselves are streamed later, never fully
-    // loaded into memory.
-    const videoSize = isPhoto
-      ? undefined
-      : await this.mediaSize(videoPath, 'tiktok-error-upload');
-
-    const {
-      data: { publish_id, upload_url },
-    } = await (
-      await this.fetch(
-        `https://open.tiktokapis.com/v2/post/publish${this.postingMethod(
-          this.contentPostingMethod(firstPost),
-          isPhoto
-        )}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json; charset=UTF-8',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            ...this.buildTikokPostInfoBody(firstPost),
-            ...this.buildTikokSourceInfoBody(firstPost, videoSize),
-          }),
-        }
-      )
-    ).json();
-
-    // Videos: stream the bytes to the upload_url returned by the init call.
-    if (!isPhoto && upload_url && videoSize) {
-      try {
-        await this.uploadTikTokVideoBytes(
-          upload_url,
-          videoPath,
-          videoSize,
-          'video/mp4'
-        );
-      } catch (err) {
-        // An explicit rejection from TikTok: the post won't publish, fail it
-        if (err instanceof BadBody) {
-          throw err;
-        }
-
-        // A network error here is ambiguous - TikTok may have received all
-        // the bytes and still publish. Return pending and let checkPostStatus
-        // deliver TikTok's own verdict instead of letting the caller retry
-        // the publish.
+    const publish_id = await this.initializeTikTokPost(
+      `https://open.tiktokapis.com/v2/post/publish${this.postingMethod(
+        this.contentPostingMethod(firstPost),
+        isPhoto
+      )}`,
+      accessToken,
+      {
+        ...this.buildTikokPostInfoBody(firstPost),
+        ...sourceInfo,
       }
-    }
+    );
 
     // The publish is now irreversible on TikTok's side: return `pending` so the
     // workflow polls checkPostStatus instead of blocking (and possibly timing
