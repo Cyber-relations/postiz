@@ -1,3 +1,5 @@
+import { TIKTOK_INIT_UNCONFIRMED_MESSAGE } from '@gitroom/helpers/utils/tiktok.posting.error';
+
 // トイバコ: 上流の英語通知を日本語にする。
 // ワークフロー側の文字列は Temporal の再生互換のため変更できないので、
 // 実際に送る直前(activity 側)でここを通して置き換える。
@@ -155,6 +157,7 @@ function isKnownJapaneseSubject(value: string): boolean {
 }
 
 function isKnownJapaneseMessage(value: string): boolean {
+  if (value === TIKTOK_INIT_UNCONFIRMED_MESSAGE) return true;
   const patterns = [
     /^トイバコからのお知らせがあります。詳細はトイバコの画面でご確認ください。$/,
     new RegExp(`^.{1,120}\\(${knownProviderJa}\\)への投稿ができませんでした。接続の有効期限が切れています。お手数ですが接続し直してください。$`),
@@ -297,7 +300,13 @@ export function toybacoNotificationJa(
     ))
   ) {
     messageMatched = true;
-    jaMessage = `${toybacoProviderName(match[1])}への投稿でエラーが発生しました。時間をおいて再度お試しください。`;
+    if (match[1].toLowerCase() === 'tiktok' && match[2] === TIKTOK_INIT_UNCONFIRMED_MESSAGE) {
+      jaSubject = 'TikTokへの投稿の公開を確認できませんでした';
+      subjectMatched = true;
+      jaMessage = TIKTOK_INIT_UNCONFIRMED_MESSAGE;
+    } else {
+      jaMessage = `${toybacoProviderName(match[1])}への投稿でエラーが発生しました。時間をおいて再度お試しください。`;
+    }
   } else if (
     (match = message.match(
       /^Your post has been published on (.+?) at (https?:\/\/\S+)$/
