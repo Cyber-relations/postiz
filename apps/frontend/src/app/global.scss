@@ -827,7 +827,7 @@ html[data-toybaco-embed] [data-toybaco-header-title] {
   display: none;
 }
 
-/* 組織選択・通知・実行中の版のソースリンクを残し、keep 印のない直下要素だけを隠す。 */
+/* 組織選択・通知を残し、keep 印のない直下要素だけを隠す。 */
 html[data-toybaco-embed]
   [data-toybaco-header-controls]
   > *:not([data-toybaco-keep]) {
