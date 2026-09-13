@@ -76,7 +76,7 @@ const ShortlinkPreferenceComponent = () => {
       <div className="mt-[4px]">
         {t('shortlink_settings', 'Shortlink Settings')}
       </div>
-      <div className="flex items-center justify-between gap-[24px]">
+      <div data-toybaco-shortlink-preference="" className="flex items-center justify-between gap-[24px]">
         <div className="flex flex-col flex-1">
           <div className="text-[14px]">
             {t('shortlink_preference', 'Shortlink Preference')}

@@ -141,6 +141,7 @@ export const SettingsPopup: FC<{
               onClick={() => setTab(tabKey)}
             >
               <div
+                data-toybaco-settings-accent=""
                 className={clsx(
                   'h-full w-[4px] rounded-s-[3px] opacity-0 group-hover/profile:opacity-100 transition-opacity',
                   tabKey === tab && 'opacity-100'
@@ -154,7 +155,7 @@ export const SettingsPopup: FC<{
         </div>
         <div>
           {showLogout && (
-            <div className="mt-4">
+            <div data-toybaco-settings-logout="" className="mt-4">
               <LogoutComponent />
             </div>
           )}
