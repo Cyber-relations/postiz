@@ -887,6 +887,28 @@ html[data-toybaco-embed] [data-toybaco-content-frame] {
   color: var(--toybaco-ink);
 }
 
+/* 設定の選択線は既存の紺へ揃え、ログアウトは親の統一導線を使う。 */
+html[data-toybaco-embed] [data-toybaco-settings-accent] svg path {
+  fill: var(--toybaco-navy);
+}
+html[data-toybaco-embed] [data-toybaco-settings-logout] {
+  display: none;
+}
+@media (max-width: 767px) {
+  html[data-toybaco-embed] [data-toybaco-shortlink-preference] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  html[data-toybaco-embed] [data-toybaco-shortlink-preference] > div {
+    width: 100%;
+    min-width: 0;
+  }
+  html[data-toybaco-embed] [data-toybaco-shortlink-preference] select {
+    min-height: 44px;
+  }
+}
+
 /* 受信箱側に画面名が無いので、埋め込みでもタイトル「投稿カレンダー」を出す。 */
 html[data-toybaco-embed] [data-toybaco-header] {
   height: 48px;
