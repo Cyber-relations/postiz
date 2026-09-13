@@ -128,8 +128,8 @@ export const SettingsPopup: FC<{
   }, []);
 
   return (
-    <>
-      <div className="bg-newBgColorInner p-[20px] flex flex-col transition-all w-[260px]">
+    <div data-toybaco-settings="" className="flex w-full min-w-0 flex-col md:flex-row">
+      <div className="bg-newBgColorInner p-[20px] flex flex-col transition-all w-full md:w-[260px] shrink-0">
         <div className="flex flex-1 flex-col gap-[15px]">
           {list.map(({ tab: tabKey, label }) => (
             <div
@@ -160,7 +160,7 @@ export const SettingsPopup: FC<{
           )}
         </div>
       </div>
-      <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+      <div className="bg-newBgColorInner min-w-0 flex-1 flex-col flex p-[20px] gap-[12px]">
         <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(submit)}>
             {!!getRef && (
@@ -224,8 +224,28 @@ export const SettingsPopup: FC<{
             </div>
           </form>
         </FormProvider>
+        <section
+          data-toybaco-source-offer=""
+          aria-labelledby="toybaco-source-title"
+          className="mt-[20px] flex min-w-0 flex-col gap-[8px] border-t border-newTableBorder pt-[20px]"
+        >
+          <h3 id="toybaco-source-title" className="text-[16px] font-semibold">
+            ライセンスとソースコード
+          </h3>
+          <p className="text-[14px] leading-relaxed">
+            投稿機能には AGPL-3.0 の Postiz 改変版を使用しています。稼働中のバージョンのソースコードを公開しています。
+          </p>
+          <a
+            href={`https://github.com/Cyber-relations/postiz/tree/${process.env.NEXT_PUBLIC_VERSION || 'main'}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[44px] items-center self-start text-[14px] underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2"
+          >
+            ソースコードを開く
+          </a>
+        </section>
       </div>
-    </>
+    </div>
   );
 };
 export const SettingsComponent = () => {

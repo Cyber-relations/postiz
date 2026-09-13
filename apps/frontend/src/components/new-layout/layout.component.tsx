@@ -167,15 +167,6 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           >
                             <NotificationComponent />
                           </span>
-                          <a
-                            data-toybaco-keep=""
-                            href={`https://github.com/Cyber-relations/postiz/tree/${process.env.NEXT_PUBLIC_VERSION || 'main'}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[12px] underline underline-offset-2 whitespace-nowrap"
-                          >
-                            ソースコード
-                          </a>
                         </div>
                       </div>
                       <div className="flex flex-1 gap-[1px]">{children}</div>

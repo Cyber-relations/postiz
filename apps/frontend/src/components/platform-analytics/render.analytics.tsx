@@ -14,7 +14,7 @@ interface AnalyticsDataItem {
 }
 
 // API由来の指標名をそのまま表示すると、上流追加時に英語が顧客画面へ漏れる。
-// 提供中のInstagram/Threadsの既知集合だけを日本語化し、未知値は総称へ閉じる。
+// 提供する6媒体の指標名を日本語化する。未知値だけを総称へ閉じる。
 const analyticsLabelJa = (label: string): string => {
   const key = label.trim().toLowerCase().replace(/[ _-]+/g, ' ');
   const labels: Record<string, string> = {
@@ -29,43 +29,29 @@ const analyticsLabelJa = (label: string): string => {
     replies: '返信',
     reposts: '再投稿',
     quotes: '引用',
+    'page impressions': 'メディアのユニーク閲覧数',
+    'posts engagement': '投稿への反応数',
+    'page followers': '新規フォロワー数',
+    'media views': 'メディアの閲覧数',
+    impression: '表示回数',
+    bookmark: 'ブックマーク',
+    like: 'いいね',
+    quote: '引用',
+    reply: '返信',
+    retweet: 'リポスト',
+    following: 'フォロー数',
+    'total likes': '累計いいね数',
+    videos: '動画数',
+    'recent likes': '直近の動画へのいいね数',
+    'recent comments': '直近の動画へのコメント数',
+    'recent shares': '直近の動画のシェア数',
+    'website clicks': 'ウェブサイトのクリック数',
+    'phone calls': '電話ボタンのクリック数',
+    'direction requests': '経路検索数',
+    'desktop map views': 'Google マップの表示数（パソコン）',
+    'mobile map views': 'Google マップの表示数（モバイル）',
   };
   return labels[key] || '指標';
-};
-
-const TrendIndicator: FC<{ value: number; average?: boolean }> = ({
-  value,
-  average,
-}) => {
-  if (value === 0) return null;
-
-  const isPositive = value > 0;
-  const displayValue = Math.abs(value).toFixed(1);
-
-  return (
-    <div
-      className={`flex items-center gap-[4px] text-[13px] font-medium ${
-        isPositive ? 'text-[#32d583]' : 'text-[#f97066]'
-      }`}
-    >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 12 12"
-        fill="none"
-        className={isPositive ? '' : 'rotate-180'}
-      >
-        <path
-          d="M6 2.5L10 7.5H2L6 2.5Z"
-          fill="currentColor"
-        />
-      </svg>
-      <span>
-        {displayValue}
-        {average ? 'pp' : '%'}
-      </span>
-    </div>
-  );
 };
 
 const AnalyticsCard: FC<{
@@ -106,9 +92,6 @@ const AnalyticsCard: FC<{
               {analyticsLabelJa(item.label)}
             </span>
           </div>
-          {item.percentageChange !== undefined && (
-            <TrendIndicator value={item.percentageChange} average={item.average} />
-          )}
         </div>
 
         {/* Content */}
