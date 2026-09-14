@@ -46,6 +46,7 @@ import dayjs from 'dayjs';
 import { Button } from '@gitroom/react/form/button';
 
 const TOYBACO_VALIDATION_MESSAGES = Object.freeze({
+  TOYBACO_INSTAGRAM_COMMENT_PERMISSION_REQUIRED: 'このInstagram接続にはコメント権限がありません。投稿文への追記に移すかコメントを除いて公開してください。コメントを含む下書きは保存できます。',
   TOYBACO_POST_CONTENT_REQUIRED:
     '投稿内容または画像を1件以上入力してください。',
   TOYBACO_POST_SETTINGS_INVALID: '投稿設定を確認してください。',
@@ -518,6 +519,12 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
         if (type !== 'draft') {
           for (const item of checkAllValid) {
+            if (item.commentPermissionError) {
+              toaster.show(toybacoValidationMessage(item.commentPermissionError), 'warning');
+              focus(item.id, 'preview');
+              setLoading(false);
+              return;
+            }
             if (item.valid === false) {
               toaster.show(
                 `${toybacoProviderLabel(item.identifier)}: ${toybacoValidationMessage(

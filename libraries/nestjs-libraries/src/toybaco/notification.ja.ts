@@ -1,3 +1,4 @@
+import { INSTAGRAM_COMMENT_PERMISSION_CODE, INSTAGRAM_COMMENT_PERMISSION_MESSAGE, INSTAGRAM_COMMENT_PROVIDER_DENIED_CODE, INSTAGRAM_COMMENT_PROVIDER_DENIED_MESSAGE } from './instagram-comment-policy';
 import { TIKTOK_INIT_UNCONFIRMED_MESSAGE } from '@gitroom/helpers/utils/tiktok.posting.error';
 
 // トイバコ: 上流の英語通知を日本語にする。
@@ -157,7 +158,7 @@ function isKnownJapaneseSubject(value: string): boolean {
 }
 
 function isKnownJapaneseMessage(value: string): boolean {
-  if (value === TIKTOK_INIT_UNCONFIRMED_MESSAGE) return true;
+  if (value === TIKTOK_INIT_UNCONFIRMED_MESSAGE || value === INSTAGRAM_COMMENT_PERMISSION_MESSAGE || value === INSTAGRAM_COMMENT_PROVIDER_DENIED_MESSAGE) return true;
   const patterns = [
     /^トイバコからのお知らせがあります。詳細はトイバコの画面でご確認ください。$/,
     new RegExp(`^.{1,120}\\(${knownProviderJa}\\)への投稿ができませんでした。接続の有効期限が切れています。お手数ですが接続し直してください。$`),
@@ -293,14 +294,20 @@ export function toybacoNotificationJa(
     ))
   ) {
     messageMatched = true;
-    jaMessage = `${toybacoProviderName(match[1])}へのコメント投稿でエラーが発生しました。時間をおいて再度お試しください。`;
+    jaMessage = match[2] === INSTAGRAM_COMMENT_PERMISSION_CODE ? INSTAGRAM_COMMENT_PERMISSION_MESSAGE
+      : match[2] === INSTAGRAM_COMMENT_PROVIDER_DENIED_CODE ? INSTAGRAM_COMMENT_PROVIDER_DENIED_MESSAGE
+      : `${toybacoProviderName(match[1])}へのコメント投稿でエラーが発生しました。時間をおいて再度お試しください。`;
   } else if (
     (match = message.match(
       /^An error occurred while posting on (.+?)(?:: ([\s\S]*))?$/
     ))
   ) {
     messageMatched = true;
-    if (match[1].toLowerCase() === 'tiktok' && match[2] === TIKTOK_INIT_UNCONFIRMED_MESSAGE) {
+    if (match[2] === INSTAGRAM_COMMENT_PERMISSION_CODE) {
+      jaMessage = INSTAGRAM_COMMENT_PERMISSION_MESSAGE;
+    } else if (match[2] === INSTAGRAM_COMMENT_PROVIDER_DENIED_CODE) {
+      jaMessage = INSTAGRAM_COMMENT_PROVIDER_DENIED_MESSAGE;
+    } else if (match[1].toLowerCase() === 'tiktok' && match[2] === TIKTOK_INIT_UNCONFIRMED_MESSAGE) {
       jaSubject = 'TikTokへの投稿の公開を確認できませんでした';
       subjectMatched = true;
       jaMessage = TIKTOK_INIT_UNCONFIRMED_MESSAGE;

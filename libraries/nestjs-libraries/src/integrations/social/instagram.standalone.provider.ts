@@ -1,3 +1,4 @@
+import { instagramCommentProviderDenied, INSTAGRAM_COMMENT_PROVIDER_DENIED_CODE } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-policy';
 import {
   AuthTokenDetails,
   PostDetails,
@@ -8,6 +9,7 @@ import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import dayjs from 'dayjs';
 import {
   SocialAbstract,
+  BadBody,
   ValidityMedia,
 } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { InstagramDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/instagram.dto';
@@ -15,6 +17,8 @@ import { InstagramProvider } from '@gitroom/nestjs-libraries/integrations/social
 import { META_GRAPH_API_VERSION } from '@gitroom/nestjs-libraries/integrations/social/facebook.provider';
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
+
+import { REQUIRED_INSTAGRAM_SCOPES, parseInstagramOAuthResponse, createInstagramPermissionSnapshot } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-permissions';
 
 const instagramProvider = new InstagramProvider();
 
@@ -31,12 +35,7 @@ export class InstagramStandaloneProvider
   name = 'Instagram\n(Standalone)';
   isBetweenSteps = false;
   refreshCron = true;
-  scopes = [
-    'instagram_business_basic',
-    'instagram_business_content_publish',
-    'instagram_business_manage_comments',
-    'instagram_business_manage_insights',
-  ];
+  scopes = [...REQUIRED_INSTAGRAM_SCOPES];
     override maxConcurrentJob = 200; // Instagram standalone has stricter limits
   dto = InstagramDto;
 
@@ -72,6 +71,9 @@ export class InstagramStandaloneProvider
   ):
     | { type: 'refresh-token' | 'bad-body' | 'retry'; value: string }
     | undefined {
+    if (instagramCommentProviderDenied(body, status)) {
+      return { type: 'bad-body', value: INSTAGRAM_COMMENT_PROVIDER_DENIED_CODE };
+    }
     return instagramProvider.handleErrors(body, status);
   }
 
@@ -82,19 +84,27 @@ export class InstagramStandaloneProvider
       )
     ).json();
 
+    if (typeof access_token !== 'string' || !access_token.trim()) {
+      throw new Error('Instagram token response is invalid');
+    }
     const {
+      id: appScopedUserId,
       user_id,
       name,
       username,
       profile_picture_url = '',
     } = await (
       await fetch(
-        `https://graph.instagram.com/${META_GRAPH_API_VERSION}/me?fields=user_id,username,name,profile_picture_url&access_token=${access_token}`
+        `https://graph.instagram.com/${META_GRAPH_API_VERSION}/me?fields=id,user_id,username,name,profile_picture_url&access_token=${access_token}`
       )
     ).json();
 
+    if (typeof user_id !== 'string' || !/^[0-9]+$/.test(user_id)) {
+      throw new Error('Instagram identity response is invalid');
+    }
     return {
-      id: user_id,
+      id: String(user_id),
+      toybacoInstagramAppScopedUserId: appScopedUserId == null ? undefined : String(appScopedUserId),
       name,
       accessToken: access_token,
       refreshToken: access_token,
@@ -150,26 +160,42 @@ export class InstagramStandaloneProvider
       })
     ).json();
 
-    const { access_token, expires_in, ...all } = await (
+    const oauth = parseInstagramOAuthResponse(getAccessToken);
+    const { access_token } = await (
       await fetch(
         'https://graph.instagram.com/access_token' +
           '?grant_type=ig_exchange_token' +
           `&client_id=${process.env.INSTAGRAM_APP_ID}` +
           `&client_secret=${process.env.INSTAGRAM_APP_SECRET}` +
-          `&access_token=${getAccessToken.access_token}`
+          `&access_token=${oauth.accessToken}`
       )
     ).json();
 
-    this.checkScopes(this.scopes, getAccessToken.permissions);
-
-    const { user_id, name, username, profile_picture_url } = await (
+    if (typeof access_token !== 'string' || !access_token.trim()) {
+      throw new Error('Instagram token response is invalid');
+    }
+    const { id: appScopedUserId, user_id, name, username, profile_picture_url } = await (
       await fetch(
-        `https://graph.instagram.com/${META_GRAPH_API_VERSION}/me?fields=user_id,username,name,profile_picture_url&access_token=${access_token}`
+        `https://graph.instagram.com/${META_GRAPH_API_VERSION}/me?fields=id,user_id,username,name,profile_picture_url&access_token=${access_token}`
       )
     ).json();
 
+    // OAuth user_id is app-scoped; /me.user_id is the professional account.
+    if (typeof user_id !== 'string' || !/^[0-9]+$/.test(user_id) ||
+        typeof appScopedUserId !== 'string' || appScopedUserId !== oauth.appScopedUserId) {
+      throw new Error('Instagram authorization identity mismatch');
+    }
+    const toybacoInstagramPermissionSnapshot = createInstagramPermissionSnapshot({
+      appId: process.env.INSTAGRAM_APP_ID!,
+      internalId: String(user_id),
+      appScopedUserId: oauth.appScopedUserId,
+      token: access_token,
+      permissions: oauth.permissions,
+    });
     return {
-      id: user_id,
+      id: String(user_id),
+      toybacoInstagramAppScopedUserId: oauth.appScopedUserId,
+      toybacoInstagramPermissionSnapshot,
       name,
       accessToken: access_token,
       refreshToken: access_token,
@@ -246,7 +272,15 @@ export class InstagramStandaloneProvider
       postDetails,
       integration,
       'graph.instagram.com'
-    );
+    ).catch((error: unknown) => {
+      if (error instanceof BadBody) {
+        const detail = error.details?.[0] as { json?: string } | undefined;
+        if (instagramCommentProviderDenied(detail?.json || '{}')) {
+          throw new BadBody('instagram-standalone', '{}', '{}', INSTAGRAM_COMMENT_PROVIDER_DENIED_CODE);
+        }
+      }
+      throw error;
+    });
   }
 
   async analytics(id: string, accessToken: string, date: number) {

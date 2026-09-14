@@ -123,6 +123,7 @@ export class NoAuthIntegrationsController {
       picture,
       username,
       additionalSettings,
+      toybacoInstagramPermissionSnapshot,
       // eslint-disable-next-line no-async-promise-executor
     } = await new Promise<AuthTokenDetails>(async (res) => {
       try {
@@ -274,7 +275,8 @@ export class NoAuthIntegrationsController {
           ? AuthService.fixedEncryption(
               Buffer.from(body.code, 'base64').toString()
             )
-          : undefined
+          : undefined,
+        toybacoInstagramPermissionSnapshot
       );
 
     this._refreshIntegrationService

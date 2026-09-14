@@ -277,6 +277,7 @@ export class IntegrationRepository {
         internalId,
         providerIdentifier,
         rootInternalId,
+        toybacoInstagramPermissions: null,
       },
     });
   }
@@ -305,7 +306,8 @@ export class IntegrationRepository {
     isBetweenSteps = false,
     refresh?: string,
     timezone?: number,
-    customInstanceDetails?: string
+    customInstanceDetails?: string,
+    toybacoInstagramPermissionSnapshot?: string
   ) {
     const postTimes = timezone
       ? {
@@ -327,6 +329,7 @@ export class IntegrationRepository {
         type: type as any,
         name,
         providerIdentifier: provider,
+        toybacoInstagramPermissions: provider === 'instagram-standalone' ? toybacoInstagramPermissionSnapshot || null : null,
         token,
         profile: username,
         ...(picture ? { picture } : {}),
@@ -359,6 +362,7 @@ export class IntegrationRepository {
         ...(picture ? { picture } : {}),
         profile: username,
         providerIdentifier: provider,
+        toybacoInstagramPermissions: provider === 'instagram-standalone' ? toybacoInstagramPermissionSnapshot || null : null,
         token,
         refreshToken,
         ...(expiresIn
@@ -415,6 +419,11 @@ export class IntegrationRepository {
       deletedAt: null,
       token: integration.token,
       refreshToken: integration.refreshToken,
+      // OAuth may change grants without changing the token value. A refresh
+      // must not resurrect the older evidence after that reconnect wins.
+      ...(integration.providerIdentifier === 'instagram-standalone'
+        ? { toybacoInstagramPermissions: integration.toybacoInstagramPermissions ?? null }
+        : {}),
     };
   }
 
@@ -423,9 +432,11 @@ export class IntegrationRepository {
     oneTimeToken: boolean,
     token: string,
     refreshToken = '',
-    expiresIn = 999999999
+    expiresIn = 999999999,
+    toybacoInstagramPermissions: string | null = null
   ) {
     const data = {
+      toybacoInstagramPermissions,
       token,
       refreshToken,
       refreshNeeded: false,

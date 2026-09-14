@@ -366,6 +366,14 @@ export const EditorWrapper: FC<{
           'bg-newSettings rounded-[12px]'
       )}
     >
+      {internalFromAll?.identifier === 'instagram-standalone' &&
+        internalFromAll.commentPermission?.state !== 'granted' && (
+          <div role="status" className="rounded-xl border border-tableBorder bg-newSettings p-4 text-sm leading-6">
+            {internalFromAll.commentPermission?.state === 'absent'
+              ? 'この接続にはコメント権限がありません。コメントを含む下書きは保存できます。公開する場合は投稿文への追記に移すかコメントを除いてください。'
+              : 'この接続のコメント権限は未確認です。既存の接続ではこれまでどおりコメントを送信しますが、Instagramの権限状態によっては受け付けられないことがあります。'}
+          </div>
+        )}
       {isCreateSet && current !== 'global' && (
         <>
           <div className="text-center absolute w-full h-full left-0 top-0 items-center justify-center flex z-[101] flex-col gap-[16px]">

@@ -116,6 +116,7 @@ export class IntegrationsController {
               stripLinks: !!findIntegration?.stripLinks?.(),
               picture: p.picture || '/no-picture.jpg',
               identifier: p.providerIdentifier,
+              commentPermission: this._integrationService.instagramCommentCapability(p),
               inBetweenSteps: p.inBetweenSteps,
               refreshNeeded: p.refreshNeeded,
               isCustomFields: !!findIntegration.customFields,

@@ -1,3 +1,4 @@
+import { instagramCommentPublicationError, INSTAGRAM_COMMENT_PERMISSION_CODE, INSTAGRAM_COMMENT_PERMISSION_MESSAGE } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-policy';
 import { Injectable } from '@nestjs/common';
 import {
   Activity,
@@ -289,6 +290,17 @@ export class PostActivity {
       expectedPublishMarker,
       'COMMENT'
     );
+    if (integration.providerIdentifier === 'instagram-standalone') {
+      const fresh = await this._integrationService.getIntegrationById(integration.organizationId, integration.id);
+      if (!fresh || fresh.internalId !== integration.internalId ||
+          fresh.providerIdentifier !== integration.providerIdentifier || fresh.disabled || fresh.deletedAt) {
+        throw new BadBody('instagram-standalone', '{}', '{}', 'Instagramの接続が変更されています。接続と公開済み投稿を確認してください。');
+      }
+      integration = fresh;
+      if (instagramCommentPublicationError(integration, 2)) {
+        throw new BadBody('instagram-standalone', '{}', '{}', INSTAGRAM_COMMENT_PERMISSION_CODE);
+      }
+    }
     return this.toybacoPostCommentV110Body(
       postId,
       lastPostId,
@@ -406,6 +418,9 @@ export class PostActivity {
     const integration = posts[0]?.integration as Integration | undefined;
     if (!integration || posts.length === 0) {
       throw new Error('claim後のpublish payloadを再取得できません。');
+    }
+    if (instagramCommentPublicationError(integration, posts.length)) {
+      throw new BadBody('instagram-standalone', '{}', '{}', INSTAGRAM_COMMENT_PERMISSION_CODE);
     }
     try {
       return await this.postSocialInternal(
