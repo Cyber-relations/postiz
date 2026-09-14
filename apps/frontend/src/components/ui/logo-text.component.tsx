@@ -5,7 +5,7 @@ export const LogoTextComponent = () => {
   return (
     <div className="flex items-center gap-[10px]">
       <img
-        src="/logo.svg?v=afca877b202b4541acbba41e3489b1d3aaaa6f2d0fd0716a543c4321d29e9311"
+        src="/logo.svg?v=9a0c76c6caed46ff017386e8c9bf33ddba4d0fade4864647563ce24af3445504"
         alt=""
         width="40"
         height="40"

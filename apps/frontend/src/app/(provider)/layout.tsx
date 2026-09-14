@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <html>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.ico?v=7ba858e41093d3f3de84ca4aea155057e4a4562c7346c1129404b4b7bfcba0ec" sizes="any" />
       </head>
       <body
         className={clsx(jakartaSans.className, 'dark text-primary !bg-primary')}
