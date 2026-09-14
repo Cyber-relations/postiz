@@ -195,6 +195,10 @@ export class AutopostService {
       };
     }
 
+    if (process.env.TOYBACO_DISABLE_AI || !process.env.OPENAI_API_KEY) {
+      throw new Error('TOYBACO_POSTING_AI_UNAVAILABLE');
+    }
+
     const description =
       state.load.description || (await this.loadUrl(state.load.url));
     if (!description) {
@@ -274,6 +278,10 @@ export class AutopostService {
     if (!getPost || !getPost.active) {
       return;
     }
+
+    // Configuration pauses AI processing; keep the rule and last URL intact.
+    // Return before the activity can retry or mark an item as processed.
+    if (getPost.generateContent && (process.env.TOYBACO_DISABLE_AI || !process.env.OPENAI_API_KEY)) return;
 
     const load = await this.loadXML(getPost.url);
     if (!load.success || load.url === getPost.lastUrl) {

@@ -74,24 +74,69 @@ function toybacoProviderLabel(identifier: unknown): string {
     : '連携先';
 }
 
+const ToybacoPostingAiIntent = React.createContext(false);
+
+const TOYBACO_POSTING_AI_REASONS = Object.freeze({
+  checking: '投稿文AIの設定を確認しています。',
+  configured: '作りたい文案を依頼できます。公開前に内容をご確認ください。',
+  disabled: '投稿文AIは現在提供を停止しています。入力した投稿はそのまま編集・保存できます。',
+  not_configured: '投稿文AIの接続設定が完了していません。共通メニューの「AIアシスタント → 投稿文作成」からサポートへお問い合わせください。',
+  unknown: '投稿文AIの利用可否を確認できません。入力内容は残しています。設定確認を再試行してください。',
+});
+type ToybacoPostingAiStatus = keyof typeof TOYBACO_POSTING_AI_REASONS;
+
+async function toybacoReadPostingAi(request: ReturnType<typeof useFetch>, signal: AbortSignal): Promise<ToybacoPostingAiStatus> {
+  const response = await request('/copilot/capabilities', { signal });
+  if (!response.ok) throw new Error('TOYBACO_AI_CAPABILITY_UNKNOWN');
+  const value = await response.json();
+  if (value?.feature !== 'posting_text' || value?.verification !== 'not_run' || value?.replyQuotaShared !== false ||
+      !['configured', 'disabled', 'not_configured'].includes(value?.status) || value?.canStart !== (value.status === 'configured')) {
+    throw new Error('TOYBACO_AI_CAPABILITY_UNKNOWN');
+  }
+  return value.status;
+}
+
 function ToybacoCopilotButton() {
   const { open, setOpen, icons } = useChatContext();
+  const request = useFetch();
+  const requestedAi = React.useContext(ToybacoPostingAiIntent);
+  const intentConsumed = useRef(false);
+  const statusId = React.useId();
+  const [status, setStatus] = useState<ToybacoPostingAiStatus>('checking');
+  const [attempt, setAttempt] = useState(0);
+  const requestRef = useRef(request);
+  useEffect(() => {
+    const controller = new AbortController();
+    let current = true;
+    setStatus('checking');
+    const timeout = setTimeout(() => { controller.abort(); if (current) setStatus('unknown'); }, 10000);
+    toybacoReadPostingAi(requestRef.current, controller.signal)
+      .then(value => { if (current && !controller.signal.aborted) setStatus(value); })
+      .catch(() => { if (current) setStatus('unknown'); })
+      .finally(() => clearTimeout(timeout));
+    return () => { current = false; clearTimeout(timeout); controller.abort(); };
+  }, [attempt]);
+  useEffect(() => {
+    if (requestedAi && status === 'configured' && !intentConsumed.current) { intentConsumed.current = true; setOpen(true); }
+  }, [requestedAi, status, setOpen]);
   return (
-    <button
-      type="button"
-      data-toybaco-composer-ai=""
-      hidden={open}
-      onClick={() => setOpen(!open)}
-      className={clsx(
-        'h-[36px] shrink-0 items-center gap-[6px] whitespace-nowrap rounded-[8px] border border-newBorder px-[10px] text-[12px] font-[600] text-textColor hover:bg-newBgColorInner',
-        open ? 'hidden' : 'inline-flex'
-      )}
-      aria-label="AIチャットを開く"
-      aria-expanded={open}
-    >
-      <span aria-hidden="true" className="flex h-[16px] w-[16px] items-center justify-center [&_svg]:h-full [&_svg]:w-full">{icons.openIcon}</span>
-      AIに相談
-    </button>
+    <div data-toybaco-composer-ai-entry="" hidden={open} className={open ? 'hidden' : 'flex flex-wrap items-center gap-x-[12px] gap-y-[4px]'}>
+      <button
+        type="button"
+        data-toybaco-composer-ai=""
+        disabled={status !== 'configured'}
+        onClick={() => { if (status === 'configured') setOpen(true); }}
+        className="inline-flex min-h-[44px] shrink-0 items-center gap-[6px] whitespace-nowrap rounded-[8px] border border-newBorder px-[12px] text-[12px] font-[600] text-textColor hover:bg-newBgColorInner disabled:opacity-50 disabled:cursor-not-allowed"
+        aria-label="投稿文をAIで作る"
+        aria-expanded={open}
+        aria-describedby={statusId}
+      >
+        <span aria-hidden="true" className="flex h-[20px] w-[20px] items-center justify-center [&_svg]:h-full [&_svg]:w-full">{icons.openIcon}</span>
+        投稿文をAIで作る
+      </button>
+      <span id={statusId} role="status" className="flex-1 min-w-[180px] text-[11px] leading-[1.5] font-normal text-textColor/70">{TOYBACO_POSTING_AI_REASONS[status]}</span>
+      {status === 'unknown' && <button type="button" onClick={() => setAttempt(value => value + 1)} className="min-h-[44px] text-[12px] underline">設定確認を再試行</button>}
+    </div>
   );
 }
 
@@ -689,12 +734,14 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   return (
     <div data-toybaco-composer="" role="dialog" aria-modal="true" aria-labelledby="toybaco-composer-title" className="w-full h-full flex-1 p-[40px] flex relative">
       <div data-toybaco-composer-panel="" className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col">
+        {addEditSets && <p data-toybaco-template-guidance="" className="px-[20px] py-[12px] text-[13px] leading-[1.6]">投稿文・メディア・投稿先ごとの設定を保存し、投稿作成で呼び出せます。この操作では公開・予約されません。</p>}
         <div data-toybaco-composer-body="" className="flex-1 flex">
           <div data-toybaco-composer-editor="" className="flex flex-col flex-1 border-e border-newBorder">
-            <div data-toybaco-composer-heading="" className="bg-newBgColor h-[65px] rounded-s-[20px] !rounded-b-[0] flex items-center gap-[12px] px-[20px] text-[20px] font-[600]">
-              <h2 id="toybaco-composer-title">{existingData.integration ? '投稿を編集' : '投稿を作成'}</h2>
+            <div data-toybaco-composer-heading="" className="bg-newBgColor h-[65px] rounded-s-[20px] !rounded-b-[0] flex items-center gap-[12px] px-[20px] text-[20px] font-[600]" style={{ display: 'grid', gridTemplateColumns: '1fr auto', height: 'auto', minHeight: 64 }}>
+              <h2 id="toybaco-composer-title">{addEditSets ? (props.set ? '投稿テンプレートを編集' : '投稿テンプレートを作成') : existingData.integration ? '投稿を編集' : '投稿を作成'}</h2>
+      <ToybacoPostingAiIntent.Provider value={props.toybacoAiIntent === true}>
       <CopilotPopup
-        className="!relative !z-[200] !inset-auto ml-auto shrink-0 [&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
+        className="!relative !z-[200] !inset-auto order-3 col-span-2 w-full shrink-0 [&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
         Button={ToybacoCopilotButton}
         Header={ToybacoCopilotHeader}
         hitEscapeToClose={false}
@@ -711,18 +758,15 @@ Post content can be added using the addPostContentFor{num} function.
 After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} function.
 `}
         labels={{
-          title: t('your_assistant', 'AIアシスタント'),
-          initial: t(
-            'assistant_initial_message',
-            'こんにちは！SNS投稿の作成をお手伝いします。'
-          ),
+          title: '投稿文づくり',
+          initial: '紹介したい商品やお知らせ、雰囲気、文字数を教えてください。文案は投稿欄で編集できます。下書き保存・公開は、ご自身で内容と投稿先を確認して操作してください。問い合わせ返信の月間利用枠とは別の文章支援です。',
           placeholder: t(
             'ai_chat_placeholder',
-            'AIアシスタントにメッセージを入力…'
+            '例：新商品の紹介を、親しみやすく150文字で'
           ),
           error: t(
             'ai_chat_error',
-            'エラーが発生しました。もう一度お試しください。'
+            '文案を作成できませんでした。投稿欄の内容は残っています。少し待ってから再試行してください。'
           ),
           stopGenerating: t('ai_chat_stop', '生成を停止'),
           regenerateResponse: t('ai_chat_regenerate', '回答を再生成'),
@@ -732,6 +776,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
           copied: t('ai_chat_copied', 'コピーしました'),
         }}
       />
+      </ToybacoPostingAiIntent.Provider>
               <button type="button" data-toybaco-composer-close="" aria-label="投稿作成を閉じる" onClick={askClose} disabled={loading}>
                 <CloseIcon />
               </button>
@@ -875,7 +920,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
               />
             )}
 
-            {!dummy && (
+            {!dummy && !addEditSets && (
               <RepeatComponent repeat={repeater} onChange={setRepeater} />
             )}
           </div>
@@ -892,7 +937,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                 <div>{t('delete_post', 'Delete Post')}</div>
               </button>
             )}
-            <DatePicker onChange={setDate} date={date} />
+            {!addEditSets && <DatePicker onChange={setDate} date={date} />}
             {!addEditSets && (
               <button
                 disabled={
@@ -919,7 +964,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                 }
                 onClick={schedule('draft')}
               >
-                セットを保存
+                投稿テンプレートを保存
               </button>
             )}
             {!addEditSets && (dummy || toybacoCanPublish) && (
