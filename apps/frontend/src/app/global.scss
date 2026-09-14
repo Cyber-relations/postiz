@@ -995,6 +995,31 @@ html[data-toybaco-embed] [data-toybaco-post-state='ERROR'] [data-toybaco-post-st
 html[data-toybaco-embed] .border-\[\#612BD3\] {
   border-color: var(--toybaco-navy) !important;
 }
+/* Page fetch feedback follows the parent shell; compact action spinners keep
+   their original size and contrast. Inline dimensions come from upstream. */
+html[data-toybaco-embed] [data-toybaco-page-loading] > div {
+  width: 28px !important;
+  height: 28px !important;
+  border: 3px solid var(--toybaco-hairline) !important;
+  border-top-color: var(--toybaco-navy) !important;
+  animation-duration: 1s !important;
+  flex-shrink: 0;
+}
+/* Opaque paper/ink stays readable over both light and dark image content. */
+html[data-toybaco-embed] [data-toybaco-media-filename] {
+  max-width: calc(100% - 20px);
+  box-sizing: border-box;
+  padding: 4px 7px;
+  border: 1px solid var(--toybaco-hairline);
+  border-radius: 6px;
+  background: var(--toybaco-surface);
+  color: var(--toybaco-ink);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 /* toybaco-shipping-posting: LPの面・文字サイズ・右パネルを実データ用に広げる。 */
 html[data-toybaco-embed] [data-toybaco-calendar-main] {
   min-width: 0;

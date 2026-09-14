@@ -32,7 +32,7 @@ export const LoadingComponent: FC<{
   height?: number;
 }> = (props) => {
   return (
-    <div className="flex-1 flex justify-center pt-[100px]">
+    <div data-toybaco-page-loading="" className="flex-1 flex justify-center pt-[100px]">
       <Spinner
         color="#612bd3"
         width={props.width || 100}
