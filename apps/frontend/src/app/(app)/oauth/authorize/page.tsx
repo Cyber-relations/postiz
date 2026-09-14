@@ -23,12 +23,12 @@ export default function OAuthAuthorizePage() {
 
   useEffect(() => {
     if (!clientId || !responseType) {
-      setError('Missing required parameters (client_id, response_type)');
+      setError('接続に必要な情報が不足しています。連携元のサービスからやり直してください。');
       setLoading(false);
       return;
     }
     if (responseType !== 'code') {
-      setError('Only response_type=code is supported');
+      setError('この接続方法には対応していません。連携元のサービスで設定をご確認ください。');
       setLoading(false);
       return;
     }
@@ -48,14 +48,14 @@ export default function OAuthAuthorizePage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.statusCode && data.statusCode >= 400) {
-          setError(data.message || 'Invalid OAuth request');
+          setError('接続内容を確認できません。連携元のサービスからやり直してください。');
         } else {
           setAppInfo(data);
         }
         setLoading(false);
       })
       .catch(() => {
-        setError('Failed to validate OAuth request');
+        setError('接続内容を確認できませんでした。時間をおいて再度お試しください。');
         setLoading(false);
       });
   }, [clientId, responseType, state, redirectUri, codeChallenge, codeChallengeMethod]);
@@ -84,7 +84,7 @@ export default function OAuthAuthorizePage() {
           window.location.href = result.redirect;
         }
       } catch {
-        setError('Failed to process authorization');
+        setError('接続の確認を完了できませんでした。時間をおいて再度お試しください。');
         setSubmitting(false);
       }
     },
@@ -97,7 +97,7 @@ export default function OAuthAuthorizePage() {
 
   if (error) {
     return (
-      <div data-toybaco-connection-surface="" className="flex flex-1 items-center justify-center relative overflow-hidden p-[24px]" style={{ color: 'var(--toybaco-ink, #24303f)', backgroundColor: 'var(--toybaco-surface, #fcfbf8)' }}>
+      <div data-toybaco-connection-surface="" className="flex flex-1 items-center justify-center relative overflow-hidden p-[24px]" style={{ color: 'var(--toybaco-ink, var(--color-text, #24303f))', backgroundColor: 'var(--toybaco-surface, var(--new-bgColor, #fcfbf8))' }}>
         <div className="relative z-10 text-center">
           <div className="flex justify-center mb-[24px]">
             <Logo />
@@ -116,7 +116,7 @@ export default function OAuthAuthorizePage() {
             </svg>
           </div>
           <div className="text-[20px] font-semibold mb-[12px]">
-            Authorization Error
+            接続を確認できません
           </div>
           <div className="text-[16px] text-newTextColor max-w-[400px]">
             {error}
@@ -131,14 +131,14 @@ export default function OAuthAuthorizePage() {
   }
 
   return (
-    <div data-toybaco-connection-surface="" className="flex flex-1 items-center justify-center relative overflow-hidden p-[24px]" style={{ color: 'var(--toybaco-ink, #24303f)', backgroundColor: 'var(--toybaco-surface, #fcfbf8)' }}>
+    <div data-toybaco-connection-surface="" className="flex flex-1 items-center justify-center relative overflow-hidden p-[24px]" style={{ color: 'var(--toybaco-ink, var(--color-text, #24303f))', backgroundColor: 'var(--toybaco-surface, var(--new-bgColor, #fcfbf8))' }}>
 
-      <div className="relative z-10 w-full max-w-[500px] mx-auto px-[20px]">
+      <div className="relative z-10 w-full max-w-[500px] min-w-0 mx-auto">
         <div className="flex justify-center mb-[32px]">
           <Logo />
         </div>
 
-        <div className="bg-[#1A1919] rounded-[16px] p-[32px] flex flex-col gap-[24px]">
+        <div className="rounded-[12px] p-[20px] sm:p-[28px] flex flex-col gap-[24px] border" style={{ backgroundColor: 'var(--toybaco-surface, var(--new-bgColorInner, #fcfbf8))', borderColor: 'var(--toybaco-hairline, #dce2e8)' }}>
           <div className="flex flex-col items-center gap-[16px]">
             {appInfo.app.picture?.path ? (
               <img
@@ -147,7 +147,7 @@ export default function OAuthAuthorizePage() {
                 className="w-[64px] h-[64px] rounded-full object-cover"
               />
             ) : (
-              <div className="w-[64px] h-[64px] rounded-full bg-[#2A2929] flex items-center justify-center text-[24px] text-newTextColor">
+              <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center text-[24px] text-newTextColor" style={{ backgroundColor: 'var(--toybaco-paper, var(--new-bgColor, #faf7f2))' }}>
                 {appInfo.app.name?.[0]?.toUpperCase() || '?'}
               </div>
             )}
@@ -161,15 +161,15 @@ export default function OAuthAuthorizePage() {
             )}
           </div>
 
-          <div className="border-t border-[#2A2929] pt-[16px]">
+          <div className="border-t pt-[16px]" style={{ borderColor: 'var(--toybaco-hairline, #dce2e8)' }}>
             <div className="text-[14px] text-newTextColor mb-[12px]">
-              This application is requesting access to あなたのトイバコアカウント. It
-              will be able to:
+              このアプリは、あなたのトイバコアカウントへのアクセスを求めています。
+              許可すると、次の操作ができるようになります。
             </div>
             <ul className="text-[14px] list-disc list-inside space-y-[4px]">
-              <li>Access your integrations and channels</li>
-              <li>Create and schedule posts on your behalf</li>
-              <li>Read your post analytics</li>
+              <li>連携サービスとチャンネルの情報を利用する</li>
+              <li>あなたに代わって投稿を作成・予約する</li>
+              <li>投稿の分析情報を読み取る</li>
             </ul>
           </div>
 
@@ -177,16 +177,16 @@ export default function OAuthAuthorizePage() {
             <button
               onClick={() => handleAction('approve')}
               disabled={submitting}
-              className="flex-1 bg-[#612BD3] hover:bg-[#7B3FF2] disabled:opacity-50 text-white rounded-[8px] py-[10px] px-[16px] text-[14px] font-semibold transition-colors"
+              className="flex-1 min-h-[44px] hover:opacity-90 disabled:opacity-50 text-white rounded-[8px] py-[10px] px-[12px] text-[14px] font-semibold transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current" style={{ backgroundColor: '#1f3a5f', outlineColor: 'var(--toybaco-ink, var(--color-text, #24303f))' }}
             >
-              Authorize
+              接続を許可する
             </button>
             <button
               onClick={() => handleAction('deny')}
               disabled={submitting}
-              className="flex-1 bg-[#2A2929] hover:bg-[#3A3939] disabled:opacity-50 text-white rounded-[8px] py-[10px] px-[16px] text-[14px] font-semibold transition-colors"
+              className="flex-1 min-h-[44px] hover:opacity-80 disabled:opacity-50 rounded-[8px] py-[10px] px-[12px] text-[14px] font-semibold border transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current" style={{ color: 'inherit', backgroundColor: 'transparent', borderColor: 'var(--toybaco-hairline, #dce2e8)' }}
             >
-              Deny
+              許可しない
             </button>
           </div>
         </div>
