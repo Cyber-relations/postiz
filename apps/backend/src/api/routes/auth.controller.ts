@@ -485,7 +485,10 @@ export class AuthController {
       return response.status(200).json({ login: true });
     } catch (error) {
       if (!generic) throw error;
-      clearToybacoCookies(response, true);
+      // A stale callback must not clear another flow or an established session.
+      if (state && state === req?.cookies?.oauth_state) {
+        clearToybacoCookies(response, true);
+      }
       return response.status(403).json({
         code: 'TOYBACO_IDENTITY_DENIED',
         message: 'トイバコIDで有効な所属を確認できませんでした',

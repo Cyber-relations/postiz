@@ -79,7 +79,7 @@ export const customFetch = (
 
     if (
       !params?.afterRequest ||
-      (await params?.afterRequest?.(url, options, fetchRequest))
+      (await params?.afterRequest?.(url, newRequestObject || options, fetchRequest))
     ) {
       return fetchRequest;
     }
