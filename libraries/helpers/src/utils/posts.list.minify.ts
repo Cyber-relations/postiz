@@ -4,6 +4,18 @@
 // Customer-facing wording accepts only closed server codes, never raw errors.
 export function toybacoPostingFailure(post: { state?: unknown; toybacoFailureCode?: unknown } | undefined) {
   if (post?.state !== 'ERROR') return null;
+  if (post.toybacoFailureCode === 'TOYBACO_INSTAGRAM_COMMENT_PERMISSION_REQUIRED') {
+    return {
+      reason: 'Instagramのコメント権限がありません。',
+      nextAction: '下書きのコメントを投稿文へ移すか除いてください。公開済みの投稿がないか確認してから予約し直してください。',
+    };
+  }
+  if (post.toybacoFailureCode === 'TOYBACO_INSTAGRAM_COMMENT_PERMISSION_DENIED') {
+    return {
+      reason: 'Instagramがコメント権限を確認できず、コメントを受け付けませんでした。',
+      nextAction: 'Instagramの権限と公開済み投稿を確認してください。確認が終わるまで投稿全体の再送を控えてください。',
+    };
+  }
   if (post.toybacoFailureCode === 'TIKTOK_PUBLIC_POSTING_NOT_APPROVED') {
     return {
       reason: 'TikTok側でアプリの公開投稿が許可されていません。',

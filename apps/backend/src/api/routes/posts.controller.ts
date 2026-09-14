@@ -1,3 +1,4 @@
+import { INSTAGRAM_COMMENT_PERMISSION_MESSAGE } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-policy';
 import {
   ForbiddenException,
   Body,
@@ -179,7 +180,7 @@ export class PostsController {
     @GetOrgFromRequest() org: Organization,
     @Body() rawBody: any
   ) {
-    return this._postsService.validatePosts(org.id, rawBody?.posts || []);
+    return this._postsService.validatePosts(org.id, rawBody?.posts || [], rawBody?.type);
   }
 
   @Post('/')
@@ -195,12 +196,14 @@ export class PostsController {
     // Server-side validation — never trust the client to have validated.
     const validation = await this._postsService.validatePosts(
       org.id,
-      rawBody?.posts || []
+      rawBody?.posts || [],
+      rawBody?.type
     );
 
     const fail = (item: (typeof validation)[number], code: unknown) => {
       // toybaco_validation_boundary_v1: provider/DTO由来の自由文は返さない。
       const messages: Record<string, string> = {
+        TOYBACO_INSTAGRAM_COMMENT_PERMISSION_REQUIRED: INSTAGRAM_COMMENT_PERMISSION_MESSAGE,
         TOYBACO_POST_CONTENT_REQUIRED:
           '投稿内容または画像を1件以上入力してください。',
         TOYBACO_POST_SETTINGS_INVALID: '投稿設定を確認してください。',
@@ -228,6 +231,7 @@ export class PostsController {
 
     if (rawBody?.type !== 'draft') {
       for (const item of validation) {
+        if (item.commentPermissionError) fail(item, item.commentPermissionError);
         if (!item.valid) {
           fail(item, 'TOYBACO_POST_SETTINGS_INVALID');
         }

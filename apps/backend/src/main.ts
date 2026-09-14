@@ -1,3 +1,4 @@
+import { instagramPermissionJsonReplacer } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-policy';
 import { initializeSentry } from '@gitroom/nestjs-libraries/sentry/initialize.sentry';
 initializeSentry('backend', true);
 import compression from 'compression';
@@ -149,6 +150,8 @@ async function start() {
       ],
     },
   });
+
+  app.getHttpAdapter().getInstance().set('json replacer', instagramPermissionJsonReplacer);
 
   // toybaco_product_boundary_v1: 非提供機能はcontroller/MCP登録より先に拒否する。
   app.use((req: any, res: any, next: any) => {

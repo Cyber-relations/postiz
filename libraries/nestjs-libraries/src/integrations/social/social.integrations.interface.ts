@@ -67,6 +67,9 @@ export type AuthTokenDetails = {
   id: string;
   name: string;
   error?: string;
+  // Server-owned OAuth evidence; never accept these fields from a request DTO.
+  toybacoInstagramPermissionSnapshot?: string;
+  toybacoInstagramAppScopedUserId?: string;
   accessToken: string; // The obtained access token
   refreshToken?: string; // The refresh token, if applicable
   expiresIn?: number; // The duration in seconds for which the access token is valid

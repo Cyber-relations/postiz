@@ -9,6 +9,7 @@ import { IntegrationRepository } from '@gitroom/nestjs-libraries/database/prisma
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 import {
   AnalyticsData,
+  AuthTokenDetails,
   SocialProvider,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { Integration, Organization } from '@prisma/client';
@@ -29,6 +30,8 @@ import { AutopostRepository } from '@gitroom/nestjs-libraries/database/prisma/au
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
 import { TemporalService } from 'nestjs-temporal-core';
 import { toybacoNotificationJa } from '@gitroom/nestjs-libraries/toybaco/notification.ja';
+
+import { instagramCommentCapability, refreshInstagramPermissionSnapshot } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-permissions';
 
 dayjs.extend(utc);
 
@@ -112,7 +115,8 @@ export class IntegrationService {
     isBetweenSteps = false,
     refresh?: string,
     timezone?: number,
-    customInstanceDetails?: string
+    customInstanceDetails?: string,
+    toybacoInstagramPermissionSnapshot?: string
   ) {
     // toybaco_provider_allowlist_v1: 外部通信やDB更新より前の最終保存境界。
     if (
@@ -149,7 +153,8 @@ export class IntegrationService {
       isBetweenSteps,
       refresh,
       timezone,
-      customInstanceDetails
+      customInstanceDetails,
+      toybacoInstagramPermissionSnapshot
     );
   }
 
@@ -191,14 +196,14 @@ export class IntegrationService {
 
   async refreshToken(provider: SocialProvider, refresh: string) {
     try {
-      const { refreshToken, accessToken, expiresIn } =
-        await provider.refreshToken(refresh);
+      const result = await provider.refreshToken(refresh);
+      const { refreshToken, accessToken, expiresIn } = result;
 
       if (!refreshToken || !accessToken || !expiresIn) {
         return false;
       }
 
-      return { refreshToken, accessToken, expiresIn };
+      return { ...result, refreshToken, accessToken, expiresIn };
     } catch (e) {
       return false;
     }
@@ -375,7 +380,8 @@ export class IntegrationService {
         !!provider.oneTimeToken,
         accessToken,
         refreshToken,
-        expiresIn
+        expiresIn,
+        data
       );
     }
   }
@@ -385,7 +391,8 @@ export class IntegrationService {
     oneTimeToken: boolean,
     token: string,
     refreshToken = '',
-    expiresIn?: number
+    expiresIn?: number,
+    identity?: Pick<AuthTokenDetails, 'id' | 'toybacoInstagramAppScopedUserId'>
   ) {
     if (
       !this._integrationManager
@@ -394,13 +401,32 @@ export class IntegrationService {
     ) {
       throw new HttpException('Integration not allowed', HttpStatus.FORBIDDEN);
     }
+    const instagram = integration.providerIdentifier === 'instagram-standalone';
+    if (instagram && identity?.id && String(identity.id) !== integration.internalId) {
+      return false;
+    }
+    const snapshot = instagram ? refreshInstagramPermissionSnapshot(
+      integration.toybacoInstagramPermissions,
+      { appId: process.env.INSTAGRAM_APP_ID!, internalId: integration.internalId, token: integration.token },
+      { appId: process.env.INSTAGRAM_APP_ID!, internalId: integration.internalId,
+        appScopedUserId: identity?.toybacoInstagramAppScopedUserId || '', token }
+    ) : null;
     return this._integrationRepository.saveRefreshedIntegration(
       integration,
       oneTimeToken,
       token,
       refreshToken,
-      expiresIn
+      expiresIn,
+      snapshot
     );
+  }
+
+  instagramCommentCapability(integration: Integration) {
+    return integration.providerIdentifier === 'instagram-standalone'
+      ? instagramCommentCapability(integration.toybacoInstagramPermissions, {
+          appId: process.env.INSTAGRAM_APP_ID!, internalId: integration.internalId, token: integration.token,
+        })
+      : undefined;
   }
 
   async markRefreshNeeded(integration: Integration) {

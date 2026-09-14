@@ -95,6 +95,7 @@ export interface Integrations {
   stripLinks?: boolean;
   display: string;
   identifier: string;
+  commentPermission?: { state: 'granted' | 'absent' | 'unknown'; source: 'oauth' | 'refresh_lineage' | 'unknown'; observedAt?: string };
   type: string;
   picture: string;
   changeProfilePicture: boolean;

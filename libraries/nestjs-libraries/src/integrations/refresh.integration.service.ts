@@ -32,7 +32,8 @@ export class RefreshIntegrationService {
       !!socialProvider.oneTimeToken,
       refresh.accessToken,
       refresh.refreshToken,
-      refresh.expiresIn
+      refresh.expiresIn,
+      refresh
     );
 
     return saved ? refresh : false;

@@ -1,3 +1,4 @@
+import { instagramCommentPublicationError, INSTAGRAM_COMMENT_PERMISSION_CODE, INSTAGRAM_COMMENT_PERMISSION_MESSAGE } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-policy';
 import { createHash } from 'node:crypto';
 import {
   BadRequestException,
@@ -282,7 +283,7 @@ export function toybacoPostReadFeedback<T extends {
   integration?: { providerIdentifier?: unknown };
 }>(post: T) {
   const { error, ...safePost } = post;
-  let toybacoFailureCode: 'TIKTOK_PUBLIC_POSTING_NOT_APPROVED' | 'POST_PUBLICATION_UNCONFIRMED' | null = null;
+  let toybacoFailureCode: 'TIKTOK_PUBLIC_POSTING_NOT_APPROVED' | 'POST_PUBLICATION_UNCONFIRMED' | 'TOYBACO_INSTAGRAM_COMMENT_PERMISSION_REQUIRED' | 'TOYBACO_INSTAGRAM_COMMENT_PERMISSION_DENIED' | null = null;
   if (post.state === 'ERROR') {
     toybacoFailureCode = 'POST_PUBLICATION_UNCONFIRMED';
     // The stored reason can be a truncated Temporal JSON failure. Match only
@@ -297,6 +298,10 @@ export function toybacoPostReadFeedback<T extends {
       post.integration?.providerIdentifier === 'tiktok' &&
       /^(?:App not approved for public posting\b|\{"cause":\{"failure":\{"message":"App not approved for public posting\b)/.test(reason)
     ) toybacoFailureCode = 'TIKTOK_PUBLIC_POSTING_NOT_APPROVED';
+    if (post.integration?.providerIdentifier === 'instagram-standalone') {
+      const match = reason.match(/^(?:\{"cause":\{"failure":\{"message":")?(TOYBACO_INSTAGRAM_COMMENT_PERMISSION_(?:REQUIRED|DENIED))(?:$|",)/);
+      if (match) toybacoFailureCode = match[1] as typeof toybacoFailureCode;
+    }
   }
   return {
     ...safePost,
@@ -1182,16 +1187,31 @@ export class PostsService {
    * same toasts it did before — and so `/posts` can refuse to create invalid
    * posts.
    */
+  private async instagramPublicationError(orgId: string, post: {
+    integration: { id: string }; value: Array<{ id?: string }>;
+  }, type?: string) {
+    if (type === 'draft' || post.value.length < 2) return null;
+    if (type === 'update') {
+      const existing = post.value[0]?.id
+        ? await this._postRepository.getPostById(post.value[0].id, orgId) : null;
+      if (existing?.state !== 'QUEUE') return null;
+    }
+    const integration = await this._integrationService.getIntegrationById(orgId, post.integration.id);
+    return integration ? instagramCommentPublicationError(integration, post.value.length) : null;
+  }
+
   async validatePosts(
     orgId: string,
     posts: Array<{
       integration: { id: string };
       value: Array<{
+        id?: string;
         content?: string;
         image?: Array<{ path: string; thumbnail?: string }>;
       }>;
       settings?: any;
-    }>
+    }>,
+    type?: string
   ) {
     return Promise.all(
       (posts || []).map(async (post) => {
@@ -1286,6 +1306,7 @@ export class PostsService {
               : '連携先',
           valid,
           settingsError,
+          commentPermissionError: await this.instagramPublicationError(orgId, post, type),
           errors,
           emptyContent,
           tooLong,
@@ -1400,6 +1421,14 @@ export class PostsService {
 
       // 既存/新規の判定とDRAFT条件更新は同じDB transaction内で行う。
       // MCP・UIは新規投稿にも一時idを付けるため、ここでnot-foundを拒否しない。
+    }
+
+    // Check before the atomic save and before any root publication. Drafts,
+    // including edits to an existing draft, retain every comment unchanged.
+    for (const post of body.posts) {
+      if (await this.instagramPublicationError(orgId, post, body.type)) {
+        throw new BadRequestException(INSTAGRAM_COMMENT_PERMISSION_MESSAGE);
+      }
     }
 
     const toybacoPreparedPosts = [];
@@ -1733,6 +1762,13 @@ export class PostsService {
 
     if (action === 'schedule' && !republish) {
       this.guardAgainstRepublish(getPostById, 'changeDate');
+    }
+
+    if (action === 'schedule' || getPostById.state === 'QUEUE') {
+      const chain = await this.getPostsRecursively(id, true, orgId);
+      if (instagramCommentPublicationError(getPostById.integration, chain.length)) {
+        throw new BadRequestException(INSTAGRAM_COMMENT_PERMISSION_MESSAGE);
+      }
     }
 
     // schedule: Set status to QUEUE and change date (reschedule the post)
