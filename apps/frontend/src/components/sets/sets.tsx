@@ -32,20 +32,22 @@ const SaveSetModal: FC<{
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form data-toybaco-settings-form="template" onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
         <Input
-          label="セット名"
+          label="テンプレート名"
+          aria-label="テンプレート名"
           translationKey="label_set_name"
           name="setName"
+          removeError={true}
           value={name}
           disableForm={true}
           onChange={(e) => setName(e.target.value)}
-          placeholder="セット名を入力してください"
+          placeholder="テンプレート名を入力してください"
           autoFocus
         />
       </div>
-      <div className="flex gap-2 justify-end">
+      <div data-toybaco-settings-form-actions="" className="flex gap-2 justify-end">
         <Button type="button" secondary onClick={onCancel}>
           {t('cancel', 'Cancel')}
         </Button>
@@ -111,7 +113,8 @@ export const Sets: FC = () => {
             {...(params?.id ? { set: JSON.parse(params.content) } : {})}
             addEditSets={(data) => {
               modal.openModal({
-                title: 'セットとして保存',
+                title: 'テンプレートとして保存',
+                toybacoSettingsDialog: true,
                 children: (
                   <SaveSetModal
                     initialValue={params?.name || ''}
@@ -128,9 +131,9 @@ export const Sets: FC = () => {
                         });
                         modal.closeAll();
                         mutate();
-                        toaster.show('セットを保存しました', 'success');
+                        toaster.show('テンプレートを保存しました', 'success');
                       } catch (error) {
-                        toaster.show('セットを保存できませんでした', 'warning');
+                        toaster.show('テンプレートを保存できませんでした', 'warning');
                       }
                     }}
                     onCancel={() => modal.closeAll()}
@@ -153,13 +156,13 @@ export const Sets: FC = () => {
   const deleteSet = useCallback(
     (data: any) => async () => {
       if (
-        await deleteDialog(`セット「${data.name}」を削除してもよろしいですか？`)
+        await deleteDialog(`テンプレート「${data.name}」を削除してもよろしいですか？`)
       ) {
         await fetch(`/sets/${data.id}`, {
           method: 'DELETE',
         });
         mutate();
-        toaster.show('セットを削除しました', 'success');
+        toaster.show('テンプレートを削除しました', 'success');
       }
     },
     [fetch, mutate, toaster]
@@ -168,43 +171,32 @@ export const Sets: FC = () => {
   const t = useT();
 
   return (
-    <div className="flex flex-col">
-      <h3 className="text-[20px]">セット（{data?.length || 0}）</h3>
+    <div data-toybaco-settings-section="sets" className="flex flex-col">
+      <h3 className="text-[20px]">投稿テンプレート（{data?.length || 0}）</h3>
       <div className="text-customColor18 mt-[4px]">
-        投稿内容をセットとして保存し、繰り返し利用できます。
+        投稿内容をテンプレートとして保存し、繰り返し利用できます。
       </div>
-      <div className="my-[16px] mt-[16px] bg-sixth border-fifth items-center border rounded-[4px] p-[24px] flex gap-[24px]">
+      <div data-toybaco-settings-card="" className="my-[16px] mt-[16px] bg-sixth border-fifth items-center border rounded-[4px] p-[24px] flex gap-[24px]">
         <div className="flex flex-col w-full">
           {!!data?.length && (
-            <div className="grid grid-cols-[2fr,1fr,1fr] w-full gap-y-[10px]">
-              <div>{t('name', 'Name')}</div>
-              <div>{t('edit', 'Edit')}</div>
-              <div>{t('delete', 'Delete')}</div>
-              {data?.map((p: any) => (
-                <Fragment key={p.id}>
-                  <div className="flex flex-col justify-center">{p.name}</div>
-                  <div className="flex flex-col justify-center">
-                    <div>
-                      <Button onClick={addSet(p)}>{t('edit', 'Edit')}</Button>
-                    </div>
+            <div data-toybaco-settings-records="" role="list">
+              {data.map((p: any) => (
+                <div data-toybaco-settings-record="" role="listitem" key={p.id}>
+                  <div data-toybaco-settings-record-content=""><strong>{p.name}</strong></div>
+                  <div data-toybaco-settings-record-actions="">
+                    <Button secondary data-toybaco-settings-action="edit" onClick={addSet(p)}>{t('edit', 'Edit')}</Button>
+                    <Button secondary data-toybaco-settings-action="delete" onClick={deleteSet(p)}>{t('delete', 'Delete')}</Button>
                   </div>
-                  <div className="flex flex-col justify-center">
-                    <div>
-                      <Button onClick={deleteSet(p)}>
-                        {t('delete', 'Delete')}
-                      </Button>
-                    </div>
-                  </div>
-                </Fragment>
+                </div>
               ))}
             </div>
           )}
           <div>
-            <Button
+            <Button data-toybaco-settings-action="add"
               onClick={addSet()}
               className={clsx((data?.length || 0) > 0 && 'my-[16px]')}
             >
-              セットを追加
+              テンプレートを追加
             </Button>
           </div>
         </div>

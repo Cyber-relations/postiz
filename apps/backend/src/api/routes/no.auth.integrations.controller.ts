@@ -1,3 +1,4 @@
+import { ToybacoGmbLookupError } from '@gitroom/nestjs-libraries/integrations/social/gmb.provider';
 import {
   Body,
   Controller,
@@ -287,6 +288,8 @@ export class NoAuthIntegrationsController {
 
     // Fetch pages if this is a two-step provider and not a refresh
     let pages: any[] = [];
+    let pagesError: unknown;
+    let pagesWarnings: string[] = [];
     if (integrationProvider.isBetweenSteps && !refresh) {
       try {
         // Check which method the provider uses (pages or companies)
@@ -297,12 +300,21 @@ export class NoAuthIntegrationsController {
             ? 'companies'
             : null;
 
-        if (fetchMethod) {
+        if (integration === 'gmb' && 'toybacoLocations' in integrationProvider && typeof integrationProvider.toybacoLocations === 'function') {
+          const result = await integrationProvider.toybacoLocations(accessToken);
+          pages = result.locations;
+          pagesWarnings = result.warnings;
+        } else if (fetchMethod) {
           // @ts-ignore - dynamic method call
           pages = await integrationProvider[fetchMethod](accessToken);
         }
       } catch (err) {
-        console.log('Failed to fetch pages:', err);
+        if (integration === 'gmb') {
+          pagesError = (err instanceof ToybacoGmbLookupError
+            ? err : new ToybacoGmbLookupError('unavailable')).getResponse();
+        } else {
+          console.log('Failed to fetch pages:', err);
+        }
       }
     }
 
@@ -353,6 +365,7 @@ export class NoAuthIntegrationsController {
       ...safeIntegration,
       onboarding: onboarding === 'true',
       pages,
+      ...(integration === 'gmb' ? { pagesError, pagesWarnings } : {}),
       ...(returnURL ? { returnURL } : {}),
       ...(extensionToken ? { extensionToken } : {}),
     };

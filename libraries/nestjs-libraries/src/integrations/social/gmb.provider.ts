@@ -18,6 +18,70 @@ import dayjs from 'dayjs';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 import { GmbSettingsDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/gmb.settings.dto';
 
+import { HttpException, HttpStatus } from '@nestjs/common';
+
+export type ToybacoGmbLookupReason =
+  | 'access-not-ready'
+  | 'rate-limited'
+  | 'reauthenticate'
+  | 'permission-denied'
+  | 'unavailable';
+
+// Keep upstream errors, credentials and Google project metadata on the server.
+// Provider authentication failures are not Toybaco session failures (401/403).
+export class ToybacoGmbLookupError extends HttpException {
+  constructor(reason: ToybacoGmbLookupReason) {
+    super({ error: 'TOYBACO_GBP_LOOKUP_FAILED', reason }, HttpStatus.SERVICE_UNAVAILABLE);
+  }
+}
+
+async function toybacoGmbReadJson(url: string, accessToken: string) {
+  let response: Response;
+  let body: any;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal });
+    body = await response.json().catch(() => undefined);
+  } catch {
+    throw new ToybacoGmbLookupError('unavailable');
+  } finally { clearTimeout(timeout); }
+  if (!response.ok) {
+    const details = Array.isArray(body?.error?.details) ? body.error.details : [];
+    const apiNotReady = details.some((detail: any) =>
+      detail?.['@type'] === 'type.googleapis.com/google.rpc.ErrorInfo' &&
+      (detail.reason === 'SERVICE_DISABLED' ||
+        (detail.reason === 'RATE_LIMIT_EXCEEDED' && detail.metadata?.quota_limit_value === '0'))
+    );
+    const reason: ToybacoGmbLookupReason = apiNotReady ? 'access-not-ready'
+      : response.status === 429 ? 'rate-limited'
+      : response.status === 401 ? 'reauthenticate'
+      : response.status === 403 ? 'permission-denied'
+      : 'unavailable';
+    throw new ToybacoGmbLookupError(reason);
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body) || body.error) {
+    throw new ToybacoGmbLookupError('unavailable');
+  }
+  return body;
+}
+
+function toybacoGmbCollection(body: any, key: 'accounts' | 'locations'): any[] {
+  if (body[key] === undefined) return [];
+  if (!Array.isArray(body[key])) throw new ToybacoGmbLookupError('unavailable');
+  return body[key];
+}
+
+function toybacoGmbNextPage(body: any, seen: Set<string>): string | undefined {
+  const token = body.nextPageToken;
+  if (token === undefined || token === '') return undefined;
+  if (typeof token !== 'string' || seen.has(token)) {
+    throw new ToybacoGmbLookupError('unavailable');
+  }
+  seen.add(token);
+  return token;
+}
+
 const clientAndGmb = () => {
   const client = new google.auth.OAuth2({
     clientId: process.env.GOOGLE_GMB_CLIENT_ID || process.env.YOUTUBE_CLIENT_ID,
@@ -204,9 +268,15 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
   }
 
   async pages(accessToken: string) {
+    return (await this.toybacoLocations(accessToken)).locations;
+  }
+
+  async toybacoLocations(accessToken: string) {
+    const warnings = new Set<ToybacoGmbLookupReason>();
     // Get all accounts with pagination
     const allAccounts: any[] = [];
     let accountsPageToken: string | undefined;
+    const seenAccountPages = new Set<string>();
 
     do {
       const params = new URLSearchParams();
@@ -215,21 +285,13 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
       }
       const url = `https://mybusinessaccountmanagement.googleapis.com/v1/accounts${params.toString() ? `?${params}` : ''}`;
 
-      const accountsResponse = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const accountsData = await accountsResponse.json();
-
-      if (accountsData.accounts) {
-        allAccounts.push(...accountsData.accounts);
-      }
-      accountsPageToken = accountsData.nextPageToken;
+      const accountsData = await toybacoGmbReadJson(url, accessToken);
+      allAccounts.push(...toybacoGmbCollection(accountsData, 'accounts'));
+      accountsPageToken = toybacoGmbNextPage(accountsData, seenAccountPages);
     } while (accountsPageToken);
 
     if (allAccounts.length === 0) {
-      return [];
+      return { locations: [], warnings: [] };
     }
 
     // Get locations for each account
@@ -242,11 +304,15 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
     }> = [];
 
     for (const account of allAccounts) {
-      const accountName = account.name; // format: accounts/{accountId}
+      const accountName = account?.name; // format: accounts/{accountId}
+      if (typeof accountName !== 'string' || !/^accounts\/[a-zA-Z0-9_-]+$/.test(accountName)) {
+        throw new ToybacoGmbLookupError('unavailable');
+      }
 
       try {
         // Get all locations with pagination
         let locationsPageToken: string | undefined;
+        const seenLocationPages = new Set<string>();
 
         do {
           const params = new URLSearchParams({
@@ -256,18 +322,17 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
             params.set('pageToken', locationsPageToken);
           }
 
-          const locationsResponse = await fetch(
+          const locationsData = await toybacoGmbReadJson(
             `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?${params}`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
+            accessToken
           );
-          const locationsData = await locationsResponse.json();
+          const locations = toybacoGmbCollection(locationsData, 'locations');
 
-          if (locationsData.locations) {
-            for (const location of locationsData.locations) {
+          if (locations.length) {
+            for (const location of locations) {
+              if (typeof location?.name !== 'string' || !/^locations\/[a-zA-Z0-9_-]+$/.test(location.name)) {
+                throw new ToybacoGmbLookupError('unavailable');
+              }
               // location.name is in format: locations/{locationId}
               // We need the full path: accounts/{accountId}/locations/{locationId}
               const locationId = location.name.replace('locations/', '');
@@ -276,15 +341,7 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
               // Get profile photo if available
               let photoUrl = '';
               try {
-                const mediaResponse = await fetch(
-                  `https://mybusinessbusinessinformation.googleapis.com/v1/${location.name}/media`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${accessToken}`,
-                    },
-                  }
-                );
-                const mediaData = await mediaResponse.json();
+                const mediaData = await toybacoGmbReadJson(`https://mybusinessbusinessinformation.googleapis.com/v1/${location.name}/media`, accessToken);
                 if (mediaData.mediaItems && mediaData.mediaItems.length > 0) {
                   const profilePhoto = mediaData.mediaItems.find(
                     (m: any) =>
@@ -311,49 +368,47 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
               });
             }
           }
-          locationsPageToken = locationsData.nextPageToken;
+          locationsPageToken = toybacoGmbNextPage(locationsData, seenLocationPages);
         } while (locationsPageToken);
       } catch (error) {
-        // Continue with other accounts if one fails
-        console.error(
-          `Failed to fetch locations for account ${accountName}:`,
-          error
-        );
+        // Keep usable locations from other managed accounts, with an explicit warning.
+        const safeError = error instanceof ToybacoGmbLookupError
+          ? error : new ToybacoGmbLookupError('unavailable');
+        warnings.add((safeError.getResponse() as { reason: ToybacoGmbLookupReason }).reason);
       }
     }
 
-    return allLocations;
+    if (!allLocations.length && warnings.size) {
+      throw new ToybacoGmbLookupError([...warnings][0]);
+    }
+    return { locations: allLocations, warnings: [...warnings] };
   }
 
   async fetchPageInformation(
     accessToken: string,
     data: { id: string; accountName: string; locationName: string }
   ) {
+    if (!data || typeof data.accountName !== 'string' || typeof data.locationName !== 'string' ||
+        !/^accounts\/[a-zA-Z0-9_-]+$/.test(data.accountName) ||
+        !/^locations\/[a-zA-Z0-9_-]+$/.test(data.locationName) ||
+        data.id !== `${data.accountName}/${data.locationName}`) {
+      throw new ToybacoGmbLookupError('unavailable');
+    }
     // data.id is the full resource path: accounts/{accountId}/locations/{locationId}
     // data.locationName is the v1 API format: locations/{locationId}
     // Fetch location details using the v1 API format
-    const locationResponse = await fetch(
+    const locationData = await toybacoGmbReadJson(
       `https://mybusinessbusinessinformation.googleapis.com/v1/${data.locationName}?readMask=name,title,storefrontAddress,metadata`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
+      accessToken
     );
-    const locationData = await locationResponse.json();
+    if (locationData.name !== data.locationName || typeof locationData.title !== 'string') {
+      throw new ToybacoGmbLookupError('unavailable');
+    }
 
     // Try to get profile photo
     let photoUrl = '';
     try {
-      const mediaResponse = await fetch(
-        `https://mybusinessbusinessinformation.googleapis.com/v1/${data.locationName}/media`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-      const mediaData = await mediaResponse.json();
+      const mediaData = await toybacoGmbReadJson(`https://mybusinessbusinessinformation.googleapis.com/v1/${data.locationName}/media`, accessToken);
       if (mediaData.mediaItems && mediaData.mediaItems.length > 0) {
         const profilePhoto = mediaData.mediaItems.find(
           (m: any) =>

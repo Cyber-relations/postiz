@@ -1,5 +1,8 @@
 'use client';
 
+import { LoadingSurface } from '@gitroom/frontend/components/layout/loading';
+
+import { readGmbResponse } from '@gitroom/frontend/components/new-launch/providers/continue-provider/gmb/gmb.continue';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { HttpStatusCode } from 'axios';
 import { useRouter } from 'next/navigation';
@@ -16,6 +19,8 @@ interface TwoStepState {
   integrationId: string;
   onboarding: boolean;
   pages: any[];
+  pagesError?: unknown;
+  pagesWarnings?: string[];
   returnURL?: string;
 }
 
@@ -25,6 +30,7 @@ export const ContinueIntegration: FC<{
   provider: string;
   searchParams: any;
   logged: boolean;
+  appOrigin?: string;
 }> = (props) => {
   const { provider, searchParams, logged } = props;
   const { push } = useRouter();
@@ -160,6 +166,8 @@ export const ContinueIntegration: FC<{
         id,
         onboarding: resOnboarding,
         pages,
+        pagesError,
+        pagesWarnings,
         returnURL,
         extensionToken,
       } = await data.json();
@@ -195,6 +203,7 @@ export const ContinueIntegration: FC<{
           integrationId: id,
           onboarding,
           pages: pages || [],
+          ...(provider === 'gmb' ? { pagesError, pagesWarnings } : {}),
           returnURL,
         });
         return;
@@ -225,6 +234,10 @@ export const ContinueIntegration: FC<{
           body: JSON.stringify({ ...modifiedParams, ...data }),
         });
 
+        if (provider === 'gmb') {
+          const result = await readGmbResponse(response);
+          if (result?.success !== true) throw new Error('GBP_SELECTION_NOT_SAVED');
+        }
         if (
           response.status !== HttpStatusCode.Ok &&
           response.status !== HttpStatusCode.Created
@@ -246,7 +259,7 @@ export const ContinueIntegration: FC<{
         setIsSaving(false);
       }
     },
-    [twoStepState, fetch, modifiedParams, provider, navigateOrShow]
+    [twoStepState, fetch, logged, modifiedParams, provider, navigateOrShow]
   );
 
   const Provider = useMemo(() => {
@@ -259,12 +272,8 @@ export const ContinueIntegration: FC<{
   // Success state for non-logged users without returnURL
   if (successState) {
     return (
-      <div className="flex flex-1 items-center justify-center text-white relative overflow-hidden">
+      <div data-toybaco-connection-surface="" className="flex flex-1 items-center justify-center relative overflow-hidden p-[24px]" style={{ color: 'var(--toybaco-ink, #24303f)', backgroundColor: 'var(--toybaco-surface, #fcfbf8)' }}>
         {/* Background gradient decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-[20%] left-[10%] w-[300px] h-[300px] bg-[#612BD3] rounded-full blur-[120px]" />
-          <div className="absolute bottom-[20%] right-[10%] w-[250px] h-[250px] bg-[#FC69FF] rounded-full blur-[120px]" />
-        </div>
 
         <div className="relative z-10 text-center">
           <div className="w-[80px] h-[80px] mx-auto mb-[24px] rounded-full bg-green-500/20 flex items-center justify-center">
@@ -280,10 +289,10 @@ export const ContinueIntegration: FC<{
               />
             </svg>
           </div>
-          <div className="text-[28px] font-semibold mb-[12px]">
+          <div className="text-[20px] font-semibold mb-[12px]">
             {t('channel_connected', 'Channel Connected!')}
           </div>
-          <div className="text-[16px] text-gray-400 max-w-[400px]">
+          <div className="text-[16px] text-newTextColor max-w-[400px]">
             {t(
               'channel_connected_description',
               'チャンネルを接続しました。この画面を閉じてください。'
@@ -297,12 +306,8 @@ export const ContinueIntegration: FC<{
   // Show the two-step selection UI
   if (twoStepState && Provider) {
     return (
-      <div className="flex flex-1 items-center justify-center text-white relative overflow-hidden">
+      <div data-toybaco-connection-surface="" className="flex flex-1 items-center justify-center relative overflow-hidden p-[24px]" style={{ color: 'var(--toybaco-ink, #24303f)', backgroundColor: 'var(--toybaco-surface, #fcfbf8)' }}>
         {/* Background gradient decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-[20%] left-[10%] w-[300px] h-[300px] bg-[#612BD3] rounded-full blur-[120px]" />
-          <div className="absolute bottom-[20%] right-[10%] w-[250px] h-[250px] bg-[#FC69FF] rounded-full blur-[120px]" />
-        </div>
 
         {/* Content */}
         <div className="relative z-10 w-full max-w-[550px] mx-auto px-[20px]">
@@ -311,7 +316,7 @@ export const ContinueIntegration: FC<{
               <h1 className="text-[24px] font-semibold">
                 {t('configure_your_channel', 'Configure Your Channel')}
               </h1>
-              <p className="text-[14px] text-gray-400">
+              <p className="text-[14px] text-newTextColor">
                 {t(
                   'select_the_page_or_account',
                   '接続するページまたはアカウントを選択してください。'
@@ -345,6 +350,14 @@ export const ContinueIntegration: FC<{
                 existingId={[]}
                 initialData={twoStepState.pages}
                 isSaving={isSaving}
+                {...(provider === 'gmb' ? {
+                  initialError: twoStepState.pagesError,
+                  initialWarnings: twoStepState.pagesWarnings,
+                  allowLookup: logged,
+                  checkExisting: logged,
+                  onClose: logged ? () => push('/launches') : undefined,
+                  returnToAppUrl: props.appOrigin ? `${props.appOrigin}/app` : '/launches',
+                } : {})}
               />
             </IntegrationContext.Provider>
           </div>
@@ -355,12 +368,8 @@ export const ContinueIntegration: FC<{
 
   if (error) {
     return (
-      <div className="flex flex-1 items-center justify-center text-white relative overflow-hidden">
+      <div data-toybaco-connection-surface="" className="flex flex-1 items-center justify-center relative overflow-hidden p-[24px]" style={{ color: 'var(--toybaco-ink, #24303f)', backgroundColor: 'var(--toybaco-surface, #fcfbf8)' }}>
         {/* Background gradient decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-[20%] left-[10%] w-[300px] h-[300px] bg-[#612BD3] rounded-full blur-[120px]" />
-          <div className="absolute bottom-[20%] right-[10%] w-[250px] h-[250px] bg-[#FC69FF] rounded-full blur-[120px]" />
-        </div>
 
         <div className="relative z-10 text-center">
           <div className="w-[80px] h-[80px] mx-auto mb-[24px] rounded-full bg-red-500/20 flex items-center justify-center">
@@ -376,10 +385,10 @@ export const ContinueIntegration: FC<{
               />
             </svg>
           </div>
-          <div className="text-[28px] font-semibold mb-[12px]">
+          <div className="text-[20px] font-semibold mb-[12px]">
             {t('could_not_add_provider', 'Could not add provider')}
           </div>
-          <div className="text-[16px] text-gray-400 max-w-[400px]">
+          <div className="text-[16px] text-newTextColor max-w-[400px]">
             {t(
               'you_are_being_redirected_back',
               'チャンネルを追加できませんでした。もう一度お試しください。'
@@ -392,26 +401,5 @@ export const ContinueIntegration: FC<{
   }
 
   // Loading state
-  return (
-    <div className="flex flex-1 items-center justify-center text-white relative overflow-hidden">
-      {/* Background gradient decoration */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-[20%] left-[10%] w-[300px] h-[300px] bg-[#612BD3] rounded-full blur-[120px]" />
-        <div className="absolute bottom-[20%] right-[10%] w-[250px] h-[250px] bg-[#FC69FF] rounded-full blur-[120px]" />
-      </div>
-
-      <div className="relative z-10 text-center">
-        <div className="text-[28px] font-semibold mb-[12px]">
-          {t('adding_channel', 'Adding Channel')}
-        </div>
-        <div className="text-[16px] text-gray-400">
-          {t('please_wait', 'Please wait while we connect your account...')}
-        </div>
-        {/* Loading spinner */}
-        <div className="mt-[32px] flex justify-center">
-          <div className="w-[48px] h-[48px] border-[3px] border-[#612BD3] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    </div>
-  );
+  return <LoadingSurface label={t('adding_channel', 'チャンネルを接続しています')} description={t('please_wait', '接続が完了するまでお待ちください。')} />;
 };

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
+import Spinner from '@gitroom/frontend/components/layout/loading';
 import { Select } from '@gitroom/react/form/select';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -65,14 +66,14 @@ const ShortlinkPreferenceComponent = () => {
 
   if (isLoading) {
     return (
-      <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px]">
-        <div className="animate-pulse">{t('loading', 'Loading...')}</div>
+      <div data-toybaco-settings-card="" className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px]">
+        <Spinner label="設定を読み込んでいます" />
       </div>
     );
   }
 
   return (
-    <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
+    <div data-toybaco-settings-card="" className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
       <div className="mt-[4px]">
         {t('shortlink_settings', 'Shortlink Settings')}
       </div>
@@ -91,6 +92,7 @@ const ShortlinkPreferenceComponent = () => {
         <div className="w-[200px]">
           <Select
             name="shortlink"
+            aria-label="短縮リンクの扱い"
             label=""
             disableForm={true}
             hideErrors={true}

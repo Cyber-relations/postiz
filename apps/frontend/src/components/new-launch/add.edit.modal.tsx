@@ -11,6 +11,7 @@ import { useExistingData } from '@gitroom/frontend/components/launches/helpers/u
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 
 export interface AddEditModalProps {
+  toybacoAiIntent?: boolean;
   dummy?: boolean;
   date: dayjs.Dayjs;
   integrations: Integrations[];

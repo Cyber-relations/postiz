@@ -1,3 +1,4 @@
+import { toybacoAppOrigin } from '@gitroom/frontend/helpers/toybaco.app.origin';
 import { ContinueIntegration } from '@gitroom/frontend/components/launches/continue.integration';
 import { cookies } from 'next/headers';
 
@@ -19,5 +20,5 @@ export default async function Page(
   } = params;
 
   const get = (await cookies()).get('auth');
-  return <ContinueIntegration searchParams={searchParams} provider={provider} logged={!!get?.name} />;
+  return <ContinueIntegration searchParams={searchParams} provider={provider} logged={!!get?.name} appOrigin={process.env.POSTIZ_GENERIC_OAUTH ? toybacoAppOrigin() || undefined : undefined} />;
 }

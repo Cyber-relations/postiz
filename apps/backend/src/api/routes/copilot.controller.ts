@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  ServiceUnavailableException,
   Logger,
   Controller,
   Get,
@@ -37,6 +38,23 @@ export class CopilotController {
     private _subscriptionService: SubscriptionService,
     private _mastraService: MastraService
   ) {}
+  // Metadata only: configuration is not proof of a successful model request.
+  @Get('/capabilities')
+  capabilities() {
+    const status = process.env.TOYBACO_DISABLE_AI
+      ? 'disabled'
+      : !process.env.OPENAI_API_KEY
+      ? 'not_configured'
+      : 'configured';
+    return {
+      feature: 'posting_text',
+      status,
+      canStart: status === 'configured',
+      verification: 'not_run',
+      replyQuotaShared: false,
+    };
+  }
+
   @Post('/chat')
   chatAgent(@Req() req: Request, @Res() res: Response) {
     // 画面を隠すだけでは API を直接呼べてしまうため、ここでも止める。
@@ -48,8 +66,7 @@ export class CopilotController {
       process.env.OPENAI_API_KEY === undefined ||
       process.env.OPENAI_API_KEY === ''
     ) {
-      Logger.warn('OpenAI API key not set, chat functionality will not work');
-      return;
+      throw new ServiceUnavailableException('投稿文AIの接続設定が完了していません。サポートにお問い合わせください。');
     }
 
     const copilotRuntimeHandler = copilotRuntimeNodeHttpEndpoint({
@@ -79,8 +96,7 @@ export class CopilotController {
       process.env.OPENAI_API_KEY === undefined ||
       process.env.OPENAI_API_KEY === ''
     ) {
-      Logger.warn('OpenAI API key not set, chat functionality will not work');
-      return;
+      throw new ServiceUnavailableException('投稿文AIの接続設定が完了していません。サポートにお問い合わせください。');
     }
     const mastra = await this._mastraService.mastra();
     const requestContext = new RequestContext<ChannelsContext>();

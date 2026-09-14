@@ -75,11 +75,29 @@ export const ShowNotification: FC<{
 export const NotificationOpenComponent = () => {
   const fetch = useFetch();
   const loadNotifications = useCallback(async () => {
-    return await (await fetch('/notifications/list')).json();
-  }, []);
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => { controller.abort(); reject(new Error('notifications_unavailable')); }, 10000);
+    });
+    try {
+      return await Promise.race([(async () => {
+        const response = await fetch('/notifications/list', { signal: controller.signal });
+        if (!response.ok) throw new Error('notifications_unavailable');
+        const value = await response.json();
+        if (!value || !Array.isArray(value.notifications) || value.notifications.some((item: any) =>
+          !item || typeof item.content !== 'string' || typeof item.createdAt !== 'string')) {
+          throw new Error('notifications_unavailable');
+        }
+        return value;
+      })(), timeout]);
+    } finally {
+      clearTimeout(timer!);
+    }
+  }, [fetch]);
   const t = useT();
 
-  const { data, isLoading } = useSWR('notifications', loadNotifications);
+  const { data, error, isLoading, isValidating, mutate } = useSWR('notifications', loadNotifications, { revalidateOnFocus: false, revalidateOnReconnect: false, shouldRetryOnError: false, errorRetryCount: 0 });
   return (
     <div
       id="notification-popup"
@@ -92,18 +110,24 @@ export const NotificationOpenComponent = () => {
       </div>
 
       <div className="flex flex-col max-h-[400px] overflow-y-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
-        {isLoading && (
+        {(isLoading || isValidating) && (
           <div className="flex-1 flex justify-center pt-12">
-            <ReactLoading type="spin" color="#fff" width={36} height={36} />
+            <ReactLoading label="通知を読み込んでいます" />
           </div>
         )}
-        {!isLoading && !data.notifications.length && (
+        {!isLoading && !isValidating && (error || !data) && (
+          <div role="alert" className="flex flex-col items-center gap-[12px] p-[20px] text-[14px] text-center">
+            <p>通知を取得できませんでした。</p>
+            <button type="button" data-toybaco-notification-retry="" onClick={() => { void mutate().catch(() => {}); }}>再確認</button>
+          </div>
+        )}
+        {!isLoading && !isValidating && !error && data?.notifications.length === 0 && (
           <div className="text-center p-[16px] text-textColor flex-1 flex justify-center items-center mt-[20px]">
             {t('no_notifications', 'No notifications')}
           </div>
         )}
-        {!isLoading &&
-          data.notifications.map(
+        {!isLoading && !isValidating && !error &&
+          data?.notifications.map(
             (
               notification: {
                 createdAt: string;
@@ -144,7 +168,7 @@ const NotificationComponent = () => {
   const ref = useClickAway<HTMLDivElement>(() => setShow(false));
   return (
     <div className="relative cursor-pointer select-none" ref={ref}>
-      <div onClick={changeShow}>
+      <button type="button" aria-label="投稿通知" title="投稿通知" aria-expanded={show} aria-controls="notification-popup" data-toybaco-notification-trigger="" onClick={changeShow}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -171,7 +195,7 @@ const NotificationComponent = () => {
             />
           )}
         </svg>
-      </div>
+      </button>
       {show && <NotificationOpenComponent />}
     </div>
   );

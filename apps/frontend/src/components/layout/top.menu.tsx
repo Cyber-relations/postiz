@@ -389,6 +389,10 @@ export const TopMenu: FC = () => {
             />
           ))}
       </div>
+      <a data-toybaco-about-link="" href="/api/toybaco/about" target="_blank" rel="noopener noreferrer"
+        className="inline-flex min-h-[44px] items-center justify-center text-[12px] leading-5 text-center">
+        トイバコについて
+      </a>
     </>
   );
 };

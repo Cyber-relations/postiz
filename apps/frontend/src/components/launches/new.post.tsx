@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import dayjs from 'dayjs';
 import { useCalendar } from '@gitroom/frontend/components/launches/calendar.context';
@@ -13,9 +13,20 @@ export const NewPost = () => {
   const modal = useModals();
   const { integrations, reloadCalendarView, sets } = useCalendar();
   const t = useT();
+  const alive = useRef(true), creating = useRef(false), requestedAi = useRef(false);
+  const [entryNotice, setEntryNotice] = useState('');
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
-  const createAPost = useCallback(async () => {
-    const date = (await (await fetch('/posts/find-slot')).json()).date;
+  const createAPost = useCallback(async (aiIntent = false) => {
+    if (!alive.current || creating.current || !integrations.length) return;
+    creating.current = true;
+    const releaseCreation = () => { creating.current = false; };
+    try {
+    const response = await fetch('/posts/find-slot');
+    if (!response.ok) throw new Error('TOYBACO_COMPOSER_UNAVAILABLE');
+    const date = (await response.json()).date;
+    if (!alive.current) return;
+    if (typeof date !== 'string' || !dayjs(date).isValid()) throw new Error('TOYBACO_COMPOSER_UNAVAILABLE');
 
     const set: any = !sets.length
       ? undefined
@@ -45,7 +56,8 @@ export const NewPost = () => {
           });
         });
 
-    if (set === 'exit') return;
+    if (set === 'exit') { requestedAi.current = false; return; }
+    if (!alive.current) return;
 
     modal.openModal({
       id: 'add-edit-modal',
@@ -60,6 +72,7 @@ export const NewPost = () => {
       },
       children: (
         <AddEditModal
+          toybacoAiIntent={aiIntent === true}
           allIntegrations={integrations.map((p) => ({
             ...p,
           }))}
@@ -73,12 +86,30 @@ export const NewPost = () => {
       size: '80%',
       title: ``,
     });
-  }, [integrations, sets]);
+    requestedAi.current = false;
+    setEntryNotice('');
+    } catch {
+      if (alive.current) setEntryNotice('投稿作成を開けませんでした。入力や保存は行っていません。もう一度「投稿を作成」を押してください。');
+    } finally { releaseCreation(); }
+  }, [fetch, integrations, modal, reloadCalendarView, sets, t]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('tb_ai') !== 'compose') return;
+    url.searchParams.delete('tb_ai');
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+    requestedAi.current = true;
+    if (!integrations.length) setEntryNotice('AIで文案を作るには、先に「チャンネルを追加」で投稿先を連携してください。');
+    else void createAPost(true);
+  }, [createAPost, integrations.length]);
+  if (!integrations.length) return entryNotice ? <p role="status" className="text-[12px] leading-[1.6]">{entryNotice}</p> : null;
   return (
+    <>
+    {entryNotice && <p role="status" className="text-[12px] leading-[1.6]">{entryNotice}</p>}
     <button
       data-toybaco-create-post=""
       aria-label="新しい投稿を作成"
-      onClick={createAPost}
+      onClick={() => createAPost(requestedAi.current)}
       className="text-white flex-1 pt-[12px] pb-[14px] ps-[16px] pe-[20px] group-[.sidebar]:p-0 min-h-[44px] max-h-[44px] rounded-[8px] bg-btnPrimary flex justify-center items-center gap-[5px] outline-none"
     >
       <svg
@@ -101,5 +132,6 @@ export const NewPost = () => {
         {t('create_new_post', 'Create Post')}
       </div>
     </button>
+    </>
   );
 };

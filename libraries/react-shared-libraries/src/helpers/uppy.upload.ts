@@ -51,12 +51,34 @@ const fetchUploadApiEndpoint = async (
   return payload;
 };
 
+// toybaco_local_xhr_identity_v1: evaluate the pinned owner when a queued upload starts.
+export type ToybacoUploadIdentityGuard = {
+  beforeRequest: () => Record<string, string>;
+  afterResponse: (status: number, headers: { get(name: string): string | null }) => void;
+};
+
+function toybacoIdentityBoundXHRUpload(guard: ToybacoUploadIdentityGuard) {
+  return class extends XHRUpload<any, any> {
+    getOptions(file: any) {
+      try {
+        const options = super.getOptions(file);
+        return { ...options, headers: { ...options.headers, ...guard.beforeRequest() } };
+      } catch (error) {
+        // XHRUpload settles rejected queue work; mark the file failed before rejecting it.
+        this.uppy.emit('upload-error', file, error as Error);
+        throw error;
+      }
+    }
+  };
+}
+
 // Define the factory to return appropriate Uppy configuration
 export const getUppyUploadPlugin = (
   provider: string,
   fetch: any,
   backendUrl: string,
-  transloadit: string[] = []
+  transloadit: string[] = [],
+  identityGuard?: ToybacoUploadIdentityGuard
 ) => {
   switch (provider) {
     case 'transloadit':
@@ -115,10 +137,21 @@ export const getUppyUploadPlugin = (
       };
     case 'local':
       return {
-        plugin: XHRUpload,
+        plugin: identityGuard ? toybacoIdentityBoundXHRUpload(identityGuard) : XHRUpload,
         options: {
           endpoint: `${backendUrl}/media/upload-server`,
           withCredentials: true,
+          ...(identityGuard ? {
+            shouldRetry: () => false,
+            onAfterResponse: (xhr: XMLHttpRequest) => {
+              const headers = { get: (name: string) => xhr.getResponseHeader(name) };
+              identityGuard.afterResponse(xhr.status, headers);
+              if (xhr.status === 401 || headers.get('logout') ||
+                  (xhr.status === 409 && headers.get('x-toybaco-session') === 'identity-changed')) {
+                throw new Error('TOYBACO_UPLOAD_RECONNECT_REQUIRED');
+              }
+            },
+          } : {}),
         },
       };
 

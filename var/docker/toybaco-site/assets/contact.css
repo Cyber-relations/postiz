@@ -1,0 +1,125 @@
+/* Consultation and custom plans: shared by the landing and detail pages. */
+@media (min-width: 981px) and (max-width: 1200px) {
+  body header.site { gap: 16px; padding-left: 20px; padding-right: 20px; }
+  header.site nav.menu { gap: 12px; padding-left: 14px; }
+  header.site nav.menu a { font-size: .8rem; white-space: nowrap; }
+  header.site nav.menu .btn-sm { padding-left: 16px; padding-right: 16px; }
+}
+nav.menu .nav-contact { color: #386657; }
+.custom-plan {
+  --contact-ink: #263936;
+  --contact-muted: #596963;
+  --contact-line: #d8e1dc;
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  gap: 40px;
+  max-width: 70rem;
+  margin: 28px auto 0;
+  scroll-margin-top: 100px;
+  padding: 36px 40px;
+  border: 1px solid var(--contact-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--contact-ink);
+  text-align: left;
+}
+.custom-plan__label {
+  margin-bottom: 12px;
+  color: #386657;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+.custom-plan h3 {
+  margin: 0 0 14px;
+  color: var(--contact-ink);
+  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+  font-weight: 700;
+  line-height: 1.55;
+  letter-spacing: .01em;
+}
+.custom-plan__description,
+.custom-plan__note {
+  color: var(--contact-muted);
+  font-size: .88rem;
+  line-height: 1.95;
+}
+.custom-plan__detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 6px 0;
+  color: #386657;
+  font-size: .86rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.custom-plan__inquiry {
+  align-self: stretch;
+  padding-left: 36px;
+  border-left: 1px solid var(--contact-line);
+}
+.custom-plan__price {
+  margin: 0 0 10px;
+  color: var(--contact-ink);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.contact-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border: 1px solid #b8c9c0;
+  border-radius: 6px;
+  background: #f4f8f5;
+  color: #29493c;
+  font: inherit;
+  font-size: .85rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.contact-button[data-contact-email] { background: #fff; }
+.contact-button:hover { background: #eaf1ed; border-color: #648471; }
+.contact-button svg { width: 17px; height: 17px; flex: none; }
+.contact-button:focus-visible,
+.custom-plan__detail:focus-visible,
+.contact-address a:focus-visible,
+.footer-contact a:focus-visible {
+  outline: 3px solid #50836b;
+  outline-offset: 4px;
+}
+.contact-address { margin-top: 14px; color: #66726c; font-size: .78rem; line-height: 1.9; }
+.contact-address a { color: #3e5a4b; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.contact-section { padding: 76px 0; border-top: 1px solid #d8e1dc; background: #fff; text-align: center; }
+.sec.contact-section h2 { color: #263936; font-size: clamp(1.4rem, 2.6vw, 2rem); line-height: 1.6; }
+.contact-section .sub2 { max-width: 38rem; margin: 16px auto 0; color: #596963; }
+.contact-section .contact-actions { justify-content: center; }
+.contact-section .contact-button { min-width: 190px; }
+.footer-contact { display: grid; gap: 6px; margin-top: 20px; }
+.footer-contact span { color: rgba(255,255,255,.65); font-size: .74rem; }
+.fgrid .footer-contact a { color: #fff; font-size: .84rem; text-decoration: underline; text-underline-offset: 4px; overflow-wrap: anywhere; }
+.bank-box { flex-wrap: wrap; }
+.bank-box .contact-actions { justify-content: center; }
+@media (max-width: 820px) {
+  .custom-plan { grid-template-columns: 1fr; gap: 24px; padding: 28px; max-width: 30rem; }
+  .custom-plan__inquiry { border-left: 0; border-top: 1px solid var(--contact-line); padding: 24px 0 0; }
+}
+@media (max-width: 480px) {
+  .custom-plan { padding: 24px 22px; }
+  .custom-plan .contact-actions { display: grid; grid-template-columns: 1fr; }
+  .contact-section { padding: 56px 0; }
+  .contact-section .contact-actions { flex-direction: column; }
+}
