@@ -173,8 +173,9 @@ const EmptyState: FC<{ onRefresh: () => void }> = ({ onRefresh }) => {
 export const RenderAnalytics: FC<{
   integration: Integration;
   date: number;
+  onRefresh: () => void;
 }> = (props) => {
-  const { integration, date } = props;
+  const { integration, date, onRefresh } = props;
   const [loading, setLoading] = useState(true);
   const fetch = useFetch();
 
@@ -197,25 +198,6 @@ export const RenderAnalytics: FC<{
     revalidateOnMount: true,
   });
 
-  const refreshChannel = useCallback(
-    (
-        integrationData: Integration & {
-          identifier: string;
-        }
-      ) =>
-      async () => {
-        const { url } = await (
-          await fetch(
-            `/integrations/social/${integrationData.identifier}?refresh=${integrationData.internalId}`,
-            {
-              method: 'GET',
-            }
-          )
-        ).json();
-        window.location.href = url;
-      },
-    []
-  );
 
   const t = useT();
 
@@ -242,7 +224,7 @@ export const RenderAnalytics: FC<{
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[16px]">
       {data?.length === 0 && (
-        <EmptyState onRefresh={refreshChannel(integration as any)} />
+        <EmptyState onRefresh={onRefresh} />
       )}
       {data?.map((item: AnalyticsDataItem, index: number) => (
         <AnalyticsCard

@@ -554,8 +554,16 @@ export const MediaBox: FC<{
                         ? 'border-[#612BD3]'
                         : 'border-transparent'
                     )}
-                    onClick={addRemoveSelected(media)}
                   >
+                    {!standalone && (
+                      <button
+                        type="button"
+                        data-toybaco-media-select-control=""
+                        aria-label={`${media.originalName || 'メディア'}を選択`}
+                        aria-pressed={selected.some((item) => item.id === media.id)}
+                        onClick={addRemoveSelected(media)}
+                      />
+                    )}
                     {!!selected.find((p: any) => p.id === media.id) ? (
                       <div data-toybaco-media-selected="" className="text-white flex z-[101] justify-center items-center text-[14px] font-[500] w-[24px] h-[24px] rounded-full bg-[#612BD3] absolute -bottom-[10px] -end-[10px]">
                         {selected.findIndex((z: any) => z.id === media.id) + 1}
@@ -622,6 +630,14 @@ export const MediaBox: FC<{
             totalPages={data?.pages}
             setPage={setPage}
           />
+        )}
+        {!standalone && (
+          <div data-toybaco-media-selection="">
+            <p role="status" aria-live="polite" aria-atomic="true">選択中 {selected.length} 件</p>
+            <button type="button" onClick={() => setSelected([])} disabled={selected.length === 0}>
+              全解除
+            </button>
+          </div>
         )}
         {!standalone && (
           <div data-toybaco-media-footer="" className="flex justify-end mt-[32px] gap-[8px]">
@@ -850,19 +866,18 @@ export const MultiMediaComponent: FC<{
         <div className="flex flex-wrap items-center gap-[8px] px-[12px] border-t border-newColColor w-full b1 text-textColor">
           {!mediaNotAvailable && (
             <div className="flex max-w-full flex-wrap py-[10px] b2 items-center gap-[4px]">
-              <div
+              <button
+                type="button"
+                data-toybaco-media-open=""
+                aria-label="メディアを挿入"
                 onClick={showModal}
-                className="cursor-pointer shrink-0 whitespace-nowrap h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
+                className="cursor-pointer shrink-0 whitespace-nowrap min-h-[44px] rounded-[6px] justify-center items-center flex gap-[8px] bg-newColColor px-[12px]"
               >
-                <div className="flex gap-[8px] items-center">
-                  <div>
-                    <InsertMediaIcon />
-                  </div>
-                  <div className="text-[10px] font-[600] maxMedia:hidden block">
-                    {t('insert_media', 'Insert Media')}
-                  </div>
-                </div>
-              </div>
+                <span aria-hidden="true"><InsertMediaIcon /></span>
+                <span className="text-[13px] font-[600]">
+                  {t('insert_media', 'Insert Media')}
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={designMedia}

@@ -167,7 +167,14 @@ const NotificationComponent = () => {
   }, [show, data]);
   const ref = useClickAway<HTMLDivElement>(() => setShow(false));
   return (
-    <div className="relative cursor-pointer select-none" ref={ref}>
+    <div className="relative cursor-pointer select-none" ref={ref}
+      onKeyDown={(event) => {
+        if (!show || event.key !== 'Escape' || event.defaultPrevented || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setShow(false);
+        event.currentTarget.querySelector<HTMLButtonElement>('[data-toybaco-notification-trigger]')?.focus();
+      }}>
       <button type="button" aria-label="投稿通知" title="投稿通知" aria-expanded={show} aria-controls="notification-popup" data-toybaco-notification-trigger="" onClick={changeShow}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
