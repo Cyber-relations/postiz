@@ -1,10 +1,10 @@
-import { FC, useCallback, useMemo, useState } from 'react';
+import { FC, useCallback, useMemo } from 'react';
+import { ConnectionReason, connectionMessage, lookupFailure } from './channel.connection.result';
 import { Integration } from '@prisma/client';
 import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { ChartSocial } from '@gitroom/frontend/components/analytics/chart-social';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
-import { useT } from '@gitroom/react/translation/get.transation.service.client';
 
 interface AnalyticsDataItem {
   label: string;
@@ -124,51 +124,36 @@ const AnalyticsCard: FC<{
   );
 };
 
-const EmptyState: FC<{ onRefresh: () => void }> = ({ onRefresh }) => {
-  const t = useT();
+const AnalyticsNotice: FC<{ message: string; action: string; onAction: () => void; failed?: boolean }> = ({ message, action, onAction, failed }) => (
+  <div role={failed ? 'alert' : 'status'} className="col-span-full flex flex-col items-center gap-[16px] rounded-[12px] border border-newTableBorder bg-newTableHeader px-[24px] py-[32px] text-center">
+    <p className="text-[15px] leading-[1.6]">{message}</p>
+    <button type="button" onClick={onAction} className="min-h-[44px] rounded-[8px] bg-btnPrimary text-btnText px-[16px] text-[14px]">{action}</button>
+  </div>
+);
 
-  return (
-    <div className="col-span-full flex flex-col items-center justify-center py-[48px] px-[24px] bg-newTableHeader border border-newTableBorder rounded-[12px]">
-      <div className="w-[48px] h-[48px] mb-[16px] rounded-full bg-[#612bd3]/10 flex items-center justify-center">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="text-[#612bd3]"
-        >
-          <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          <path d="M12 8v4l2 2" />
-        </svg>
-      </div>
-      <p className="text-[15px] text-newTableText text-center mb-[12px]">
-        {t(
-          'this_channel_needs_to_be_refreshed',
-          'This channel needs to be refreshed to display analytics'
-        )}
-      </p>
-      <button
-        onClick={onRefresh}
-        className="inline-flex items-center gap-[6px] px-[16px] py-[8px] text-[14px] font-medium text-white bg-[#612bd3] hover:bg-[#5023b8] rounded-[8px] transition-colors"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M23 4v6h-6M1 20v-6h6" />
-          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-        </svg>
-        {t('refresh_channel', 'Refresh Channel')}
-      </button>
-    </div>
-  );
-};
+// The deadline covers both fetch and JSON; errors are not valid empty analytics.
+export async function readAnalytics(fetch: ReturnType<typeof useFetch>, path: string): Promise<AnalyticsDataItem[]> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([(async () => {
+      const response = await fetch(path, { signal: controller.signal });
+      const body = await response.json();
+      if (!response.ok) throw Object.assign(new Error('ANALYTICS_UNAVAILABLE'), { reason: lookupFailure(body) });
+      if (!Array.isArray(body) || body.some(item =>
+        !item || typeof item.label !== 'string' || !Array.isArray(item.data) ||
+        (item.average !== undefined && typeof item.average !== 'boolean') ||
+        (item.percentageChange !== undefined && (typeof item.percentageChange !== 'number' || !Number.isFinite(item.percentageChange))) ||
+        item.data.some((point: { total?: unknown; date?: unknown } | null) =>
+          !point || !['number', 'string'].includes(typeof point.total) || String(point.total).trim() === '' || !Number.isFinite(Number(point.total)) ||
+          typeof point.date !== 'string' || !Number.isFinite(Date.parse(point.date)))
+      )) throw new Error('ANALYTICS_UNAVAILABLE');
+      return body.map(item => ({ ...item, data: item.data.map((point: { total: number | string; date: string }) => ({ ...point, total: Number(point.total) })) }));
+    })(), new Promise<never>((_, reject) => {
+      timer = setTimeout(() => { controller.abort(); reject(new Error('ANALYTICS_UNAVAILABLE')); }, 15000);
+    })]);
+  } finally { if (timer !== undefined) clearTimeout(timer); }
+}
 
 export const RenderAnalytics: FC<{
   integration: Integration;
@@ -176,20 +161,13 @@ export const RenderAnalytics: FC<{
   onRefresh: () => void;
 }> = (props) => {
   const { integration, date, onRefresh } = props;
-  const [loading, setLoading] = useState(true);
   const fetch = useFetch();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const load = (
-      await fetch(`/analytics/${integration.id}?date=${date}`)
-    ).json();
-    setLoading(false);
-    return load;
-  }, [integration, date]);
+  const load = useCallback(() => readAnalytics(fetch, `/analytics/${integration.id}?date=${date}`), [fetch, integration.id, date]);
 
-  const { data } = useSWR(`/analytics-${integration?.id}-${date}`, load, {
+  const { data, error, isLoading, mutate } = useSWR(`/analytics-${integration?.id}-${date}`, load, {
     refreshInterval: 0,
+    shouldRetryOnError: false,
     refreshWhenHidden: false,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
@@ -199,13 +177,11 @@ export const RenderAnalytics: FC<{
   });
 
 
-  const t = useT();
-
   const totals = useMemo(() => {
     return data?.map((p: AnalyticsDataItem) => {
       const value =
         (p?.data.reduce((acc: number, curr: { total: number }) => acc + curr.total, 0) || 0) /
-        (p.average ? p.data.length : 1);
+        (p.average && p.data.length ? p.data.length : 1);
       if (p.average) {
         return value.toFixed(2) + '%';
       }
@@ -213,7 +189,7 @@ export const RenderAnalytics: FC<{
     });
   }, [data]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-[48px]">
         <LoadingComponent />
@@ -221,10 +197,22 @@ export const RenderAnalytics: FC<{
     );
   }
 
+  if (error) {
+    const reason: ConnectionReason = error.reason || 'unavailable';
+    const message = reason === 'unavailable'
+      ? '分析データを取得できませんでした。時間をおいて、もう一度お試しください。'
+      : connectionMessage({ outcome: 'failed', reason });
+    return <AnalyticsNotice failed message={message} action={reason === 'reauthenticate' ? 'チャンネルを再接続' : '再確認'} onAction={reason === 'reauthenticate' ? onRefresh : () => { void mutate(); }} />;
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[16px]">
       {data?.length === 0 && (
-        <EmptyState onRefresh={onRefresh} />
+        <AnalyticsNotice
+          message={integration.refreshNeeded ? 'チャンネルの認証を更新してから、分析データを確認してください。' : 'この期間の分析データはありません。期間を変えるか、時間をおいて再確認してください。'}
+          action={integration.refreshNeeded ? 'チャンネルを再接続' : '再確認'}
+          onAction={integration.refreshNeeded ? onRefresh : () => { void mutate(); }}
+        />
       )}
       {data?.map((item: AnalyticsDataItem, index: number) => (
         <AnalyticsCard

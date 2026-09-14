@@ -6,7 +6,7 @@ import { readGmbResponse } from '@gitroom/frontend/components/new-launch/provide
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { HttpStatusCode } from 'axios';
 import { useRouter } from 'next/navigation';
-import { Redirect } from '@gitroom/frontend/components/layout/redirect';
+import { ConnectionReason, connectionMessage, lookupFailure } from '@gitroom/frontend/components/platform-analytics/channel.connection.result';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import dayjs from 'dayjs';
@@ -38,6 +38,11 @@ export const ContinueIntegration: FC<{
   const fetch = useFetch();
   const { extensionId, backendUrl } = useVariables();
   const [error, setError] = useState(false);
+  const [failureReason, setFailureReason] = useState<ConnectionReason>('unavailable');
+  const [failureOutcome, setFailureOutcome] = useState<'failed' | 'review' | 'precondition'>('failed');
+  useEffect(() => {
+    if (error) window.opener?.postMessage({ type: 'toybaco-connect', outcome: failureOutcome, reason: failureReason }, window.location.origin);
+  }, [error, failureReason, failureOutcome]);
   const [twoStepState, setTwoStepState] = useState<TwoStepState | null>(null);
   const [successState, setSuccessState] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -57,6 +62,7 @@ export const ContinueIntegration: FC<{
         if (outcome === 'connected') {
           setSuccessState(true);
         } else {
+          setFailureOutcome(outcome);
           setError(true);
         }
       }
@@ -111,32 +117,44 @@ export const ContinueIntegration: FC<{
   }, []);
 
   useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancel: (() => void) | undefined;
+    const request = async (body: string) => {
+      const work = (async () => {
+        const response = await fetch(`/integrations/social-connect/${provider}`, { method: 'POST', body, signal: controller.signal });
+        return { status: response.status, body: await response.json().catch(() => ({})) };
+      })();
+      try {
+        return await Promise.race([work, new Promise<never>((_, reject) => {
+          cancel = () => reject(new Error('CONNECTION_CANCELLED'));
+          timer = setTimeout(() => { controller.abort(); reject(new Error('CONNECTION_TIMEOUT')); }, 15000);
+        })]);
+      } finally { if (timer !== undefined) clearTimeout(timer); cancel = undefined; }
+    };
     (async () => {
       const timezone = String(dayjs.tz().utcOffset());
 
       // Try public endpoint first (handles both public and fallback scenarios)
-      let data = await fetch(`/integrations/social-connect/${provider}`, {
-        method: 'POST',
-        body: JSON.stringify({ ...modifiedParams, timezone }),
-      });
+      let data = await request(JSON.stringify({ ...modifiedParams, timezone }));
+      if (!active) return;
 
       // If public endpoint fails with specific errors, try authenticated endpoint
       if (data.status === HttpStatusCode.BadRequest) {
-        const errorData = await data.json().catch(() => ({}));
+        const errorData = data.body;
         // "Invalid connection type" means this wasn't started as a public flow
         if (
           errorData.message?.includes('Invalid connection type') ||
           errorData.message?.includes('Invalid or expired state')
         ) {
-          data = await fetch(`/integrations/social-connect/${provider}`, {
-            method: 'POST',
-            body: JSON.stringify({ ...modifiedParams, timezone }),
-          });
+          data = await request(JSON.stringify({ ...modifiedParams, timezone }));
+          if (!active) return;
         }
       }
 
       if (data.status === HttpStatusCode.PreconditionFailed) {
-        const { returnURL } = await data.json().catch(() => ({}));
+        const { returnURL } = data.body;
         navigateOrShow(
           `/launches?precondition=true`,
           returnURL,
@@ -146,7 +164,7 @@ export const ContinueIntegration: FC<{
       }
 
       if (data.status === HttpStatusCode.NotAcceptable) {
-        const { returnURL } = await data.json().catch(() => ({}));
+        const { returnURL } = data.body;
         navigateOrShow('/launches?connection=review', returnURL, 'review');
         return;
       }
@@ -156,7 +174,7 @@ export const ContinueIntegration: FC<{
         data.status !== HttpStatusCode.Created
       ) {
         // API・連携先の生エラーは顧客画面へ出さない。
-        await data.json().catch(() => ({}));
+        setFailureReason(lookupFailure(data.body));
         setError(true);
         return;
       }
@@ -170,7 +188,8 @@ export const ContinueIntegration: FC<{
         pagesWarnings,
         returnURL,
         extensionToken,
-      } = await data.json();
+      } = data.body;
+      if (typeof id !== 'string' || !id) throw new Error('CONNECTION_INVALID_RESPONSE');
       const onboarding = resOnboarding || searchParams.onboarding === 'true';
 
       // Store refresh token in extension for background cookie refresh
@@ -214,7 +233,8 @@ export const ContinueIntegration: FC<{
         returnURL,
         'connected'
       );
-    })();
+    })().catch(() => { if (active) setError(true); });
+    return () => { active = false; controller.abort(); cancel?.(); if (timer !== undefined) clearTimeout(timer); };
   }, []);
 
   const onSave = useCallback(
@@ -389,12 +409,13 @@ export const ContinueIntegration: FC<{
             {t('could_not_add_provider', 'Could not add provider')}
           </div>
           <div className="text-[16px] text-newTextColor max-w-[400px]">
-            {t(
-              'you_are_being_redirected_back',
-              'チャンネルを追加できませんでした。もう一度お試しください。'
-            )}
+            {connectionMessage({ outcome: failureOutcome, reason: failureReason })}
           </div>
-          {logged && <Redirect url="/launches" delay={3000} />}
+          <div className="mt-[24px] flex justify-center">
+            {typeof window !== 'undefined' && window.opener
+              ? <button type="button" className="min-h-[44px] rounded-[8px] border px-[16px]" onClick={() => window.close()}>元の画面に戻る</button>
+              : logged && <button type="button" className="min-h-[44px] rounded-[8px] border px-[16px]" onClick={() => push(`/launches?connection=failed&reason=${failureReason}`)}>投稿画面に戻る</button>}
+          </div>
         </div>
       </div>
     );

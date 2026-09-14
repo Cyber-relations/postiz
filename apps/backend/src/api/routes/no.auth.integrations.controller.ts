@@ -93,6 +93,7 @@ export class NoAuthIntegrationsController {
     }
 
     const refresh = await ioRedis.get(`refresh:${body.state}`);
+    let existingGmbRefreshToken: string | undefined;
     if (refresh) {
       await ioRedis.del(`refresh:${body.state}`);
       const current = await this._integrationService.getIntegrationByInternalId(
@@ -107,6 +108,7 @@ export class NoAuthIntegrationsController {
       if (!current || expectedProvider !== integration) {
         throw new Error('Integration not allowed');
       }
+      if (integration === 'gmb') existingGmbRefreshToken = current.refreshToken;
     }
 
     const onboarding = await ioRedis.get(`onboarding:${body.state}`);
@@ -114,6 +116,7 @@ export class NoAuthIntegrationsController {
       await ioRedis.del(`onboarding:${body.state}`);
     }
 
+    let lookupFailure: ToybacoGmbLookupError | undefined;
     const {
       error,
       accessToken,
@@ -157,8 +160,19 @@ export class NoAuthIntegrationsController {
               refresh,
               auth.accessToken
             );
+            if (integration === 'gmb') {
+              // Location selection refines identity, not the OAuth credentials/expiry.
+              // Google may omit a refresh token; retain only this verified channel's stored token.
+              const refreshToken = auth.refreshToken || existingGmbRefreshToken;
+              if (!refreshToken || !auth.accessToken || !Number.isFinite(auth.expiresIn) || auth.expiresIn! <= 0) {
+                throw new ToybacoGmbLookupError('reauthenticate');
+              }
+              res({ ...auth, ...newAuth, refreshToken, expiresIn: auth.expiresIn });
+              return;
+            }
             return res({ ...newAuth, refreshToken: body.refresh });
           } catch (err: any) {
+            if (integration === 'gmb' && err instanceof ToybacoGmbLookupError) lookupFailure = err;
             return res({
               error: err.message,
               accessToken: '',
@@ -197,6 +211,7 @@ export class NoAuthIntegrationsController {
       }
     });
 
+    if (lookupFailure) throw lookupFailure;
     if (error) {
       throw new NotEnoughScopes(error);
     }

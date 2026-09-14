@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { ChannelConnectionResult, connectionMessage, readConnectionResult } from './channel.connection.result';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 
@@ -8,21 +9,30 @@ type RefreshDependencies = {
   fetch: (url: string, options?: RequestInit) => Promise<Response>;
   show: (message: string, type: 'success' | 'warning') => void;
   completed: () => void;
+  result?: (value: ChannelConnectionResult | null) => void;
 };
 
 // OAuth must leave the iframe. Completion still uses the existing callback's
 // same-origin, exact WindowProxy and finite outcome contract.
-export function createChannelRefresh({ browser, fetch, show, completed }: RefreshDependencies) {
+export function createChannelRefresh({ browser, fetch, show, completed, result }: RefreshDependencies) {
   const owner = browser as Window & { __toybacoConnectPopup?: Window | null };
   let popup: Window | null = null;
   let disposed = false;
+  let channel: RefreshChannel | undefined;
   let pending = false;
   let controller: AbortController | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let generation = 0;
+  let closeTimer: ReturnType<typeof setInterval> | undefined;
+  const report = (value: ChannelConnectionResult) => {
+    result?.({ ...value, channel });
+    show(connectionMessage(value), value.outcome === 'connected' ? 'success' : 'warning');
+  };
   let cancel: (() => void) | undefined;
   const finishRequest = () => { pending = false; };
   const release = (close: boolean) => {
+    if (closeTimer) clearInterval(closeTimer);
+    closeTimer = undefined;
     if (owner.__toybacoConnectPopup === popup) owner.__toybacoConnectPopup = null;
     if (close && popup && !popup.closed) popup.close();
     popup = null;
@@ -30,14 +40,11 @@ export function createChannelRefresh({ browser, fetch, show, completed }: Refres
   const onMessage = (event: MessageEvent) => {
     if (disposed || !popup || event.origin !== browser.location.origin ||
         event.source !== popup || owner.__toybacoConnectPopup !== popup) return;
-    const data = event.data;
-    if (!data || typeof data !== 'object' || data.type !== 'toybaco-connect' ||
-        !['connected', 'review', 'precondition'].includes(data.outcome)) return;
+    const data = readConnectionResult(event.data);
+    if (!data) return;
     generation++;
-    release(false);
-    show(data.outcome === 'connected' ? 'チャンネルを再接続しました' :
-      data.outcome === 'precondition' ? 'チャンネルを接続するための条件を満たしていません' :
-      'チャンネルの接続結果を確認してください', data.outcome === 'connected' ? 'success' : 'warning');
+    release(data.outcome === 'failed');
+    report(data);
     if (data.outcome === 'connected') completed();
   };
   browser.addEventListener('message', onMessage);
@@ -46,13 +53,15 @@ export function createChannelRefresh({ browser, fetch, show, completed }: Refres
       if (disposed || pending) return false;
       if (popup && !popup.closed) { popup.focus(); return false; }
       release(false);
+      channel = integration;
+      result?.(null);
       const embedded = !!browser.document.documentElement.dataset.toybacoEmbed;
       if (embedded) {
         // _blank gives this attempt its own WindowProxy; an old unmount must
         // never close a named window reused by another screen's newer flow.
         popup = browser.open('about:blank', '_blank', 'width=600,height=800');
         if (!popup) {
-          show('チャンネル再接続用のポップアップを開けませんでした。ブラウザのポップアップを許可して、もう一度お試しください。', 'warning');
+          report({ outcome: 'failed', reason: 'popup-blocked' });
           return false;
         }
         owner.__toybacoConnectPopup = popup;
@@ -80,6 +89,14 @@ export function createChannelRefresh({ browser, fetch, show, completed }: Refres
         if (embedded) {
           if (!activePopup || activePopup.closed || owner.__toybacoConnectPopup !== activePopup) throw new Error('CHANNEL_REFRESH_CLOSED');
           activePopup.location.href = url.href;
+          closeTimer = setInterval(() => {
+            if (disposed || attempt !== generation || owner.__toybacoConnectPopup !== activePopup) return;
+            if (activePopup.closed) {
+              generation++;
+              release(false);
+              report({ outcome: 'failed', reason: 'interrupted' });
+            }
+          }, 1000);
         } else {
           browser.location.href = url.href;
         }
@@ -87,7 +104,7 @@ export function createChannelRefresh({ browser, fetch, show, completed }: Refres
       } catch {
         if (!disposed && attempt === generation) {
           release(true);
-          show('チャンネルを再接続できませんでした。もう一度お試しください。', 'warning');
+          report({ outcome: 'failed', reason: 'unavailable' });
         }
         return false;
       } finally {
@@ -109,15 +126,17 @@ export function createChannelRefresh({ browser, fetch, show, completed }: Refres
   };
 }
 
-export function useChannelRefresh(onCompleted: () => void) {
+export function useChannelRefresh(onCompleted: () => void, onResult?: (value: ChannelConnectionResult | null) => void) {
   const fetch = useFetch();
   const { show } = useToaster();
   const completed = useRef(onCompleted);
   completed.current = onCompleted;
+  const result = useRef(onResult);
+  result.current = onResult;
   const session = useRef<ReturnType<typeof createChannelRefresh> | null>(null);
   useEffect(() => {
     const owned = createChannelRefresh({ browser: window, fetch,
-      show, completed: () => completed.current() });
+      show, completed: () => completed.current(), result: value => result.current?.(value) });
     session.current = owned;
     return () => { if (session.current === owned) session.current = null; owned.dispose(); };
   }, [fetch, show]);

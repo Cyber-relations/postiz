@@ -25,6 +25,7 @@ import { NewPost } from '@gitroom/frontend/components/launches/new.post';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import useCookie from 'react-use-cookie';
+import { ChannelConnectionResult, connectionMessage, connectionReason, readConnectionResult } from '@gitroom/frontend/components/platform-analytics/channel.connection.result';
 import { Onboarding } from '@gitroom/frontend/components/onboarding/onboarding';
 
 export const SVGLine = () => {
@@ -386,6 +387,7 @@ export const LaunchesComponent = () => {
   const fireEvents = useFireEvents();
   const t = useT();
   const [reload, setReload] = useState(false);
+  const [connectionResult, setConnectionResult] = useState<ChannelConnectionResult | null>(null);
   const { collapsed: toybacoChannelsCollapsed, toggle: toybacoToggleChannels } = useToybacoChannelSidebar();
   const { isLoading, data: integrations, mutate } = useIntegrationList();
 
@@ -540,37 +542,13 @@ export const LaunchesComponent = () => {
       ) {
         return;
       }
-      const data = event.data as {
-        type?: unknown;
-        outcome?: unknown;
-      };
-      // 自由文やbooleanではなく、許可した有限の結果だけを受け付ける。
-      if (
-        data.type !== 'toybaco-connect' ||
-        (data.outcome !== 'connected' &&
-          data.outcome !== 'review' &&
-          data.outcome !== 'precondition')
-      ) {
-        return;
-      }
+      const result = readConnectionResult(event.data);
+      if (!result) return;
+      if (result.outcome === 'failed') toybacoWindow.__toybacoConnectPopup.close();
       toybacoWindow.__toybacoConnectPopup = null;
-      const customerMessage =
-        data.outcome === 'connected'
-          ? t('channel_added', 'チャンネルを追加しました')
-          : data.outcome === 'precondition'
-          ? t(
-              'connection_precondition_failed',
-              'チャンネルを接続するための条件を満たしていません'
-            )
-          : t(
-            'channel_connection_review',
-            'チャンネルの接続結果を確認してください'
-          );
-      toast.show(
-        customerMessage,
-        data.outcome === 'connected' ? 'success' : 'warning'
-      );
-      void mutate();
+      setConnectionResult(result);
+      toast.show(connectionMessage(result), result.outcome === 'connected' ? 'success' : 'warning');
+      if (result.outcome === 'connected') void mutate();
     };
     if (document.documentElement.dataset.toybacoEmbed) {
       window.addEventListener('message', handleToybacoConnectMessage);
@@ -593,6 +571,7 @@ export const LaunchesComponent = () => {
               'channel_connection_review',
               'チャンネルの接続結果を確認してください'
             );
+      setConnectionResult({ outcome });
       toast.show(customerMessage, 'warning');
       window?.opener?.postMessage(
         {
@@ -601,6 +580,11 @@ export const LaunchesComponent = () => {
         },
         window.location.origin
       );
+    }
+    if (search.get('connection') === 'failed') {
+      const result: ChannelConnectionResult = { outcome: 'failed', reason: connectionReason(search.get('reason')) };
+      setConnectionResult(result);
+      window.opener?.postMessage({ type: 'toybaco-connect', ...result }, window.location.origin);
     }
     if (search.get('added')) {
       fireEvents('channel_added');
@@ -612,7 +596,7 @@ export const LaunchesComponent = () => {
         window.location.origin
       );
     }
-    if (window.opener) {
+    if (window.opener && (search.get('added') || search.get('connection') === 'review' || search.get('connection') === 'failed' || search.get('precondition') === 'true')) {
       window.close();
     }
 
@@ -749,6 +733,7 @@ export const LaunchesComponent = () => {
           </div>
         </div>
         <div data-toybaco-calendar-main="" className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+          {connectionResult && <p data-toybaco-connection-result="" role={connectionResult.outcome === 'connected' ? 'status' : 'alert'} className="rounded-[8px] border border-newTableBorder p-[16px] text-[14px] leading-[1.6]">{connectionMessage(connectionResult)}</p>}
           <Filters />
           <div className="flex-1 flex">
             <Calendar />

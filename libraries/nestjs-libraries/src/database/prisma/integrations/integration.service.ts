@@ -5,6 +5,7 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
+import { ToybacoGmbLookupError } from '@gitroom/nestjs-libraries/integrations/social/gmb.provider';
 import { IntegrationRepository } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.repository';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 import {
@@ -540,6 +541,11 @@ export class IntegrationService {
         getIntegration
       );
       if (!data) {
+        if (getIntegration.providerIdentifier === 'gmb') {
+          // A false refresh can also be a superseded credential CAS, not an auth rejection.
+          const current = await this.getIntegrationById(org.id, integration);
+          throw new ToybacoGmbLookupError(current?.refreshNeeded ? 'reauthenticate' : 'unavailable');
+        }
         return [];
       }
 
@@ -553,13 +559,14 @@ export class IntegrationService {
         }
       } else {
         await this.disconnectChannel(org.id, getIntegration);
+        if (getIntegration.providerIdentifier === 'gmb') throw new ToybacoGmbLookupError('reauthenticate');
         return [];
       }
     }
 
-    const getIntegrationData = await ioRedis.get(
-      `integration:${org.id}:${integration}:${date}`
-    );
+    // Old GBP errors were stored as []; a new key also lets genuine empty results remain cached.
+    const analyticsCacheKey = `${getIntegration.providerIdentifier === 'gmb' ? 'integration-gmb-v2' : 'integration'}:${org.id}:${integration}:${date}`;
+    const getIntegrationData = await ioRedis.get(analyticsCacheKey);
     if (getIntegrationData) {
       return JSON.parse(getIntegrationData);
     }
@@ -572,7 +579,7 @@ export class IntegrationService {
           +date
         );
         await ioRedis.set(
-          `integration:${org.id}:${integration}:${date}`,
+          analyticsCacheKey,
           JSON.stringify(loadAnalytics),
           'EX',
           !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
@@ -581,6 +588,7 @@ export class IntegrationService {
         );
         return loadAnalytics;
       } catch (e) {
+        if (e instanceof ToybacoGmbLookupError) throw e;
         if (e instanceof RefreshToken) {
           return this.checkAnalytics(org, integration, date, true);
         }
