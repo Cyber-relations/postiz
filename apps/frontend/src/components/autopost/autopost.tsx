@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FC, Fragment, useCallback, useMemo, useState } from 'react';
+import React, { FC, Fragment, useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
 import { Button } from '@gitroom/react/form/button';
@@ -17,57 +17,96 @@ import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { ToybacoAssistedTextarea, usePostingTextCapability } from '@gitroom/frontend/components/settings/toybaco-settings-controls';
 import { SettingsToggle as Slider } from '@gitroom/frontend/components/settings/toybaco-settings-controls';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { readSettings, writeSettings, settingsWriteMessage, settingsWriteUncertain } from '@gitroom/frontend/components/settings/toybaco-settings-request';
+
+type RssRecord = { id: string; title: string; url: string; active: boolean; integrations: string; onSlot: boolean; syncLast: boolean; addPicture: boolean; generateContent: boolean; lastUrl: string; content: string | null };
+const isRssList = (value: unknown): value is RssRecord[] => Array.isArray(value) && value.every(item => {
+  if (!item || typeof item.id !== 'string' || typeof item.title !== 'string' || typeof item.url !== 'string' || typeof item.active !== 'boolean' || typeof item.integrations !== 'string') return false;
+  if (['onSlot', 'syncLast', 'addPicture', 'generateContent'].some(key => typeof item[key] !== 'boolean') || typeof item.lastUrl !== 'string' || (item.content !== null && typeof item.content !== 'string')) return false;
+  try { const integrations = JSON.parse(item.integrations); return Array.isArray(integrations) && integrations.every(row => row && typeof row.id === 'string'); } catch { return false; }
+});
 export const Autopost: FC = () => {
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const fetch = useFetch();
   const t = useT();
   const modal = useModals();
   const toaster = useToaster();
-  const list = useCallback(async () => {
-    return (await fetch('/autopost')).json();
-  }, []);
-  const { data, mutate } = useSWR('autopost', list);
+  const list = useCallback(() => readSettings(fetch, '/autopost', isRssList), [fetch]);
+  const { data, error, isLoading, isValidating, mutate } = useSWR('autopost', list, {
+    revalidateOnFocus: false, revalidateOnReconnect: false, shouldRetryOnError: false, errorRetryCount: 0,
+  });
+  const [operationError, setOperationError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const finishOperation = useCallback(() => { busyRef.current = false; if (alive.current) setBusy(false); }, []);
+  const [needsReview, setNeedsReview] = useState(false);
+  const reviewRequired = useRef(false);
+  const markNeedsReview = useCallback((required: boolean) => { reviewRequired.current = required; setNeedsReview(required); }, []);
+  const [readingList, setReadingList] = useState(false);
+  const refreshList = useCallback(async () => {
+    markNeedsReview(true);
+    setReadingList(true);
+    try {
+      // mutate() alone may return stale cached rows after a failed revalidation.
+      const records = await list();
+      if (!alive.current) throw new Error('SETTINGS_VIEW_CLOSED');
+      await mutate(records, false);
+      if (!alive.current) return records;
+      markNeedsReview(false);
+      setOperationError('');
+      return records;
+    } catch (error) {
+      if (alive.current) setOperationError('最新の一覧を確認できませんでした。前回の表示を残しています。一覧を再確認してください。');
+      throw error;
+    } finally { if (alive.current) setReadingList(false); }
+  }, [list, mutate, markNeedsReview]);
+  const retryList = () => { void refreshList().then(() => { if (alive.current) setOperationError(''); }).catch(() => { if (alive.current) setOperationError('最新の一覧を確認できませんでした。前回の表示を残しています。もう一度お試しください。'); }); };
+  const refreshAfterWrite = useCallback(() => {
+    if (!alive.current) return;
+    markNeedsReview(true);
+    void refreshList().catch(() => { if (alive.current) setOperationError('変更は保存されましたが、最新の一覧を確認できませんでした。前回の表示を残しています。一覧を再確認してください。'); });
+  }, [refreshList, markNeedsReview]);
   const addWebhook = useCallback(
     (data?: any) => () => {
       modal.openModal({
         title: data ? 'RSSの下書き設定を編集' : 'RSSから下書きを作成',
         withCloseButton: true,
         toybacoSettingsDialog: true,
-        children: <AddOrEditWebhook data={data} reload={mutate} />,
+        children: <AddOrEditWebhook data={data} reload={refreshList} onSaved={refreshAfterWrite} />,
       });
     },
-    [modal, mutate]
+    [modal, refreshList, refreshAfterWrite]
   );
   const deleteHook = useCallback(
-    (data: any) => async () => {
-      if (
-        await deleteDialog(
-          t(
-            'are_you_sure_you_want_to_delete',
-            `Are you sure you want to delete ${data.name}?`,
-            { name: data.name }
-          )
-        )
-      ) {
-        await fetch(`/autopost/${data.id}`, {
-          method: 'DELETE',
-        });
-        mutate();
-        toaster.show(t('webhook_deleted_successfully', 'Webhook deleted successfully'), 'success');
-      }
-    },
-    []
+    (record: RssRecord) => async () => {
+      if (busyRef.current || reviewRequired.current || readingList || needsReview) return;
+      busyRef.current = true;
+      setBusy(true);
+      try {
+        if (!await deleteDialog(`RSS設定「${record.title}」を削除してもよろしいですか？`)) return;
+        await writeSettings(fetch, `/autopost/${record.id}`, { method: 'DELETE' });
+        if (!alive.current) return;
+        setOperationError('');
+        toaster.show('RSS設定を削除しました', 'success');
+        refreshAfterWrite();
+      } catch (error) { if (!alive.current) return; setOperationError(settingsWriteMessage(error, '削除')); markNeedsReview(settingsWriteUncertain(error)); }
+      finally { finishOperation(); }
+    }, [fetch, toaster, needsReview, readingList, refreshAfterWrite, markNeedsReview, finishOperation]
   );
   const changeActive = useCallback(
-    (data: any) => async (ac: 'on' | 'off') => {
-      await fetch(`/autopost/${data.id}/active`, {
-        body: JSON.stringify({
-          active: ac === 'on',
-        }),
-        method: 'POST',
-      });
-      mutate();
-    },
-    [mutate]
+    (record: RssRecord) => async (active: 'on' | 'off') => {
+      if (busyRef.current || reviewRequired.current || readingList || needsReview) return;
+      busyRef.current = true;
+      setBusy(true);
+      try {
+        await writeSettings(fetch, `/autopost/${record.id}/active`, { method: 'POST', body: JSON.stringify({ active: active === 'on' }) });
+        if (!alive.current) return;
+        setOperationError('');
+        refreshAfterWrite();
+      } catch (error) { if (!alive.current) return; setOperationError(settingsWriteMessage(error)); markNeedsReview(settingsWriteUncertain(error)); }
+      finally { finishOperation(); }
+    }, [fetch, needsReview, readingList, refreshAfterWrite, markNeedsReview, finishOperation]
   );
   return (
     <div data-toybaco-settings-section="autopost" className="flex flex-col">
@@ -78,6 +117,9 @@ export const Autopost: FC = () => {
           'Autopost can automatically posts your RSS new items to social media'
         )}
       </div>
+      {(error || operationError) && <div role="alert" data-toybaco-settings-notice=""><p>{operationError || (data ? '最新のRSS設定を確認できませんでした。前回の一覧を表示しています。' : 'RSS設定の一覧を確認できませんでした。')}</p><Button type="button" secondary disabled={isValidating || readingList} onClick={retryList}>一覧を再確認</Button></div>}
+      {isLoading && !data && <p role="status">RSS設定の一覧を確認しています。</p>}
+      {!error && data?.length === 0 && <p>保存済みのRSS設定はありません。</p>}
       <div data-toybaco-settings-card="" className="my-[16px] mt-[16px] bg-sixth border-fifth items-center border rounded-[4px] p-[24px] flex gap-[24px]">
         <div className="flex flex-col w-full">
           {!!data?.length && (
@@ -86,16 +128,16 @@ export const Autopost: FC = () => {
                 <div data-toybaco-settings-record="" role="listitem" key={p.id}>
                   <div data-toybaco-settings-record-content=""><strong>{p.title}</strong><p>{p.url}</p></div>
                   <div data-toybaco-settings-record-actions="">
-                    <Button secondary data-toybaco-settings-action="edit" onClick={addWebhook(p)}>{t('edit', 'Edit')}</Button>
-                    <Button secondary data-toybaco-settings-action="delete" onClick={deleteHook(p)}>{t('delete', 'Delete')}</Button>
-                    <div data-toybaco-settings-active=""><span>下書き作成</span><Slider value={p.active ? 'on' : 'off'} onChange={changeActive(p)} fill={true} /></div>
+                    <Button secondary data-toybaco-settings-action="edit" disabled={busy || readingList || needsReview || !!error} onClick={addWebhook(p)}>{t('edit', 'Edit')}</Button>
+                    <Button secondary data-toybaco-settings-action="delete" disabled={busy || readingList || needsReview || !!error} onClick={deleteHook(p)}>{t('delete', 'Delete')}</Button>
+                    <div data-toybaco-settings-active=""><span>下書き作成</span><Slider disabled={busy || readingList || needsReview || !!error} value={p.active ? 'on' : 'off'} onChange={changeActive(p)} fill={true} /></div>
                   </div>
                 </div>
               ))}
             </div>
           )}
           <div>
-            <Button data-toybaco-settings-action="add"
+            <Button data-toybaco-settings-action="add" disabled={!data || busy || readingList || needsReview || !!error}
               onClick={addWebhook()}
               className={clsx((data?.length || 0) > 0 && 'my-[16px]')}
             >
@@ -154,9 +196,22 @@ const getPostImmediately = (t: (key: string, fallback: string) => string) => [
 ];
 export const AddOrEditWebhook: FC<{
   data?: any;
-  reload: () => void;
+  reload: () => Promise<RssRecord[]>;
+  onSaved: () => void;
 }> = (props) => {
-  const { data, reload } = props;
+  const { data, reload, onSaved } = props;
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const pending = useRef(false);
+  const finishSave = useCallback(() => { pending.current = false; }, []);
+  const previewPending = useRef(false);
+  const [saveError, setSaveError] = useState('');
+  const [uncertain, setUncertain] = useState(false);
+  const [savedRecords, setSavedRecords] = useState<RssRecord[] | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [previewError, setPreviewError] = useState('');
+  const [previewing, setPreviewing] = useState(false);
+  const finishPreview = useCallback(() => { previewPending.current = false; if (alive.current) setPreviewing(false); }, []);
   const fetch = useFetch();
   const t = useT();
   const options = getOptions(t);
@@ -195,9 +250,10 @@ export const AddOrEditWebhook: FC<{
   const url = form.watch('url');
   const syncLast = form.watch('syncLast');
   const integrations = form.watch('integrations');
-  const integration = useCallback(async () => {
-    return (await fetch('/integrations/list')).json();
-  }, []);
+  const integration = useCallback(() => readSettings(fetch, '/integrations/list', (value): value is { integrations: any[] } => {
+    const result = value as { integrations?: unknown } | null;
+    return !!result && Array.isArray(result.integrations) && result.integrations.every(item => item && typeof item.id === 'string');
+  }), [fetch]);
   const changeIntegration = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const findValue = options.find(
@@ -208,9 +264,10 @@ export const AddOrEditWebhook: FC<{
         form.setValue('integrations', []);
       }
     },
-    []
+    [form, options]
   );
-  const { data: dataList, isLoading } = useSWR('integrations', integration, {
+  const { data: dataList, isLoading, error: integrationError, mutate: retryIntegrations } = useSWR('integrations', integration, {
+    shouldRetryOnError: false, errorRetryCount: 0,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     revalidateIfStale: false,
@@ -220,11 +277,15 @@ export const AddOrEditWebhook: FC<{
   });
   const callBack = useCallback(
     async (values: any) => {
+      if (pending.current || uncertain || previewPending.current) return;
       if (values.generateContent && !aiAvailable) {
         toast.show('AIを利用できません。AIを使わない設定を選ぶか、保存せず閉じてください。', 'warning');
         return;
       }
-      await fetch(data?.id ? `/autopost/${data?.id}` : '/autopost', {
+      pending.current = true;
+      setSaveError('');
+      try {
+      await writeSettings(fetch, data?.id ? `/autopost/${data?.id}` : '/autopost', {
         method: data?.id ? 'PUT' : 'POST',
         body: JSON.stringify({
           ...(data?.id
@@ -242,40 +303,45 @@ export const AddOrEditWebhook: FC<{
               }),
         }),
       });
-      toast.show(
-        data?.id
-          ? t('autopost_updated_successfully', 'Autopost updated successfully')
-          : t('autopost_added_successfully', 'Autopost added successfully'),
-        'success'
-      );
-      modal.closeAll();
-      reload();
+      } catch (error) {
+        if (!alive.current) return;
+        setSaveError(settingsWriteMessage(error)); setUncertain(settingsWriteUncertain(error)); setSavedRecords(null);
+        return;
+      } finally { finishSave(); }
+      if (!alive.current) return;
+      toast.show(data?.id ? 'RSS設定を更新しました' : 'RSS設定を追加しました', 'success');
+      modal.closeCurrent();
+      onSaved();
     },
-    [data, lastUrl, syncLast, aiAvailable, toast, fetch, modal, reload, t]
+    [data, lastUrl, syncLast, aiAvailable, toast, fetch, modal, onSaved, uncertain, finishSave]
   );
   const sendTest = useCallback(async () => {
-    const url = form.getValues('url');
+    if (previewPending.current || pending.current) return;
+    previewPending.current = true;
+    setPreviewing(true);
+    setPreviewError('');
+    const requestedUrl = form.getValues('url');
     try {
-      const { success, url: newUrl } = await (
-        await fetch(`/autopost/send?url=${encodeURIComponent(url)}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-      ).json();
-      if (!success) {
-        setValid('');
-        toast.show(t('could_not_use_rss_feed', 'Could not use this RSS feed'), 'warning');
-        return;
-      }
-      toast.show(t('rss_valid', 'RSS valid!'), 'success');
-      setValid(url);
-      setLastUrl(newUrl);
-    } catch (e: any) {
-      /** empty **/
-    }
-  }, []);
+      const result = await readSettings(fetch, `/autopost/send?url=${encodeURIComponent(requestedUrl)}`, (value): value is { success: boolean; url?: string } => {
+        const result = value as { success?: unknown; url?: unknown } | null;
+        return !!result && typeof result.success === 'boolean' && (!result.success || typeof result.url === 'string');
+      }, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      if (!alive.current || form.getValues('url') !== requestedUrl) return;
+      if (!result.success) { setValid(''); setPreviewError('RSSフィードを確認できませんでした。URLを確認して、もう一度お試しください。'); return; }
+      setValid(requestedUrl);
+      setLastUrl(result.url!);
+      toast.show('RSSフィードを確認しました', 'success');
+    } catch {
+      if (alive.current && form.getValues('url') === requestedUrl) { setValid(''); setPreviewError('RSSフィードの取得結果を確認できませんでした。URLを確認して、もう一度お試しください。'); }
+    } finally { finishPreview(); }
+  }, [fetch, form, toast, finishPreview]);
+  const checkSaved = async () => {
+    if (checking) return;
+    setChecking(true);
+    try { const records = await reload(); if (alive.current) setSavedRecords(records); }
+    catch { if (alive.current) setSaveError('保存済みの一覧を確認できませんでした。入力を残しています。時間をおいて再確認してください。'); }
+    finally { if (alive.current) setChecking(false); }
+  };
 
   return (
     <FormProvider {...form}>
@@ -287,6 +353,7 @@ export const AddOrEditWebhook: FC<{
               label="設定名"
               aria-label="設定名"
               translationKey="toybaco_rss_label_title"
+              disabled={form.formState.isSubmitting}
               removeError={!form.formState.errors.title}
               {...form.register('title')}
             />
@@ -294,11 +361,13 @@ export const AddOrEditWebhook: FC<{
               label="RSSフィードのURL"
               aria-label="RSSフィードのURL"
               translationKey="toybaco_rss_label_url"
+              disabled={form.formState.isSubmitting || previewing}
               removeError={!form.formState.errors.url}
               {...form.register('url')}
             />
             <Select
               label="現在の最新記事も取り込む"
+              disabled={form.formState.isSubmitting}
               aria-label="現在の最新記事も取り込む"
               translationKey="toybaco_rss_label_should_sync_last_post"
               hideErrors={!form.formState.errors.syncLast}
@@ -316,6 +385,7 @@ export const AddOrEditWebhook: FC<{
             </Select>
             <Select
               label="AIで下書き本文を作成"
+              disabled={form.formState.isSubmitting}
               aria-label="AIで下書き本文を作成"
               translationKey="toybaco_rss_label_autogenerate_content"
               hideErrors={!form.formState.errors.generateContent}
@@ -342,6 +412,7 @@ export const AddOrEditWebhook: FC<{
                     '!min-h-40 !max-h-80 p-2 overflow-x-hidden scrollbar scrollbar-thumb-[#612AD5] bg-customColor2 outline-none mb-[16px] border-fifth border rounded-[4px]'
                   )}
                   value={content}
+                  disabled={form.formState.isSubmitting}
                   onChange={(e) => {
                     form.setValue('content', e.target.value);
                   }}
@@ -359,6 +430,7 @@ export const AddOrEditWebhook: FC<{
               name="integrations"
               hideErrors={true}
               label="下書きの作成先"
+              disabled={form.formState.isSubmitting}
               aria-label="下書きの作成先"
               translationKey="toybaco_rss_label_integrations"
               disableForm={true}
@@ -374,20 +446,31 @@ export const AddOrEditWebhook: FC<{
               <PickPlatforms
                 integrations={dataList.integrations}
                 selectedIntegrations={integrations as any[]}
-                onChange={(e) => form.setValue('integrations', e)}
+                onChange={(e) => { if (!pending.current) form.setValue('integrations', e); }}
                 singleSelect={false}
                 toolTip={true}
                 isMain={true}
               />
             )}
+            {integrationError && allIntegrations.value === 'specific' && <div role="alert" data-toybaco-settings-notice=""><p>投稿先を確認できませんでした。選択内容は残しています。</p><Button type="button" secondary disabled={isLoading} onClick={() => { void retryIntegrations().catch(() => {}); }}>投稿先を再確認</Button></div>}
+            {previewError && <p role="alert" data-toybaco-settings-notice="">{previewError}</p>}
+            {saveError && <div role="alert" data-toybaco-settings-notice=""><p>{saveError} 入力内容は残しています。</p>
+              {uncertain && <Button type="button" secondary disabled={checking} onClick={checkSaved}>保存済みの一覧を確認</Button>}
+              {savedRecords && <div><p>保存済みのRSS設定を確認してください。同じ内容がある場合は再度保存しないでください。</p>
+                <ul style={{ maxHeight: 200, overflowY: 'auto', overflowWrap: 'anywhere', minWidth: 0 }}>{savedRecords.map(record => <li key={record.id}>{record.title} — {record.url}</li>)}</ul>
+                {!savedRecords.length && <p>保存済みのRSS設定はありません。</p>}
+                <Button type="button" secondary onClick={() => { setUncertain(false); setSavedRecords(null); setSaveError('一覧を確認しました。未保存の場合だけ、もう一度保存してください。'); }}>一覧を確認しました</Button>
+              </div>}
+            </div>}
             <p data-toybaco-settings-notice="">「RSSを確認」はフィードの取得確認だけを行います。下書きの保存やSNSへの送信は行いません。</p>
             <div data-toybaco-settings-form-actions="" className="flex gap-[10px]">
-              <Button type="button" secondary onClick={() => modal.closeCurrent()}>キャンセル</Button>
+              <Button type="button" secondary disabled={form.formState.isSubmitting} onClick={() => modal.closeCurrent()}>キャンセル</Button>
               {valid === url && (syncLast || !!lastUrl) && (
                 <Button
                   type="submit"
                   className="mt-[24px]"
                   disabled={
+                    uncertain || previewing || (allIntegrations.value === 'specific' && (!!integrationError || isLoading)) ||
                     (generateContent && !aiAvailable) || form.formState.isSubmitting ||
                     valid !== url ||
                     !form.formState.isValid ||
@@ -403,7 +486,7 @@ export const AddOrEditWebhook: FC<{
                 className="mt-[24px]"
                 onClick={sendTest}
                 disabled={
-                  !form.formState.isValid ||
+                  previewing || form.formState.isSubmitting || !form.formState.isValid ||
                   (allIntegrations.value === 'specific' &&
                     !integrations?.length)
                 }
