@@ -40,10 +40,10 @@ export function usePostingTextCapability() {
   return { available, checking, error: !!error, capability: data, retry: () => { void mutate().catch(() => {}); } };
 }
 
-export const SettingsToggle = ({ value, onChange, label = '下書き作成', fill: _fill }: {
-  value: 'on' | 'off'; onChange: (value: 'on' | 'off') => void; label?: string; fill?: boolean;
+export const SettingsToggle = ({ value, onChange, label = '下書き作成', fill: _fill, disabled = false }: {
+  value: 'on' | 'off'; onChange: (value: 'on' | 'off') => void; label?: string; fill?: boolean; disabled?: boolean;
 }) => (
-  <button type="button" role="switch" aria-label={label} aria-checked={value === 'on'}
+  <button type="button" role="switch" disabled={disabled} aria-label={label} aria-checked={value === 'on'}
     data-toybaco-settings-switch="" onClick={() => onChange(value === 'on' ? 'off' : 'on')}>
     <span aria-hidden="true"><span /></span>
   </button>
