@@ -28,6 +28,8 @@ interface OpenModalInterface {
   askClose?: boolean;
   toybacoDecision?: boolean;
   toybacoTagDialog?: boolean;
+  toybacoMediaPicker?: boolean;
+  toybacoMediaPreview?: boolean;
   onClose?: () => void;
   children: ReactNode | ((close: () => void) => ReactNode);
   classNames?: {
@@ -271,6 +273,8 @@ export const Component: FC<{
                 modal.size ? '' : 'min-w-[600px]',
                 modal.fullScreen && 'h-full'
               )}
+              data-toybaco-media-picker={modal.toybacoMediaPicker ? '' : undefined}
+              data-toybaco-media-preview={modal.toybacoMediaPreview ? '' : undefined}
               {...((!!modal.size || !!modal.height || !!modal.maxSize) && {
                 style: {
                   ...(modal.size ? { width: modal.size } : {}),
@@ -290,7 +294,7 @@ export const Component: FC<{
                     <button
                       className="outline-none absolute end-[20px] top-[20px] mantine-UnstyledButton-root mantine-ActionIcon-root hover:bg-tableBorder cursor-pointer mantine-Modal-close mantine-1dcetaa"
                       type="button"
-                      aria-label={modal.toybacoTagDialog ? '閉じる' : undefined}
+                      aria-label={modal.toybacoTagDialog || modal.toybacoMediaPicker || modal.toybacoMediaPreview ? '閉じる' : undefined}
                       onClick={closeModalFunction}
                     >
                       <svg

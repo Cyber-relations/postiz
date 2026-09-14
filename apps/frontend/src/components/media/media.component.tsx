@@ -349,8 +349,9 @@ export const MediaBox: FC<{
       modals.openModal({
         title: '',
         top: 10,
+        toybacoMediaPreview: true,
         children: (
-          <div className="w-full h-full p-[50px]">
+          <div data-toybaco-media-preview-surface="" className="w-full h-full p-[50px]">
             {hasExtension(media.path, 'mp4') ? (
               <VideoFrame
                 autoplay={true}
@@ -413,9 +414,10 @@ export const MediaBox: FC<{
   }, [t, loading]);
 
   return (
-    <DropFiles disabled={loading} className="flex flex-col flex-1" onDrop={dragAndDrop}>
-      <div className="flex flex-col flex-1">
+    <DropFiles disabled={loading} className="toybaco-media-dropzone flex flex-col flex-1" onDrop={dragAndDrop}>
+      <div data-toybaco-media-box={standalone ? 'library' : 'picker'} className="flex flex-col flex-1">
         <div
+          data-toybaco-media-toolbar=""
           className={clsx(
             'flex items-center gap-[12px]',
             !isLoading &&
@@ -470,6 +472,7 @@ export const MediaBox: FC<{
           )}
         >
           <div
+            data-toybaco-media-grid=""
             className={clsx(
               'absolute -left-[3px] -top-[3px] withp3 h-full overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-newColColor scrollbar-track-newBgColorInner',
               !isLoading &&
@@ -511,6 +514,7 @@ export const MediaBox: FC<{
               <>
                 {[...new Array(16)].map((_, i) => (
                   <div
+                    data-toybaco-media-skeleton=""
                     className={clsx(
                       'px-[3px] py-[3px] float-left rounded-[6px] cursor-pointer w8-max aspect-square'
                     )}
@@ -532,6 +536,7 @@ export const MediaBox: FC<{
               })
               .map((media: any) => (
                 <div
+                  data-toybaco-media-tile=""
                   className={clsx(
                     'group px-[3px] py-[3px] float-left rounded-[6px] w8-max aspect-square',
                     !standalone && 'cursor-pointer'
@@ -539,6 +544,9 @@ export const MediaBox: FC<{
                   key={media.id}
                 >
                   <div
+                    data-toybaco-media-selectable={!standalone ? '' : undefined}
+                    data-toybaco-media-image=""
+                    data-selected={!!selected.find((p) => p.id === media.id)}
                     className={clsx(
                       'w-full h-full rounded-[6px] border-[4px] relative',
                       !!selected.find((p) => p.id === media.id)
@@ -548,11 +556,12 @@ export const MediaBox: FC<{
                     onClick={addRemoveSelected(media)}
                   >
                     {!!selected.find((p: any) => p.id === media.id) ? (
-                      <div className="text-white flex z-[101] justify-center items-center text-[14px] font-[500] w-[24px] h-[24px] rounded-full bg-[#612BD3] absolute -bottom-[10px] -end-[10px]">
+                      <div data-toybaco-media-selected="" className="text-white flex z-[101] justify-center items-center text-[14px] font-[500] w-[24px] h-[24px] rounded-full bg-[#612BD3] absolute -bottom-[10px] -end-[10px]">
                         {selected.findIndex((z: any) => z.id === media.id) + 1}
                       </div>
                     ) : (
                       <DeleteCircleIcon
+                        data-toybaco-media-delete-desktop=""
                         className="cursor-pointer hidden z-[100] group-hover:block absolute -top-[5px] -end-[5px]"
                         onClick={deleteImage(media)}
                       />
@@ -561,6 +570,7 @@ export const MediaBox: FC<{
                     <div className="w-full h-full rounded-[6px] overflow-hidden relative">
                       <div className="absolute z-[20] left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]">
                         <div
+                          data-toybaco-media-preview-desktop=""
                           onClick={maximize(media)}
                           className="cursor-pointer p-[4px] bg-black/40 hidden group-hover:block hover:scale-150 transition-all"
                         >
@@ -591,6 +601,16 @@ export const MediaBox: FC<{
                       )}
                     </div>
                   </div>
+                  <div data-toybaco-media-actions="">
+                    <button type="button" onClick={maximize(media)} title={media.originalName}>
+                      {t('preview', 'Preview')}
+                    </button>
+                    {!selected.some((item) => item.id === media.id) && (
+                      <button type="button" data-toybaco-media-delete="" onClick={deleteImage(media)}>
+                        {t('delete', 'Delete')}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
           </div>
@@ -603,7 +623,7 @@ export const MediaBox: FC<{
           />
         )}
         {!standalone && (
-          <div className="flex justify-end mt-[32px] gap-[8px]">
+          <div data-toybaco-media-footer="" className="flex justify-end mt-[32px] gap-[8px]">
             <button
               onClick={() => modals.closeCurrent()}
               className="cursor-pointer h-[52px] px-[20px] items-center justify-center border border-newTextColor/10 flex rounded-[10px]"
@@ -612,6 +632,7 @@ export const MediaBox: FC<{
             </button>
             {!isLoading && !!data?.results?.length && (
               <button
+                data-toybaco-media-confirm=""
                 onClick={standalone ? () => {} : addMedia}
                 disabled={selected.length === 0}
                 className="cursor-pointer text-white disabled:opacity-80 disabled:cursor-not-allowed h-[52px] px-[20px] items-center justify-center bg-[#612BD3] flex rounded-[10px]"
@@ -718,6 +739,7 @@ export const MultiMediaComponent: FC<{
       askClose: false,
       closeOnEscape: true,
       fullScreen: true,
+      toybacoMediaPicker: true,
       size: 'calc(100% - 80px)',
       height: 'calc(100% - 80px)',
       children: (close) => (
@@ -957,6 +979,7 @@ export const MediaComponent: FC<{
       askClose: false,
       closeOnEscape: true,
       fullScreen: true,
+      toybacoMediaPicker: true,
       size: 'calc(100% - 80px)',
       height: 'calc(100% - 80px)',
       children: (close) => (

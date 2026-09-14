@@ -14,8 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import useCookie from 'react-use-cookie';
-import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
+import { SVGLine, useToybacoChannelSidebar } from '@gitroom/frontend/components/launches/launches.component';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 // toybaco_provider_allowlist_v1: 分析画面の案内も製品提供集合と同一にする。
 const allowedIntegrations = [
@@ -43,7 +42,7 @@ export const PlatformAnalytics = () => {
   const [current, setCurrent] = useState(0);
   const [key, setKey] = useState(7);
   const [refresh, setRefresh] = useState(false);
-  const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
+  const { collapsed: toybacoChannelsCollapsed, toggle: toybacoToggleChannels } = useToybacoChannelSidebar();
   const toaster = useToaster();
   const load = useCallback(async () => {
     const int = (
@@ -180,9 +179,10 @@ export const PlatformAnalytics = () => {
   return (
     <>
       <div
+        data-toybaco-analytics-sidebar=""
         className={clsx(
           'bg-newBgColorInner p-[20px] flex flex-col gap-[15px] transition-all',
-          collapseMenu === '1' ? 'group sidebar w-[100px]' : 'w-[260px]'
+          toybacoChannelsCollapsed ? 'group sidebar w-[100px]' : 'w-[260px]'
         )}
       >
         <div className="flex gap-[12px] flex-col">
@@ -190,8 +190,13 @@ export const PlatformAnalytics = () => {
             <h2 className="group-[.sidebar]:hidden flex-1 text-[20px] font-[500]">
               {t('channels')}
             </h2>
-            <div
-              onClick={() => setCollapseMenu(collapseMenu === '1' ? '0' : '1')}
+            <button
+              type="button"
+              data-toybaco-analytics-toggle=""
+              aria-label={toybacoChannelsCollapsed ? 'チャンネルを展開' : 'チャンネルを折りたたむ'}
+              aria-expanded={!toybacoChannelsCollapsed}
+              title={toybacoChannelsCollapsed ? 'チャンネルを展開' : 'チャンネルを折りたたむ'}
+              onClick={toybacoToggleChannels}
               className="group-[.sidebar]:rotate-[180deg] group-[.sidebar]:mx-auto text-btnText bg-btnSimple rounded-[6px] w-[24px] h-[24px] flex items-center justify-center cursor-pointer select-none"
             >
               <svg
@@ -209,10 +214,12 @@ export const PlatformAnalytics = () => {
                   strokeLinejoin="round"
                 />
               </svg>
-            </div>
+            </button>
           </div>
           {sortedIntegrations.map((integration, index) => (
             <div
+              data-toybaco-analytics-channel=""
+              title={integration.name}
               key={integration.id}
               onClick={() => {
                 if (integration.refreshNeeded) {
@@ -279,7 +286,7 @@ export const PlatformAnalytics = () => {
           ))}
         </div>
       </div>
-      <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+      <div data-toybaco-analytics-main="" className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
         {!!options.length && (
           <div className="flex-1 flex flex-col gap-[14px]">
             <div className="max-w-[200px]">
