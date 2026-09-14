@@ -57,13 +57,13 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
 
   const { backendUrl, billingEnabled, isGeneral } = useVariables();
   const posting = useSyncExternalStore(toybacoSubscribePosting, toybacoPostingSnapshot, toybacoPostingServerSnapshot);
-  const postingCache = useMemo(() => ({ provider: () => new Map() }), [posting.documentId]);
-  const copilotHeaders = useMemo(() => posting.owner ? toybacoPostingCopilotHeaders(posting) : undefined, [posting.documentId, posting.owner]);
+  const [postingCache] = useState(() => ({ provider: () => new Map() }));
+  const copilotHeaders = useMemo(() => posting.owner ? toybacoPostingCopilotHeaders(posting.owner, posting.documentId) : undefined, [posting.documentId, posting.owner]);
   const [verifyingPosting, setVerifyingPosting] = useState(false);
 
   // Feedback icon component attaches Sentry feedback to a top-bar icon when DSN is present
   const searchParams = useSearchParams();
-  const load = useCallback(() => toybacoLoadPostingIdentity(fetch, backendUrl, posting), [fetch, backendUrl, posting.documentId, posting.context?.frameId]);
+  const load = useCallback(() => toybacoLoadPostingIdentity(fetch, backendUrl, posting), [fetch, backendUrl, posting]);
   const identityKey = ['context', 'standalone', 'ready', 'blocked'].includes(posting.phase)
     ? ['/user/self', posting.documentId, posting.context?.frameId || 'standalone']
     : null;

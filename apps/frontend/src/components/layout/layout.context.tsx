@@ -102,7 +102,7 @@ function LayoutContextInner(params: { children: ReactNode; postingTicket?: Retur
     toybacoAssertPostingTicket(ticket);
     const prepared = await toybacoComposerBeforeRequest(url, options);
     return toybacoPostingBeforeRequest(url, prepared, ticket);
-  }, []);
+  }, [params.postingTicket]);
   const afterRequest = useCallback(
     async (url: string, options: RequestInit, response: Response) => {
       const postingHandled = toybacoPostingAfterResponse(url, options, response);

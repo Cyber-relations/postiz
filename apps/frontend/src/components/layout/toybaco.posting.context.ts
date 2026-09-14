@@ -148,9 +148,16 @@ export function toybacoPostingAfterResponse(url: string, options: RequestInit, r
   return observeResponse(response, ticket);
 }
 
-export function toybacoPostingCopilotHeaders(ticket = state) {
-  if (!ticket.owner) return undefined;
-  return { ...headersFor(ticket), 'x-toybaco-posting-document-id': ticket.documentId };
+export function toybacoPostingCopilotHeaders(owner = state.owner, documentId = state.documentId) {
+  if (!owner) return undefined;
+  // SDK configuration retains identity across a blocked-state render. The
+  // transport checks the active generation and phase immediately before send.
+  return {
+    'x-toybaco-composer-user-id': owner.id,
+    'x-toybaco-composer-organization-id': owner.orgId,
+    'x-toybaco-composer-role': owner.role,
+    'x-toybaco-posting-document-id': documentId,
+  };
 }
 
 // The installed self-hosted Copilot SDK uses global fetch and has no fetch prop.
