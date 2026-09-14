@@ -8,6 +8,7 @@ import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { RenderAnalytics } from '@gitroom/frontend/components/platform-analytics/render.analytics';
+import { ChannelConnectionResult, connectionMessage } from './channel.connection.result';
 import { useChannelRefresh } from '@gitroom/frontend/components/platform-analytics/use.channel.refresh';
 import { Select } from '@gitroom/react/form/select';
 import { Button } from '@gitroom/react/form/button';
@@ -43,6 +44,7 @@ export const PlatformAnalytics = () => {
   const [key, setKey] = useState(7);
   const [refresh, setRefresh] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [connectionResult, setConnectionResult] = useState<ChannelConnectionResult | null>(null);
   const { collapsed: toybacoChannelsCollapsed, toggle: toybacoToggleChannels } = useToybacoChannelSidebar();
   const load = useCallback(async () => {
     const int = (
@@ -64,7 +66,7 @@ export const PlatformAnalytics = () => {
     refreshWhenOffline: false,
     fallbackData: [],
   });
-  const reconnectChannel = useChannelRefresh(() => { void mutate(); setRefreshVersion(value => value + 1); });
+  const reconnectChannel = useChannelRefresh(() => { void mutate(); setRefreshVersion(value => value + 1); }, setConnectionResult);
   const sortedIntegrations = useMemo(() => {
     return orderBy(
       data,
@@ -286,6 +288,11 @@ export const PlatformAnalytics = () => {
         </div>
       </div>
       <div data-toybaco-analytics-main="" className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+        {connectionResult && <div data-toybaco-connection-result="" role={connectionResult.outcome === 'connected' ? 'status' : 'alert'} className="rounded-[8px] border border-newTableBorder p-[16px] text-[14px] leading-[1.6]">
+          <p>{connectionMessage(connectionResult)}</p>
+          {connectionResult.outcome === 'failed' && connectionResult.channel && ['unavailable', 'interrupted', 'popup-blocked', 'reauthenticate'].includes(connectionResult.reason || 'unavailable') &&
+            <button type="button" className="mt-[12px] min-h-[44px] rounded-[8px] border px-[16px]" onClick={() => { void reconnectChannel(connectionResult.channel!); }}>接続をやり直す</button>}
+        </div>}
         {!!options.length && (
           <div className="flex-1 flex flex-col gap-[14px]">
             <div className="max-w-[200px]">

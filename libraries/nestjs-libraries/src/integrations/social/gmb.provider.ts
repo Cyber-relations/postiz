@@ -623,7 +623,7 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
       const locationPath = `locations/${locationId}`;
 
       // Use the Business Profile Performance API
-      const response = await fetch(
+      const data = await toybacoGmbReadJson(
         `https://businessprofileperformance.googleapis.com/v1/${locationPath}:fetchMultiDailyMetricsTimeSeries?dailyMetrics=WEBSITE_CLICKS&dailyMetrics=CALL_CLICKS&dailyMetrics=BUSINESS_DIRECTION_REQUESTS&dailyMetrics=BUSINESS_IMPRESSIONS_DESKTOP_MAPS&dailyMetrics=BUSINESS_IMPRESSIONS_MOBILE_MAPS&dailyRange.startDate.year=${dayjs(
           startDate
         ).year()}&dailyRange.startDate.month=${
@@ -635,14 +635,8 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
         ).year()}&dailyRange.endDate.month=${
           dayjs(endDate).month() + 1
         }&dailyRange.endDate.day=${dayjs(endDate).date()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+        accessToken
       );
-
-      const data = await response.json();
 
       // Response structure: { multiDailyMetricTimeSeries: [{ dailyMetricTimeSeries: [...] }] }
       const dailyMetricTimeSeries =
@@ -687,8 +681,7 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
 
       return analytics;
     } catch (error) {
-      console.error('Error fetching GMB analytics:', error);
-      return [];
+      throw error instanceof ToybacoGmbLookupError ? error : new ToybacoGmbLookupError('unavailable');
     }
   }
 
