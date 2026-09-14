@@ -58,6 +58,17 @@ function loadSource(relative) {
     fetch: (...args) => transport(...args),
     require: (name) => {
       if (Object.hasOwn(stubs, name)) return stubs[name];
+      // Follow only the actual notification policy dependencies, without
+      // permitting arbitrary relative or package imports in this fixture.
+      if (relative === 'libraries/nestjs-libraries/src/toybaco/notification.ja.ts' && name === './instagram-comment-policy') {
+        return loadSource('libraries/nestjs-libraries/src/toybaco/instagram-comment-policy.ts');
+      }
+      if (relative === 'libraries/nestjs-libraries/src/toybaco/instagram-comment-policy.ts' && name === './instagram-comment-permissions') {
+        return loadSource('libraries/nestjs-libraries/src/toybaco/instagram-comment-permissions.ts');
+      }
+      if (relative === 'libraries/nestjs-libraries/src/toybaco/instagram-comment-permissions.ts' && name === 'crypto') {
+        return require('node:crypto');
+      }
       if (name.startsWith('node:')) return require(name);
       if (name.startsWith('@gitroom/')) {
         return loadSource(name.replace('@gitroom/', 'libraries/').replace(/^(libraries\/[^/]+)\//, '$1/src/') + '.ts');
@@ -270,4 +281,24 @@ test('existing calendar error guidance asks for verification before manual resen
   const result = toybacoPostingFailure({ state: 'ERROR', toybacoFailureCode: 'POST_PUBLICATION_UNCONFIRMED' });
   assert.match(result.reason, /結果を確認できません/);
   assert.match(result.nextAction, /確認が終わるまで再送を控え/);
+});
+
+test('Instagram permission notifications retain draft and published-post guidance without raw provider text', () => {
+  const { toybacoNotificationJa } = loadSource('libraries/nestjs-libraries/src/toybaco/notification.ja.ts');
+  const policy = loadSource('libraries/nestjs-libraries/src/toybaco/instagram-comment-policy.ts');
+  for (const [code, message, guidance] of [
+    [policy.INSTAGRAM_COMMENT_PERMISSION_CODE, policy.INSTAGRAM_COMMENT_PERMISSION_MESSAGE, /コメントを含む下書きは保存できます/],
+    [policy.INSTAGRAM_COMMENT_PROVIDER_DENIED_CODE, policy.INSTAGRAM_COMMENT_PROVIDER_DENIED_MESSAGE, /Instagramの権限と公開済み投稿を確認/],
+  ]) {
+    for (const kind of ['posting', 'posting comments']) {
+      const subject = 'Error posting on instagram-standalone for Test Creator';
+      const notification = toybacoNotificationJa(subject, `An error occurred while ${kind} on instagram-standalone: ${code}`);
+      assert.equal(notification.message, message);
+      assert.match(notification.message, guidance);
+      assert.deepEqual(plain(toybacoNotificationJa(notification.subject, notification.message)), plain(notification));
+      const untrusted = toybacoNotificationJa(subject, `An error occurred while ${kind} on instagram-standalone: ${code} secret-remote-response`);
+      assert.notEqual(untrusted.message, message, 'Only the exact server code receives permission-specific guidance');
+      assert.doesNotMatch(untrusted.message, /secret-remote-response|TOYBACO_INSTAGRAM/);
+    }
+  }
 });
