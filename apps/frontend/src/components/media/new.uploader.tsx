@@ -5,6 +5,7 @@ import Japanese from '@uppy/locales/lib/ja_JP';
 // @ts-ignore
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { getUppyUploadPlugin } from '@gitroom/react/helpers/uppy.upload';
+import { toybacoPostingUploadGuard } from '@gitroom/frontend/components/layout/toybaco.posting.context';
 import { Dashboard, FileInput, ProgressBar } from '@uppy/react';
 
 // Uppy styles
@@ -246,7 +247,8 @@ export function useUppyUploader(props: {
       transloadit.length > 0 ? 'transloadit' : storageProvider,
       fetch,
       backendUrl,
-      transloadit
+      transloadit,
+      toybacoPostingUploadGuard()
     );
 
     uppy2.use(plugin, options);

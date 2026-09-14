@@ -5,6 +5,7 @@ import { FetchWrapperComponent } from '@gitroom/helpers/utils/custom.fetch';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useReturnUrl } from '@gitroom/frontend/app/(app)/auth/return.url.component';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
+import { toybacoAssertPostingTicket, toybacoPostingAfterResponse, toybacoPostingBeforeRequest, toybacoPostingSnapshot } from '@gitroom/frontend/components/layout/toybaco.posting.context';
 // toybaco_composer_session_v1: keep the mounted editor; never retry a post.
 type ToybacoComposerOwner = {
   id: string;
@@ -77,10 +78,10 @@ export function toybacoComposerAfterResponse(url: string, response: Response): b
 }
 // toybaco_composer_session_end
 
-export default function LayoutContext(params: { children: ReactNode }) {
+export default function LayoutContext(params: { children: ReactNode; postingTicket?: ReturnType<typeof toybacoPostingSnapshot> }) {
   if (params?.children) {
     // eslint-disable-next-line react/no-children-prop
-    return <LayoutContextInner children={params.children} />;
+    return <LayoutContextInner children={params.children} postingTicket={params.postingTicket} />;
   }
   return <></>;
 }
@@ -93,12 +94,19 @@ export function setCookie(cname: string, cvalue: string, exdays: number) {
   const expires = 'expires=' + d.toUTCString();
   document.cookie = cname + '=' + cvalue + ';' + expires + ';path=/';
 }
-function LayoutContextInner(params: { children: ReactNode }) {
+function LayoutContextInner(params: { children: ReactNode; postingTicket?: ReturnType<typeof toybacoPostingSnapshot> }) {
   const returnUrl = useReturnUrl();
   const { backendUrl, isGeneral, isSecured } = useVariables();
+  const beforeRequest = useCallback(async (url: string, options: RequestInit) => {
+    const ticket = params.postingTicket || toybacoPostingSnapshot();
+    toybacoAssertPostingTicket(ticket);
+    const prepared = await toybacoComposerBeforeRequest(url, options);
+    return toybacoPostingBeforeRequest(url, prepared, ticket);
+  }, []);
   const afterRequest = useCallback(
     async (url: string, options: RequestInit, response: Response) => {
-      if (toybacoComposerAfterResponse(url, response)) return true;
+      const postingHandled = toybacoPostingAfterResponse(url, options, response);
+      if (postingHandled || toybacoComposerAfterResponse(url, response)) return true;
       if (
         typeof window !== 'undefined' &&
         (window.location.href.includes('/p/') ||
@@ -196,7 +204,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
     []
   );
   return (
-    <FetchWrapperComponent baseUrl={backendUrl} beforeRequest={toybacoComposerBeforeRequest} afterRequest={afterRequest}>
+    <FetchWrapperComponent baseUrl={backendUrl} beforeRequest={beforeRequest} afterRequest={afterRequest}>
       {params?.children || <></>}
     </FetchWrapperComponent>
   );

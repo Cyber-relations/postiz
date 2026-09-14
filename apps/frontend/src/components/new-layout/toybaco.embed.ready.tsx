@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useVariables } from '@gitroom/react/helpers/variable.context';
+import { toybacoAcceptPostingContext, toybacoBeginPosting, toybacoDenyPosting, toybacoPostingDocumentId, toybacoPostingSnapshot, toybacoSubscribePosting } from '@gitroom/frontend/components/layout/toybaco.posting.context';
 
 // iframe の load はログイン画面やエラーページでも発火するため、Postiz の
 // client mount 完了を明示的に親へ通知する。送信先はserverで検証済みの
@@ -10,6 +12,7 @@ export function ToybacoEmbedReady({
 }: {
   appOrigin: string;
 }): null {
+  const { genericOauth } = useVariables();
   useEffect(() => {
     let embedded = document.documentElement.dataset.toybacoEmbed === '1';
     // Sec-Fetch-Dest を送らない旧UAや、OAuth後にmarker queryが落ちた場合の補助。
@@ -18,7 +21,15 @@ export function ToybacoEmbedReady({
       embedded = window.self !== window.top;
       if (embedded) document.documentElement.dataset.toybacoEmbed = '1';
     }
-    if (!embedded || !appOrigin || window.parent === window) return;
+    let documentId: string;
+    try { documentId = toybacoPostingDocumentId(); }
+    catch { toybacoDenyPosting('context-unavailable'); return; }
+    const needsContext = !!embedded && !!genericOauth && window.parent !== window;
+    const releasePosting = toybacoBeginPosting(documentId, needsContext, appOrigin);
+    if (!embedded || !appOrigin || window.parent === window) {
+      if (needsContext) toybacoDenyPosting('context-unavailable');
+      return releasePosting;
+    }
 
     const applyTheme = (theme: string) => {
       document.documentElement.dataset.toybacoTheme = theme;
@@ -30,12 +41,26 @@ export function ToybacoEmbedReady({
 
     // /user/self の取得後に投稿shellが描画される場合もある。認証画面や
     // エラー画面はREADYと誤認せず、shellが揃った時だけ1回通知する。
+    let readySent = false;
     const notifyParentIfReady = () => {
+      if (readySent) return true;
+      const posting = toybacoPostingSnapshot();
+      // A cached legacy parent cannot answer INIT. It may reveal only this
+      // neutral full-app recovery screen, never unbound business children.
+      if (needsContext && posting.phase === 'denied' && !posting.context &&
+          document.querySelector('[data-toybaco-context-recovery]')) {
+        window.parent.postMessage({ type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.toybacoTheme }, appOrigin);
+        readySent = true;
+        return true;
+      }
+      if (needsContext && (posting.phase !== 'ready' || !posting.context || !posting.owner)) return false;
       if (!document.querySelector('[data-toybaco-shell]')) return false;
       window.parent.postMessage(
-        { type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.toybacoTheme },
+        { type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.toybacoTheme,
+          ...(posting.context ? { ...posting.context, organizationId: posting.owner?.orgId } : {}) },
         appOrigin
       );
+      readySent = true;
       return true;
     };
     const observer = new MutationObserver(() => {
@@ -67,6 +92,11 @@ export function ToybacoEmbedReady({
     };
     let closePending = false;
     const onMessage = (event: MessageEvent) => {
+      if (event.origin === appOrigin && event.source === window.parent &&
+          event.data && event.data.type === 'TOYBACO_POSTIZ_INIT') {
+        if (needsContext && event.data.documentId === documentId) toybacoAcceptPostingContext(event.data);
+        return;
+      }
       // Parent theme is display-only. Never write the standalone mode cookie.
       if (event.origin === appOrigin && event.source === window.parent &&
           event.data && event.data.type === 'TOYBACO_POSTIZ_THEME' &&
@@ -96,13 +126,32 @@ export function ToybacoEmbedReady({
     };
     window.addEventListener('message', onMessage);
     document.addEventListener('keydown', onKeydown, true);
+    let deniedSent = false;
+    const unsubscribePosting = toybacoSubscribePosting(() => {
+      const posting = toybacoPostingSnapshot();
+      if (posting.documentId !== documentId) return;
+      if (!deniedSent && posting.context && ['blocked', 'denied'].includes(posting.phase)) {
+        deniedSent = true;
+        window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CONTEXT_DENIED', ...posting.context,
+          reason: posting.reason || 'context-unavailable' }, appOrigin);
+      }
+      notifyParentIfReady();
+    });
+    const contextTimeout = window.setTimeout(() => {
+      const posting = toybacoPostingSnapshot();
+      if (needsContext && posting.documentId === documentId && !posting.owner) toybacoDenyPosting('context-unavailable', posting);
+    }, 20000);
+    if (needsContext) window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CONTEXT_REQUEST', documentId }, appOrigin);
     return () => {
       active = false;
+      window.clearTimeout(contextTimeout);
+      unsubscribePosting();
+      releasePosting();
       observer.disconnect();
       document.removeEventListener('keydown', onKeydown, true);
       window.removeEventListener('message', onMessage);
     };
-  }, [appOrigin]);
+  }, [appOrigin, genericOauth]);
 
   return null;
 }
