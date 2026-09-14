@@ -20,12 +20,20 @@ export function ToybacoEmbedReady({
     }
     if (!embedded || !appOrigin || window.parent === window) return;
 
+    const applyTheme = (theme: string) => {
+      document.documentElement.dataset.toybacoTheme = theme;
+      document.body.classList.remove('dark', 'light');
+      document.body.classList.add(theme);
+      document.dispatchEvent(new CustomEvent('toybaco:theme-changed'));
+    };
+    applyTheme(document.documentElement.dataset.toybacoTheme === 'dark' ? 'dark' : 'light');
+
     // /user/self の取得後に投稿shellが描画される場合もある。認証画面や
     // エラー画面はREADYと誤認せず、shellが揃った時だけ1回通知する。
     const notifyParentIfReady = () => {
       if (!document.querySelector('[data-toybaco-shell]')) return false;
       window.parent.postMessage(
-        { type: 'TOYBACO_POSTIZ_READY' },
+        { type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.toybacoTheme },
         appOrigin
       );
       return true;
@@ -59,6 +67,15 @@ export function ToybacoEmbedReady({
     };
     let closePending = false;
     const onMessage = (event: MessageEvent) => {
+      // Parent theme is display-only. Never write the standalone mode cookie.
+      if (event.origin === appOrigin && event.source === window.parent &&
+          event.data && event.data.type === 'TOYBACO_POSTIZ_THEME' &&
+          Number.isSafeInteger(event.data.requestId) && event.data.requestId > 0 &&
+          (event.data.theme === 'light' || event.data.theme === 'dark')) {
+        applyTheme(event.data.theme);
+        window.parent.postMessage({ type: 'TOYBACO_POSTIZ_THEME_APPLIED', theme: event.data.theme, requestId: event.data.requestId }, appOrigin);
+        return;
+      }
       if (event.origin !== appOrigin || event.source !== window.parent ||
           !event.data || typeof event.data !== 'object' || event.data.type !== 'TOYBACO_POSTIZ_REQUEST_CLOSE' ||
           !Number.isSafeInteger(event.data.requestId) || event.data.requestId <= 0 || closePending) return;

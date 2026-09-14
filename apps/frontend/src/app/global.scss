@@ -1270,3 +1270,92 @@ html[data-toybaco-embed] [data-toybaco-composer-footer] { gap: 8px; padding: 10p
   html[data-toybaco-embed] [data-toybaco-post-actions] .mantine-Menu-item { min-height: 44px; }
   html[data-toybaco-embed] [data-toybaco-composer-close] { width: 36px; height: 36px; }
 }
+
+
+/* toybaco-embedded-dark: match the parent palette without changing standalone
+   dark/light or the SNS preview variables. The SSR attribute prevents a light
+   first paint before the trusted parent message arrives. */
+html[data-toybaco-embed][data-toybaco-theme='dark'] {
+  color-scheme: dark;
+  --toybaco-navy: #8EB2D8;
+  --toybaco-navy-deep: #7C9BC4;
+  --toybaco-offwhite: #0F151E;
+  --toybaco-surface: #121A26;
+  --toybaco-ink: #D6E4F2;
+  --toybaco-muted: #8EA6C0;
+  --toybaco-hairline: #22304A;
+  --toybaco-wash: #1F3046;
+  --toybaco-wait-bg: #382A18;
+  --toybaco-wait-fg: #E6C58D;
+  --toybaco-done-bg: #173226;
+  --toybaco-done-fg: #7ED8A2;
+}
+html[data-toybaco-embed][data-toybaco-theme='light'] { color-scheme: light; }
+html[data-toybaco-embed][data-toybaco-theme='dark'] body {
+  --new-back-drop: #0F151E;
+  --new-settings: #1A2738;
+  --new-border: #22304A;
+  --new-bgColor: #0F151E;
+  --new-bgColorInner: #121A26;
+  --new-sep: #30455F;
+  --new-bgLineColor: #22304A;
+  --new-textItemFocused: #D6E4F2;
+  --new-textItemBlur: #8EA6C0;
+  --new-boxFocused: #1F3046;
+  --new-textColor: 214 228 242;
+  --new-blockSeparator: #22304A;
+  --new-btn-simple: #1F3046;
+  --new-btn-text: #D6E4F2;
+  --new-btn-primary: #2E5580;
+  --new-ai-btn: #B83E31;
+  --new-box-hover: #1A2738;
+  --new-table-border: #22304A;
+  --new-table-header: #1A2738;
+  --new-table-text: #8EA6C0;
+  --new-table-text-focused: #FFB4A8;
+  --new-small-strips: #121A26;
+  --new-big-strips: #1A2738;
+  --new-col-color: #1A2738;
+  --color-primary: #0F151E;
+  --color-secondary: #121A26;
+  --color-text: #D6E4F2;
+  --color-third: #121A26;
+  --color-forth: #2E5580;
+  --color-seventh: #4A76A6;
+  --color-gray: #8EA6C0;
+  --color-input-text: #B1C5DC;
+  --color-custom2: #1A2738;
+  --color-custom3: #121A26;
+  --color-custom4: #8EB2D8;
+  --color-custom7: #4A76A6;
+  --color-custom11: #8EB2D8;
+  --color-custom12: #D6E4F2;
+  --color-custom28: #8EB2D8;
+  --color-custom29: #1F3046;
+  --color-custom30: #2E5580;
+  --color-custom41: #B1C5DC;
+  --color-custom45: #8EB2D8;
+  --color-custom50: #1F3046;
+  --color-custom51: #2E5580;
+  --color-custom52: #22304A;
+}
+html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-create-post],
+html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-composer] .bg-\[\#612BD3\],
+html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-composer] .bg-\[\#D82D7E\] {
+  background: #2E5580 !important;
+  color: #fff !important;
+}
+html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-create-post]:hover {
+  background: #3B6696 !important;
+}
+html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-calendar-grid] .repeated-strip {
+  background: #1A2738;
+}
+html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-post-state='ERROR'] [data-toybaco-post-status],
+html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-composer] [data-toybaco-save-error] {
+  background: #38211F;
+  color: #FFB4A8;
+}
+html[data-toybaco-embed][data-toybaco-theme='dark'] :is(button, [role='button'], input, textarea, select):focus-visible {
+  outline-color: #8EB2D8 !important;
+}
