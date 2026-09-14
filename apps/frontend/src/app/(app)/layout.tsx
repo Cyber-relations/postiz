@@ -37,12 +37,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // proxy がブラウザの frame 文脈から作った内部印だけを信頼する。
   // 顧客が x-toybaco-embed を直接送っても proxy 側で必ず上書きされる。
   const toybacoEmbed = requestHeaders.get('x-toybaco-embed') === '1';
+  const toybacoTheme = requestHeaders.get('x-toybaco-theme') === 'dark' ? 'dark' : 'light';
   const language = cookieStore.get(cookieName)?.value || fallbackLng;
   const Plausible = !!process.env.STRIPE_PUBLISHABLE_KEY
     ? PlausibleProvider
     : Fragment;
   return (
-    <html data-toybaco-embed={toybacoEmbed ? '1' : undefined}>
+    <html data-toybaco-embed={toybacoEmbed ? '1' : undefined} data-toybaco-theme={toybacoEmbed ? toybacoTheme : undefined}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         {!!process.env.DATAFAST_WEBSITE_ID && (
@@ -59,7 +60,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         className={clsx(
           jakartaSans.className,
           'toybaco-font',
-          'dark text-primary !bg-primary'
+          toybacoEmbed ? toybacoTheme : 'dark',
+          'text-primary !bg-primary'
         )}
       >
         <VariableContextComponent

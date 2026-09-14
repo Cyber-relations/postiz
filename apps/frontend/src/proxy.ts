@@ -174,6 +174,13 @@ export async function proxy(request: NextRequest) {
   const toybacoEmbed =
     request.headers.get('sec-fetch-dest') === 'iframe' ||
     nextUrl.searchParams.get('tb_embed') === '1';
+  // Presentation only. Do not trust an incoming internal header or widen the
+  // existing OIDC return-path/identity boundary to carry this enum.
+  requestHeaders.delete('x-toybaco-theme');
+  const toybacoTheme = nextUrl.searchParams.get('tb_theme');
+  if (toybacoEmbed && (toybacoTheme === 'light' || toybacoTheme === 'dark')) {
+    requestHeaders.set('x-toybaco-theme', toybacoTheme);
+  }
   if (toybacoEmbed) {
     requestHeaders.set('x-toybaco-embed', '1');
   } else {
