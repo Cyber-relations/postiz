@@ -995,16 +995,127 @@ html[data-toybaco-embed] [data-toybaco-post-state='ERROR'] [data-toybaco-post-st
 html[data-toybaco-embed] .border-\[\#612BD3\] {
   border-color: var(--toybaco-navy) !important;
 }
-/* Page fetch feedback follows the parent shell; compact action spinners keep
-   their original size and contrast. Inline dimensions come from upstream. */
-html[data-toybaco-embed] [data-toybaco-page-loading] > div {
-  width: 28px !important;
-  height: 28px !important;
-  border: 3px solid var(--toybaco-hairline) !important;
-  border-top-color: var(--toybaco-navy) !important;
-  animation-duration: 1s !important;
-  flex-shrink: 0;
+/* Size/contrast are intrinsic; CSS only supplies motion. */
+@keyframes toybaco-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  [data-toybaco-spinner] { animation: none !important; }
 }
+/* Posting settings use one compact tab row; all native forms/CRUD stay mounted
+   by the existing permission-filtered tab selection. */
+html[data-toybaco-embed] [data-toybaco-content-frame]:has([data-toybaco-settings]) { position: relative; }
+html[data-toybaco-embed] [data-toybaco-settings] {
+  box-sizing: border-box; max-width: 980px; margin: 0 auto; padding: 20px 28px 40px;
+  color: var(--toybaco-ink); background: var(--toybaco-surface); gap: 24px;
+}
+[data-toybaco-settings-tabs] {
+  display: flex; align-items: center; gap: 4px; min-width: 0; overflow-x: auto;
+  border-bottom: 1px solid var(--toybaco-hairline, #dce2e8);
+}
+[data-toybaco-settings-tabs] [role='tab'] {
+  min-height: 44px; flex: 0 0 auto; padding: 10px 14px; border-bottom: 2px solid transparent;
+  font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap;
+  color: var(--toybaco-muted, #66758a); background: transparent;
+}
+[data-toybaco-settings-tabs] [aria-selected='true'] {
+  color: var(--toybaco-navy, #1f3a5f); border-bottom-color: currentColor; font-weight: 600;
+}
+[data-toybaco-settings-tabs] button:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
+[data-toybaco-settings-body] { min-width: 0; width: 100%; }
+html[data-toybaco-embed] [data-toybaco-settings] h3 { margin: 0; font-size: 18px; line-height: 28px; font-weight: 600; }
+html[data-toybaco-embed] [data-toybaco-settings] h3 + div,
+html[data-toybaco-embed] [data-toybaco-settings-description] {
+  color: var(--toybaco-muted); font-size: 14px; line-height: 1.6; margin-top: 6px;
+}
+html[data-toybaco-embed] [data-toybaco-settings-card] {
+  box-sizing: border-box; min-width: 0; margin: 20px 0 0; padding: 20px;
+  border: 1px solid var(--toybaco-hairline); border-radius: 12px;
+  background: var(--toybaco-surface); gap: 20px;
+}
+html[data-toybaco-embed] [data-toybaco-settings-card] > [class~='mt-[4px]'] { font-size: 15px; font-weight: 600; margin: 0; }
+html[data-toybaco-embed] [data-toybaco-settings-card] .justify-between { gap: 20px; }
+html[data-toybaco-embed] [data-toybaco-settings] select,
+html[data-toybaco-embed] [data-toybaco-settings] input:not([type='checkbox']):not([type='radio']),
+html[data-toybaco-embed] [data-toybaco-settings] button { min-height: 44px; font-size: 14px; }
+html[data-toybaco-embed] [data-toybaco-settings] select { max-width: 320px; border-radius: 8px; }
+[data-toybaco-settings-records] { display: flex; flex-direction: column; min-width: 0; margin-bottom: 16px; }
+[data-toybaco-settings-record] { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--toybaco-hairline, #dce2e8); }
+[data-toybaco-settings-record]:first-child { padding-top: 0; }
+[data-toybaco-settings-record-content] { min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
+[data-toybaco-settings-record-content] p { margin: 4px 0; }
+[data-toybaco-settings-record-content] span { font-size: 13px; color: var(--toybaco-muted, #66758a); }
+[data-toybaco-settings-action] { min-height: 44px; border-radius: 8px; padding: 10px 16px; font-weight: 500; }
+[data-toybaco-settings-action='add'] { color: #fff; background: var(--new-btn-primary, #1f3a5f); }
+[data-toybaco-settings-action='edit'] { color: var(--toybaco-ink, #24303f); background: transparent; border: 1px solid var(--toybaco-hairline, #dce2e8); }
+[data-toybaco-settings-action='delete'] { color: #a5352b; background: transparent; border: 1px solid transparent; }
+[data-toybaco-settings-action='edit']:hover { background: var(--toybaco-wash, #e9eff6); }
+[data-toybaco-settings-action='delete']:hover { background: #ff6b5b14; }
+html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-settings-action='delete'] { color: #ffb4a8; }
+[data-toybaco-settings-record-actions] { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+[data-toybaco-settings-active] { display: flex; align-items: center; gap: 8px; margin-left: 8px; font-size: 13px; }
+/* Parent account switch is canonical; standalone organization controls remain. */
+html[data-toybaco-embed] [data-toybaco-organization-control] { display: none !important; }
+html[data-toybaco-embed] [data-toybaco-content-frame]:has([data-toybaco-settings]) { position: relative; }
+html[data-toybaco-embed] [data-toybaco-content-frame]:has([data-toybaco-settings]) [data-toybaco-header] {
+  position: absolute; top: 20px; right: max(28px, calc((100% - 980px) / 2 + 28px)); z-index: 20; width: 44px; height: 44px;
+  min-height: 44px; padding: 0 !important; background: transparent !important; border: 0 !important;
+}
+html[data-toybaco-embed] [data-toybaco-content-frame]:has([data-toybaco-settings]) [data-toybaco-header-title] { display: none !important; }
+html[data-toybaco-embed] [data-toybaco-settings-tabs] { margin-right: 52px; }
+[data-toybaco-notification-retry] { min-height: 44px; border: 1px solid var(--toybaco-hairline, #dce2e8); border-radius: 8px; padding: 8px 16px; background: var(--toybaco-wash, #e9eff6); color: var(--toybaco-ink, #24303f); }
+[data-toybaco-notification-trigger] { padding: 0; background: transparent; color: inherit; border-radius: 8px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+html[data-toybaco-embed] [data-toybaco-post-notifications] circle { fill: var(--toybaco-coral, #ff6b5b); stroke: var(--toybaco-surface); }
+html[data-toybaco-embed] #notification-popup { width: min(420px, calc(100vw - 32px)); }
+@media (max-width: 767px) {
+  html[data-toybaco-embed] [data-toybaco-settings] { padding: 16px 16px 28px; gap: 20px; }
+  html[data-toybaco-embed] [data-toybaco-settings-card] { padding: 16px; gap: 16px; }
+  [data-toybaco-settings-tabs] [role='tab'] { padding: 10px 10px; font-size: 13px; }
+  html[data-toybaco-embed] [data-toybaco-content-frame]:has([data-toybaco-settings]) [data-toybaco-header] { top: 16px; right: 16px; }
+  [data-toybaco-settings-record] { align-items: stretch; flex-direction: column; gap: 12px; }
+  [data-toybaco-settings-record-actions] { justify-content: flex-start; }
+  [data-toybaco-settings-active] { margin-left: auto; }
+}
+
+/* Only RSS/template/signature dialogs; native focus/Escape hooks are unchanged. */
+[data-toybaco-settings-dialog] {
+  box-sizing: border-box; width: min(640px, calc(100vw - 32px)) !important;
+  min-width: 0 !important; max-width: calc(100vw - 32px); padding: 24px !important;
+  gap: 24px !important; border-radius: 16px !important;
+  color: var(--toybaco-ink, #24303f); background: var(--toybaco-surface, #fcfbf8);
+}
+div:has(> [data-toybaco-settings-dialog]) { padding-top: 24px !important; padding-bottom: 24px !important; }
+[data-toybaco-settings-dialog] > div:first-child > div:first-child { font-size: 20px; line-height: 28px; padding-right: 36px; }
+[data-toybaco-settings-dialog] .mantine-Modal-close { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; top: 12px; right: 12px; border-radius: 8px; }
+[data-toybaco-settings-form] > div { border: 0; padding: 0; gap: 20px; }
+[data-toybaco-settings-form='rss'] > div > div { display: flex; flex-direction: column; gap: 20px; }
+[data-toybaco-settings-field] > label { display: block; margin-bottom: 6px; }
+[data-toybaco-assisted-textarea], [data-toybaco-assisted-textarea] > div:first-child { width: 100%; min-width: 0; }
+[data-toybaco-settings-form] textarea, [data-toybaco-assisted-textarea] [contenteditable='true'] { display: block; width: 100%; box-sizing: border-box; }
+[data-toybaco-assistance-actions] { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+[data-toybaco-assistance-actions] button { flex-shrink: 0; padding: 8px 12px; border: 1px solid var(--toybaco-hairline, #dce2e8); border-radius: 8px; background: var(--toybaco-wash, #e9eff6); color: var(--toybaco-navy, #1f3a5f); }
+[data-toybaco-assistance-actions] button:disabled { opacity: .55; cursor: not-allowed; }
+[data-toybaco-assistance-actions] p { flex: 1 1 140px; margin: 0; font-size: 12px; line-height: 1.6; color: var(--toybaco-muted, #66758a); }
+[data-toybaco-settings-switch] { min-width: 58px; min-height: 44px; flex: 0 0 auto; padding: 6px 0; display: flex; align-items: center; background: transparent !important; border: 0; }
+[data-toybaco-settings-switch] > span { width: 54px; height: 30px; display: block; border: 1px solid var(--toybaco-hairline, #dce2e8); border-radius: 99px; padding: 3px; background: var(--toybaco-wash, #e9eff6); }
+[data-toybaco-settings-switch][aria-checked='true'] > span { background: var(--toybaco-navy, #1f3a5f); border-color: var(--toybaco-navy, #1f3a5f); }
+[data-toybaco-settings-switch] > span > span { display: block; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0002; }
+[data-toybaco-settings-switch][aria-checked='true'] > span > span { transform: translateX(24px); }
+[data-toybaco-settings-switch]:focus-visible { outline: 2px solid var(--toybaco-navy, #1f3a5f); outline-offset: 2px; }
+[data-toybaco-settings-form] input, [data-toybaco-settings-form] select,
+[data-toybaco-settings-dialog] button { min-height: 44px; font-size: 14px; }
+[data-toybaco-settings-form] div:has(> input) { min-height: 44px; }
+[data-toybaco-settings-form] select { width: 100%; }
+[data-toybaco-settings-form] textarea { border: 1px solid var(--toybaco-hairline, #dce2e8); border-radius: 8px; padding: 12px; min-height: 140px; font-size: 14px; line-height: 1.7; }
+[data-toybaco-settings-form] label { font-size: 14px; font-weight: 600; }
+[data-toybaco-settings-form] :is(input, select, textarea, button):focus-visible { outline: 2px solid var(--toybaco-navy, #1f3a5f); outline-offset: 2px; border-radius: 8px; }
+[data-toybaco-settings-notice] { font-size: 13px; line-height: 1.7; color: var(--toybaco-muted, #66758a); margin: 0; }
+[data-toybaco-settings-form-actions] { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+[data-toybaco-settings-form-actions] button { margin-top: 0 !important; border-radius: 8px; }
+@media (max-width: 767px) {
+  [data-toybaco-settings-dialog] { padding: 20px 16px !important; gap: 20px !important; }
+  [data-toybaco-settings-form-actions] { justify-content: stretch; }
+  [data-toybaco-settings-form-actions] button { flex: 1 1 auto; }
+}
+
 /* Opaque paper/ink stays readable over both light and dark image content. */
 html[data-toybaco-embed] [data-toybaco-media-filename] {
   max-width: calc(100% - 20px);

@@ -29,7 +29,6 @@ import { Sets } from '@gitroom/frontend/components/sets/sets';
 import { SignaturesComponent } from '@gitroom/frontend/components/settings/signatures.component';
 import { Autopost } from '@gitroom/frontend/components/autopost/autopost';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { GlobalSettings } from '@gitroom/frontend/components/settings/global.settings';
 import { ApprovedAppsComponent } from '@gitroom/frontend/components/approved-apps/approved-apps.component';
 export const SettingsPopup: FC<{
@@ -82,6 +81,7 @@ export const SettingsPopup: FC<{
   }, []);
 
   const [tab, setTab] = useState('global_settings');
+  const tabId = React.useId();
 
   const t = useT();
   const list = useMemo(() => {
@@ -128,40 +128,27 @@ export const SettingsPopup: FC<{
   }, []);
 
   return (
-    <div data-toybaco-settings="" className="flex w-full min-w-0 flex-col md:flex-row">
-      <div className="bg-newBgColorInner p-[20px] flex flex-col transition-all w-full md:w-[260px] shrink-0">
-        <div className="flex flex-1 flex-col gap-[15px]">
-          {list.map(({ tab: tabKey, label }) => (
-            <div
-              key={tabKey}
-              className={clsx(
-                'cursor-pointer flex items-center gap-[12px] group/profile hover:bg-boxHover rounded-e-[8px]',
-                tabKey === tab && 'bg-boxHover'
-              )}
-              onClick={() => setTab(tabKey)}
-            >
-              <div
-                data-toybaco-settings-accent=""
-                className={clsx(
-                  'h-full w-[4px] rounded-s-[3px] opacity-0 group-hover/profile:opacity-100 transition-opacity',
-                  tabKey === tab && 'opacity-100'
-                )}
-              >
-                <SVGLine />
-              </div>
-              {label}
-            </div>
-          ))}
-        </div>
-        <div>
-          {showLogout && (
-            <div data-toybaco-settings-logout="" className="mt-4">
-              <LogoutComponent />
-            </div>
-          )}
-        </div>
+    <div data-toybaco-settings="" className="flex w-full min-w-0 flex-col">
+      <div data-toybaco-settings-tabs="" role="tablist" aria-label="投稿設定">
+        {list.map(({ tab: tabKey, label }, index) => (
+          <button key={tabKey} type="button" role="tab"
+            id={`${tabId}-${tabKey}`} aria-controls={`${tabId}-panel`}
+            aria-selected={tabKey === tab} tabIndex={tabKey === tab ? 0 : -1}
+            onClick={() => setTab(tabKey)}
+            onKeyDown={(event) => {
+              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+              event.preventDefault();
+              const next = event.key === 'Home' ? 0 : event.key === 'End' ? list.length - 1
+                : (index + (event.key === 'ArrowRight' ? 1 : -1) + list.length) % list.length;
+              setTab(list[next].tab);
+              event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+            }}>
+            {({ global_settings: '一般', autopost: 'RSS', sets: 'テンプレート', signatures: '署名' } as Record<string, string>)[tabKey] || label}
+          </button>
+        ))}
       </div>
-      <div className="bg-newBgColorInner min-w-0 flex-1 flex-col flex p-[20px] gap-[12px]">
+      {showLogout && <div data-toybaco-settings-logout=""><LogoutComponent /></div>}
+      <div data-toybaco-settings-body="" role="tabpanel" id={`${tabId}-panel`} aria-labelledby={`${tabId}-${tab}`} tabIndex={0}>
         <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(submit)}>
             {!!getRef && (
@@ -225,26 +212,6 @@ export const SettingsPopup: FC<{
             </div>
           </form>
         </FormProvider>
-        <section
-          data-toybaco-source-offer=""
-          aria-labelledby="toybaco-source-title"
-          className="mt-[20px] flex min-w-0 flex-col gap-[8px] border-t border-newTableBorder pt-[20px]"
-        >
-          <h3 id="toybaco-source-title" className="text-[16px] font-semibold">
-            ライセンスとソースコード
-          </h3>
-          <p className="text-[14px] leading-relaxed">
-            投稿機能には AGPL-3.0 の Postiz 改変版を使用しています。稼働中のバージョンのソースコードを公開しています。
-          </p>
-          <a
-            href={`https://github.com/Cyber-relations/postiz/tree/${process.env.NEXT_PUBLIC_VERSION || 'main'}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-[44px] items-center self-start text-[14px] underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2"
-          >
-            ソースコードを開く
-          </a>
-        </section>
       </div>
     </div>
   );

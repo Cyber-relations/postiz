@@ -182,6 +182,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           <span
                             style={{ display: 'contents' }}
                             data-toybaco-keep=""
+                            data-toybaco-organization-control=""
                           >
                             <OrganizationSelector />
                           </span>
@@ -196,6 +197,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           <span
                             style={{ display: 'contents' }}
                             data-toybaco-keep=""
+                            data-toybaco-post-notifications=""
                           >
                             <NotificationComponent />
                           </span>

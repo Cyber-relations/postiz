@@ -18,6 +18,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=ivory-20260914">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"トイバコ","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"中小店舗のための問い合わせ受信箱+SNS予約投稿ツール","offers":[{"@type":"Offer","name":"ライト","price":"9800","priceCurrency":"JPY"},{"@type":"Offer","name":"スタンダード","price":"29800","priceCurrency":"JPY"},{"@type":"Offer","name":"プロ","price":"44800","priceCurrency":"JPY"}],"provider":{"@type":"Organization","name":"株式会社サイバーリレーションズ","address":{"@type":"PostalAddress","addressLocality":"福岡市","addressRegion":"福岡県"}}}</script>
 <link rel="stylesheet" href="assets/fonts/zenkaku.css?v=20260831">
+<link rel="stylesheet" href="assets/contact.css?v=20260914b">
 <style>
 /* ============================================================
    トイバコ ヒーロープロトタイプ
@@ -1071,39 +1072,6 @@ header.site .btn-sm{border-radius:999px; padding:9px 22px}
 .plan2 ul li.no::before{content:"−"; color:#98A3B0}
 .plan2 ul li.ai b{color:var(--coral)}
 .plan2 .btn{margin-top:auto; text-align:center; padding:13px 20px; font-size:.9rem}
-.prem-band{
-  max-width:70rem; margin:22px auto 0; border-radius:22px; position:relative; overflow:hidden;
-  background:linear-gradient(120deg, #131F2E 0%, #1C3355 52%, #27466E 100%);
-  border:1.5px solid rgba(240,193,105,.55);
-  padding:30px 36px; display:flex; gap:20px; align-items:center; flex-wrap:wrap;
-  color:#fff; text-align:left;
-  box-shadow:0 4px 10px rgba(19,31,46,.25), 0 26px 60px rgba(19,31,46,.4), inset 0 1px 0 rgba(255,255,255,.09);
-}
-.prem-band::before{ /* 金の光沢が静かに流れる */
-  content:""; position:absolute; top:-30%; bottom:-30%; width:120px; left:-160px;
-  background:linear-gradient(100deg, transparent, rgba(240,193,105,.14), transparent);
-  transform:skewX(-18deg); animation:premShine 6.5s ease-in-out infinite;
-}
-@keyframes premShine{0%,55%{left:-160px}85%,100%{left:calc(100% + 80px)}}
-.prem-tag{
-  position:absolute; top:0; right:34px; background:linear-gradient(120deg, #F3CC7E, #D9A441);
-  color:#1A2A40; font-size:.62rem; font-weight:900; letter-spacing:.08em;
-  padding:6px 14px 5px; border-radius:0 0 9px 9px; box-shadow:0 4px 12px rgba(217,164,65,.4);
-}
-.prem-band .t b{font-size:1.2rem; display:inline-flex; align-items:center; gap:8px;
-  background:linear-gradient(100deg, #F7DCA0, #EDBE6C); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
-.prem-band .t b svg{width:19px; height:19px; flex:none}
-.prem-band .t .py{font-weight:900; font-size:1.65rem; margin-left:12px; color:#F5D08C; font-feature-settings:"tnum"}
-.prem-band .t .py em{font-style:normal; font-size:.75rem; font-weight:700; opacity:.75; color:#fff}
-.prem-band .t p{font-size:.84rem; opacity:.85; margin-top:7px; line-height:1.9}
-.prem-band .a{margin-left:auto; position:relative; z-index:2}
-.btn-gold{
-  padding:14px 28px; font-size:.94rem; border-radius:13px;
-  background:linear-gradient(120deg, #F3CC7E, #DCA84A); color:#1A2A40; font-weight:900;
-  box-shadow:0 4px 12px rgba(217,164,65,.35), 0 14px 30px rgba(217,164,65,.28);
-}
-.btn-gold:hover{transform:translateY(-2px); box-shadow:0 6px 16px rgba(217,164,65,.42), 0 20px 40px rgba(217,164,65,.34)}
-@media (prefers-reduced-motion:reduce){.prem-band::before{animation:none}}
 .btn-white{background:rgba(255,255,255,.95); color:var(--navy)}
 .btn-white:hover{background:#fff; transform:translateY(-2px)}
 .price-notes{font-size:.78rem; color:var(--muted); margin-top:22px; line-height:2}
@@ -1115,7 +1083,7 @@ header.site .btn-sm{border-radius:999px; padding:9px 22px}
 .bill-tgl button.on em{background:var(--coral); color:#fff}
 .plan2 .pprice .ybill{display:block; font-style:normal; font-size:.74rem; font-weight:700; color:var(--muted); margin-top:5px; min-height:1.3em; visibility:hidden}
 body.bill-y .plan2 .pprice .ybill{visibility:visible; color:#1F8A4B}
-.pprice b, .prem-band .t .py span{transition:opacity .16s}
+.pprice b{transition:opacity .16s}
 
 /* ---- 4つの公言 ---- */
 
@@ -1222,8 +1190,6 @@ footer.site2::before{content:""; position:absolute; top:0; left:0; right:0; heig
   .dl-grid::before,.dl-prog{display:none}
   .dl-dot{display:none}
   .plans2{grid-template-columns:1fr; max-width:30rem}
-  .prem-band{flex-direction:column; align-items:flex-start; max-width:30rem}
-  .prem-band .a{margin-left:0}
   .about2{flex-direction:column; text-align:center}
   .about2 .afacts{justify-content:center}
   .about2 .body2{text-align:left}
@@ -1420,6 +1386,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <a href="industries/">業界パック</a>
     <a href="pricing/">料金</a>
     <a href="start/">はじめ方</a>
+    <a class="nav-contact" href="contact/">お問い合わせ</a>
     <a class="login" href="https://app.staging.toybaco.jp">ログイン</a>
     <a class="btn btn-coral btn-sm" href="signup/" style="margin-left:6px">申し込む</a>
   </nav>
@@ -1437,7 +1404,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <p class="lead"><strong>ありそうで、なかった。</strong>問い合わせの受信箱・SNS 予約投稿・AI 自動応答が、ついにひとつに。返信はたった3秒、夜は AI が自動で接客。お店の窓口業務が、まるごとラクになります。</p>
   <div class="actions">
     <a class="btn btn-coral btn-lg" href="signup/">今すぐはじめる</a>
-    <a class="btn btn-ghost btn-lg" href="#toybaco-staging-chat-preview" data-open-chat>まずは無料で相談</a>
+    <a class="btn btn-ghost btn-lg" href="#consultation">まずは無料で相談</a>
   </div>
   <div class="checks" aria-hidden="true">
     <span>カード決済なら数分で開通</span><span>接続代行は希望制</span><span>契約の縛りなし</span>
@@ -1982,7 +1949,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <div class="wrap2 center">
     <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>料金</span>
     <h2 class="reveal price-h"><span class="mk" style="padding:0 4px">アカウント課金ゼロ</span>。利用人数の上限内で、店舗ごとの定額制<span class="maru">。</span></h2>
-    <p class="sub2 reveal" style="--d:.08s">利用人数の上限内なら、人数が増えても料金は同じ。見積もり不要、料金はすべてこのページに公開しています。</p>
+    <p class="sub2 reveal" style="--d:.08s">定額プランは、利用人数の上限内なら人数が増えても料金は同じ。業務に合わせた個別設計もご相談いただけます。</p>
     <div class="compare2 reveal" style="--d:.1s" id="staffCalc">
       <div class="calc-head">
         <h3>スタッフ <b id="calcN">10</b>人のお店なら —</h3>
@@ -2039,11 +2006,23 @@ document.addEventListener('DOMContentLoaded', () => {
         <a class="btn btn-coral buy-btn" data-plan="pro" data-lm="signup/?plan=pro&amp;cycle=month&amp;version=2026-09-06.1" data-ly="signup/?plan=pro&amp;cycle=year&amp;version=2026-09-06.1" href="signup/?plan=pro&amp;cycle=month&amp;version=2026-09-06.1">このプランではじめる</a>
       </div>
     </div><!-- toybaco-plans:cards:end -->
-    <div class="prem-band reveal" style="--d:.25s">
-      <span class="prem-tag">多店舗のご相談</span>
-      <div class="t"><b>多店舗でのご利用</b><span class="py">個別お見積もり</span><p>店舗数と必要な機能に合わせて、ご契約と運用方法をご案内します。</p></div>
-      <div class="a"><a class="btn btn-gold" href="#toybaco-staging-chat-preview" data-open-chat>チャットで相談する</a></div>
-    </div>
+    <section class="custom-plan reveal" id="consultation" aria-label="個別設計プラン">
+      <div class="custom-plan__intro">
+        <p class="custom-plan__label">個別設計プラン</p>
+        <h3>業務に合わせて、<br>必要な機能と支援を。</h3>
+        <p class="custom-plan__description">専用環境、業務カスタマイズ、AIエージェントの最適化。導入・運用支援まで、ご要望に応じて設計します。</p>
+        <a class="custom-plan__detail" href="enterprise/">プランの内容を見る <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="custom-plan__inquiry">
+        <p class="custom-plan__price">個別お見積もり</p>
+        <p class="custom-plan__note">1店舗からご相談いただけます。<br>内容が固まっていない段階でも、お気軽にご相談ください。</p>
+        <div class="contact-actions">
+          <a class="contact-button" href="#toybaco-staging-chat-preview" data-open-chat><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 3v-3H3V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>チャットで相談</a>
+          <a class="contact-button" href="contact/" data-contact-form><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>フォームで相談</a>
+        </div>
+        <p class="contact-address">担当者からメールでご返信します。</p>
+      </div>
+    </section>
     <p class="price-notes reveal" style="--d:.3s"><!-- toybaco-plans:price_notes:start -->価格はすべて税別です。月払いの税込目安: ライト ¥10,780 / スタンダード ¥32,780 / プロ ¥49,280。<br>年払いは1年分の一括前払いです。解約後は契約期間の終了までご利用いただけます。追加店舗・接続代行の提供条件と料金は、決済画面または事前のお見積もりでご確認ください。<!-- toybaco-plans:price_notes:end --></p>
     <p class="price-notes reveal" style="--d:.32s"><!-- toybaco-plans:change_policy:start -->同じ支払周期の上位プランへの変更は、差額を日割りで請求し、決済成功後すぐに反映します。下位プランへの変更と月払い・年払いの切替は、現在の契約期間の終了時に反映し、期間途中の追加請求・返金は行いません。<!-- toybaco-plans:change_policy:end --><br><!-- toybaco-plans:change_scope:start -->変更可能なプラン・料金・適用日は「ご契約内容」でご確認ください。旧契約や追加オプションを含む契約の変更は、お問い合わせください。<!-- toybaco-plans:change_scope:end --></p>
   </div>
@@ -2127,6 +2106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="acts reveal" style="--d:.15s">
       <a class="btn btn-coral btn-lg" href="signup/">今すぐはじめる</a>
       <a class="btn btn-ghost btn-lg" href="#toybaco-staging-chat-preview" data-open-chat>チャットで相談する</a>
+      <a class="btn btn-ghost btn-lg" href="contact/" data-contact-form>フォームで相談する</a>
       <a class="btn btn-ghost btn-lg" href="#pricing">料金を見る</a>
     </div>
   </div>
@@ -2141,6 +2121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="fbrand">
       <div class="fbrand-logo"><img src="assets/toybaco-app-icon-ivory.webp" alt="" width="38" height="38"><span>トイバコ</span></div>
       <p>問い合わせも、投稿も。ひとつの箱に。<br>運営: 株式会社サイバーリレーションズ</p>
+      <div class="footer-contact"><span>お問い合わせ</span><a href="contact/" data-contact-form>お問い合わせフォーム</a></div>
     </div>
     <div>
       <h4>サービス</h4>
@@ -2158,7 +2139,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <h4>ご利用の流れ</h4>
       <ul>
         <li><a href="pricing/">料金</a></li>
-        <li><a href="enterprise/">エンタープライズ</a></li>
+        <li><a href="enterprise/">個別設計プラン</a></li>
         <li><a href="compare/">ツールの選び方</a></li>
         <li><a href="start/">はじめ方</a></li>
         <li><a href="signup/">お申し込み</a></li>

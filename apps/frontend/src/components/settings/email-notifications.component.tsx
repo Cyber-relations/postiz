@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
-import { Slider } from '@gitroom/react/form/slider';
+import Spinner from '@gitroom/frontend/components/layout/loading';
+import { SettingsToggle as Slider } from '@gitroom/frontend/components/settings/toybaco-settings-controls';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 
@@ -98,16 +99,14 @@ const EmailNotificationsComponent = () => {
 
   if (isLoading) {
     return (
-      <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px]">
-        <div className="animate-pulse">
-          {t('loading', 'Loading...')}
-        </div>
+      <div data-toybaco-settings-card="" className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px]">
+        <Spinner label="設定を読み込んでいます" />
       </div>
     );
   }
 
   return (
-    <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
+    <div data-toybaco-settings-card="" className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
       <div className="mt-[4px]">
         {t('email_notifications', 'Email Notifications')}
       </div>
@@ -123,7 +122,7 @@ const EmailNotificationsComponent = () => {
             )}
           </div>
         </div>
-        <Slider
+        <Slider label="公開成功の通知"
           value={localSettings.sendSuccessEmails ? 'on' : 'off'}
           onChange={handleSuccessEmailsChange}
           fill={true}
@@ -141,7 +140,7 @@ const EmailNotificationsComponent = () => {
             )}
           </div>
         </div>
-        <Slider
+        <Slider label="公開失敗の通知"
           value={localSettings.sendFailureEmails ? 'on' : 'off'}
           onChange={handleFailureEmailsChange}
           fill={true}
@@ -159,7 +158,7 @@ const EmailNotificationsComponent = () => {
             )}
           </div>
         </div>
-        <Slider
+        <Slider label="継続利用の通知"
           value={localSettings.sendStreakEmails ? 'on' : 'off'}
           onChange={handleStreakEmailsChange}
           fill={true}

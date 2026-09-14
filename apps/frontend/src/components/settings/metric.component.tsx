@@ -32,9 +32,9 @@ const MetricComponent = () => {
     dayjs.tz.setDefault(value);
   };
   return (
-    <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
+    <div data-toybaco-settings-card="" className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
       <div className="mt-[4px]">時刻表記</div>
-      <Select name="metric" disableForm={true} label="" onChange={changeMetric} value={currentMetric ? 'US' : 'GLOBAL'}>
+      <Select aria-label="時刻表記" hideErrors={true} name="metric" disableForm={true} label="" onChange={changeMetric} value={currentMetric ? 'US' : 'GLOBAL'}>
         {dateMetrics.map((metric) => (
           <option
             key={metric.value}

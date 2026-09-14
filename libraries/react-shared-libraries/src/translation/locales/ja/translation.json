@@ -13,7 +13,7 @@
   "video_made_with_ai": "AIで作成された動画",
   "please_add_at_least": "少なくとも20文字を追加してください",
   "send_invitation_via_email": "メールで招待を送信しますか？",
-  "global_settings": "グローバル設定",
+  "global_settings": "一般設定",
   "copy_id": "チャンネルIDをコピー",
   "team_members": "チームメンバー",
   "invite_your_assistant_or_team_member_to_manage_your_account": "アシスタントやチームメンバーを招待してアカウントを管理してもらいましょう",
@@ -270,7 +270,7 @@
   "claim": "請求",
   "frequently_asked_questions": "よくある質問",
   "autopost": "自動投稿",
-  "autopost_can_automatically_posts_your_rss_new_items_to_social_media": "自動投稿は、RSSの新しいアイテムを自動的にソーシャルメディアに投稿できます",
+  "autopost_can_automatically_posts_your_rss_new_items_to_social_media": "RSSの更新を取り込み、投稿カレンダーに下書きを作成します。公開前に内容を確認できます。",
   "title": "タイトル",
   "add_an_autopost": "自動投稿を追加",
   "post_content": "投稿内容",
@@ -891,7 +891,7 @@
   "signature_updated_successfully": "署名を更新しました",
   "signature_added_successfully": "署名を追加しました",
   "write_signature_placeholder": "署名を入力してください...",
-  "label_set_name": "セット名",
+  "label_set_name": "テンプレート名",
   "set_name_placeholder": "セット名を入力してください",
   "save_as_set": "セットとして保存",
   "set_saved_successfully": "セットを保存しました",
@@ -909,5 +909,10 @@
   "ai_chat_copy": "クリップボードにコピー",
   "ai_chat_helpful": "役に立った",
   "ai_chat_not_helpful": "役に立たなかった",
-  "ai_chat_copied": "コピーしました"
+  "ai_chat_copied": "コピーしました",
+  "toybaco_rss_label_title": "設定名",
+  "toybaco_rss_label_url": "RSSフィードのURL",
+  "toybaco_rss_label_should_sync_last_post": "現在の最新記事も取り込む",
+  "toybaco_rss_label_autogenerate_content": "AIで下書き本文を作成",
+  "toybaco_rss_label_integrations": "下書きの作成先"
 }

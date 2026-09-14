@@ -62,4 +62,11 @@ module.exports = [
       'react-hooks/exhaustive-deps': 'error',
     },
   },
+  // This copied LP asset is byte-preserved from the deployed contact form.
+  // Its normal send/back UI serializes work with a busy guard before awaiting;
+  // ESLint cannot follow that closure state. Keep every other rule enabled.
+  {
+    files: ['var/docker/toybaco-site/assets/contact-form.js'],
+    rules: { 'require-atomic-updates': 'off' },
+  },
 ];

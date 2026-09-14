@@ -30,6 +30,7 @@ interface OpenModalInterface {
   toybacoTagDialog?: boolean;
   toybacoMediaPicker?: boolean;
   toybacoMediaPreview?: boolean;
+  toybacoSettingsDialog?: boolean;
   onClose?: () => void;
   children: ReactNode | ((close: () => void) => ReactNode);
   classNames?: {
@@ -275,6 +276,7 @@ export const Component: FC<{
               )}
               data-toybaco-media-picker={modal.toybacoMediaPicker ? '' : undefined}
               data-toybaco-media-preview={modal.toybacoMediaPreview ? '' : undefined}
+              {...(modal.toybacoSettingsDialog && { role: 'dialog', 'aria-modal': isLast, 'aria-labelledby': `toybaco-settings-title-${modal.id}`, 'data-toybaco-settings-dialog': '' })}
               {...((!!modal.size || !!modal.height || !!modal.maxSize) && {
                 style: {
                   ...(modal.size ? { width: modal.size } : {}),
@@ -285,7 +287,7 @@ export const Component: FC<{
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center">
-                <div id={modal.toybacoDecision ? `toybaco-decision-title-${modal.id}` : modal.toybacoTagDialog ? `toybaco-tag-title-${modal.id}` : undefined} className="text-[24px] font-[600] flex-1">
+                <div id={modal.toybacoSettingsDialog ? `toybaco-settings-title-${modal.id}` : modal.toybacoDecision ? `toybaco-decision-title-${modal.id}` : modal.toybacoTagDialog ? `toybaco-tag-title-${modal.id}` : undefined} className="text-[24px] font-[600] flex-1">
                   {modal.title}
                 </div>
                 {typeof modal.withCloseButton === 'undefined' ||
@@ -294,7 +296,7 @@ export const Component: FC<{
                     <button
                       className="outline-none absolute end-[20px] top-[20px] mantine-UnstyledButton-root mantine-ActionIcon-root hover:bg-tableBorder cursor-pointer mantine-Modal-close mantine-1dcetaa"
                       type="button"
-                      aria-label={modal.toybacoTagDialog || modal.toybacoMediaPicker || modal.toybacoMediaPreview ? '閉じる' : undefined}
+                      aria-label={modal.toybacoTagDialog || modal.toybacoMediaPicker || modal.toybacoMediaPreview || modal.toybacoSettingsDialog ? '閉じる' : undefined}
                       onClick={closeModalFunction}
                     >
                       <svg
