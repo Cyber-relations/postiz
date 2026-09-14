@@ -353,7 +353,7 @@ export const MenuComponent: FC<
   );
 };
 // Mobile embed uses the same native rail without changing the desktop cookie.
-function useToybacoChannelSidebar() {
+export function useToybacoChannelSidebar() {
   const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
   const [embeddedMobile, setEmbeddedMobile] = useState(false);
   const [mobileCollapsed, setMobileCollapsed] = useState(true);
