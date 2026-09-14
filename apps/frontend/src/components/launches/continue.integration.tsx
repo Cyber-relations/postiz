@@ -1,5 +1,6 @@
 'use client';
 
+import { readGmbResponse } from '@gitroom/frontend/components/new-launch/providers/continue-provider/gmb/gmb.continue';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { HttpStatusCode } from 'axios';
 import { useRouter } from 'next/navigation';
@@ -16,6 +17,8 @@ interface TwoStepState {
   integrationId: string;
   onboarding: boolean;
   pages: any[];
+  pagesError?: unknown;
+  pagesWarnings?: string[];
   returnURL?: string;
 }
 
@@ -25,6 +28,7 @@ export const ContinueIntegration: FC<{
   provider: string;
   searchParams: any;
   logged: boolean;
+  appOrigin?: string;
 }> = (props) => {
   const { provider, searchParams, logged } = props;
   const { push } = useRouter();
@@ -160,6 +164,8 @@ export const ContinueIntegration: FC<{
         id,
         onboarding: resOnboarding,
         pages,
+        pagesError,
+        pagesWarnings,
         returnURL,
         extensionToken,
       } = await data.json();
@@ -195,6 +201,7 @@ export const ContinueIntegration: FC<{
           integrationId: id,
           onboarding,
           pages: pages || [],
+          ...(provider === 'gmb' ? { pagesError, pagesWarnings } : {}),
           returnURL,
         });
         return;
@@ -225,6 +232,10 @@ export const ContinueIntegration: FC<{
           body: JSON.stringify({ ...modifiedParams, ...data }),
         });
 
+        if (provider === 'gmb') {
+          const result = await readGmbResponse(response);
+          if (result?.success !== true) throw new Error('GBP_SELECTION_NOT_SAVED');
+        }
         if (
           response.status !== HttpStatusCode.Ok &&
           response.status !== HttpStatusCode.Created
@@ -246,7 +257,7 @@ export const ContinueIntegration: FC<{
         setIsSaving(false);
       }
     },
-    [twoStepState, fetch, modifiedParams, provider, navigateOrShow]
+    [twoStepState, fetch, logged, modifiedParams, provider, navigateOrShow]
   );
 
   const Provider = useMemo(() => {
@@ -345,6 +356,14 @@ export const ContinueIntegration: FC<{
                 existingId={[]}
                 initialData={twoStepState.pages}
                 isSaving={isSaving}
+                {...(provider === 'gmb' ? {
+                  initialError: twoStepState.pagesError,
+                  initialWarnings: twoStepState.pagesWarnings,
+                  allowLookup: logged,
+                  checkExisting: logged,
+                  onClose: logged ? () => push('/launches') : undefined,
+                  returnToAppUrl: props.appOrigin ? `${props.appOrigin}/app` : '/launches',
+                } : {})}
               />
             </IntegrationContext.Provider>
           </div>

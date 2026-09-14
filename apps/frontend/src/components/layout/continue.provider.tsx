@@ -1,3 +1,4 @@
+import { readGmbResponse } from '@gitroom/frontend/components/new-launch/providers/continue-provider/gmb/gmb.continue';
 import React, { FC, useCallback, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TopTitle } from '@gitroom/frontend/components/launches/helpers/top.title.component';
@@ -74,13 +75,17 @@ const ModalContent: FC<{
 
   const onSave = useCallback(
     async (data: any) => {
-      await fetch(`/integrations/provider/${continueId}/connect`, {
+      const response = await fetch(`/integrations/provider/${continueId}/connect`, {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      if (added === 'gmb') {
+        const result = await readGmbResponse(response);
+        if (result?.success !== true) throw new Error('GBP_SELECTION_NOT_SAVED');
+      }
       closeModal();
     },
-    [continueId, closeModal]
+    [added, continueId, closeModal, fetch]
   );
 
   return (
@@ -109,7 +114,7 @@ const ModalContent: FC<{
         },
       }}
     >
-      <Provider onSave={onSave} existingId={integrations} />
+      <Provider onSave={onSave} existingId={integrations} onClose={added === 'gmb' ? closeModal : undefined} />
     </IntegrationContext.Provider>
   );
 };

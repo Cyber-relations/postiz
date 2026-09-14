@@ -1,3 +1,4 @@
+import { ToybacoGmbLookupError } from '@gitroom/nestjs-libraries/integrations/social/gmb.provider';
 import {
   Body,
   Controller,
@@ -390,6 +391,9 @@ export class IntegrationsController {
 
         return load;
       } catch (err) {
+        if (getIntegration.providerIdentifier === 'gmb' && err instanceof ToybacoGmbLookupError) {
+          throw err;
+        }
         // The platform will keep rejecting this channel until the user
         // re-connects it: mark it as needing a refresh instead of retrying.
         if (err instanceof Disconnect) {
