@@ -223,7 +223,7 @@ footer.site2::before{content:""; position:absolute; top:0; left:0; right:0; heig
 .fgrid{display:grid; grid-template-columns:minmax(250px,1fr) auto auto auto; gap:44px clamp(48px,6vw,110px);
   max-width:74rem; margin:0 auto; padding:0 max(24px,4vw); text-align:left}
 .fbrand-logo{display:flex; align-items:center; gap:11px; margin-bottom:15px}
-.fbrand-logo img{width:38px; height:38px; border-radius:10px; background:#fff; padding:4px; box-sizing:border-box}
+.fbrand-logo img{width:38px; height:38px; border-radius:10px; object-fit:contain}
 .fbrand-logo span{font-size:1.18rem; font-weight:900; color:#fff; letter-spacing:.05em}
 .fgrid .fbrand p{font-size:.8rem; color:rgba(255,255,255,.6); line-height:1.9}
 .fgrid h4{font-size:.74rem; letter-spacing:.18em; color:var(--coral); margin-bottom:14px}

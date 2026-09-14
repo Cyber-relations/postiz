@@ -12,10 +12,10 @@
 <meta property="og:site_name" content="トイバコ">
 <!-- toybaco-plans:og_title:start --><meta property="og:title" content="トイバコ | 問い合わせ・SNS投稿・AI応答をひとつに 月¥9,800から"><!-- toybaco-plans:og_title:end -->
 <!-- toybaco-plans:og_description:start --><meta property="og:description" content="問い合わせ・SNS予約投稿・AI応答をひとつに。トイバコは月¥9,800から。機能と利用人数・AI応答枠はプランにより異なります。"><!-- toybaco-plans:og_description:end -->
-<meta property="og:image" content="https://staging.toybaco.jp/assets/og.png?v=20260903c">
+<meta property="og:image" content="https://staging.toybaco.jp/assets/og.png?v=ivory-20260914">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/png" href="assets/favicon.png">
-<link rel="apple-touch-icon" href="assets/toybaco-mark-c4.png">
+<link rel="icon" type="image/png" href="assets/favicon.png?v=ivory-20260914">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=ivory-20260914">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"トイバコ","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"中小店舗のための問い合わせ受信箱+SNS予約投稿ツール","offers":[{"@type":"Offer","name":"ライト","price":"9800","priceCurrency":"JPY"},{"@type":"Offer","name":"スタンダード","price":"29800","priceCurrency":"JPY"},{"@type":"Offer","name":"プロ","price":"44800","priceCurrency":"JPY"}],"provider":{"@type":"Organization","name":"株式会社サイバーリレーションズ","address":{"@type":"PostalAddress","addressLocality":"福岡市","addressRegion":"福岡県"}}}</script>
 <link rel="stylesheet" href="assets/fonts/zenkaku.css?v=20260831">
 <style>
@@ -1187,7 +1187,7 @@ footer.site2::before{content:""; position:absolute; top:0; left:0; right:0; heig
 .fgrid{display:grid; grid-template-columns:minmax(250px,1fr) auto auto auto; gap:44px clamp(48px,6vw,110px);
   max-width:74rem; margin:0 auto; padding:0 max(24px,4vw); text-align:left}
 .fbrand-logo{display:flex; align-items:center; gap:11px; margin-bottom:15px}
-.fbrand-logo img{width:38px; height:38px; border-radius:10px; background:#fff; padding:4px; box-sizing:border-box}
+.fbrand-logo img{width:38px; height:38px; border-radius:10px; object-fit:contain}
 .fbrand-logo span{font-size:1.18rem; font-weight:900; color:#fff; letter-spacing:.05em}
 .fgrid .fbrand p{font-size:.8rem; color:rgba(255,255,255,.6); line-height:1.9}
 .fgrid h4{font-size:.74rem; letter-spacing:.18em; color:var(--coral); margin-bottom:14px}
@@ -1279,7 +1279,7 @@ footer.site2::before{content:""; position:absolute; top:0; left:0; right:0; heig
   font-weight:800; font-size:1.08rem; max-width:36rem; margin:0 auto;
   box-shadow:0 6px 14px rgba(31,58,95,.25), 0 22px 50px rgba(31,58,95,.35);
 }
-.t2o-new img{width:44px; height:44px; background:#FCFBF8; border-radius:11px; padding:6px; box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.t2o-new img{width:44px; height:44px; border-radius:11px; box-shadow:0 2px 6px rgba(0,0,0,.25)}
 .t2o-new b{font-size:1.5rem; font-weight:900; color:#FFD9D2; font-feature-settings:"tnum"}
 .t2o-note{font-size:.66rem; color:var(--muted); text-align:center; margin-top:12px}
 /* ---- TOYBACO AI(ダークバンド) ---- */
@@ -1412,7 +1412,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="glow a" aria-hidden="true"></div>
 <div class="glow b" aria-hidden="true"></div>
 <header class="site">
-  <a class="logo" href="./" aria-label="トイバコ"><img src="assets/logo.webp" alt="トイバコ"></a>
+  <a class="logo" href="./" aria-label="トイバコ"><img src="assets/logo.webp?v=ivory-20260914" alt="トイバコ"></a>
   <nav class="menu" id="siteMenu" aria-label="サイト内メニュー">
     <a href="features/">できること</a>
     <a href="posting/">投稿機能</a>
@@ -1525,7 +1525,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="app-body">
             <nav class="app-nav" aria-hidden="true">
-              <div class="nav-acct"><img src="assets/toybaco-mark-c4.webp" alt="">トイバコ美容室</div>
+              <div class="nav-acct"><img src="assets/toybaco-app-icon-ivory.webp" alt="">トイバコ美容室</div>
               <div class="nav-item on" id="navInbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3.5 9.5 12 4l8.5 5.5v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-8z"/><path d="M3.5 13h5l1.5 2h4l1.5-2h5"/></svg>会話<span class="navdot" id="navUnread">12</span></div>
               <div class="nav-item" id="navPost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>投稿</div>
               <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="6" width="17" height="12.5" rx="2.5"/><path d="M3.5 10h17"/></svg>ご契約内容</div>
@@ -1674,7 +1674,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="t2o-card"><b>AIチャットボット</b><em>月3〜10万円</em></div>
       </div>
       <div class="t2o-down" aria-hidden="true">↓</div>
-      <div class="t2o-new"><img src="assets/toybaco-mark-c4.webp" alt="">トイバコ、これひとつ。<b>月<!-- toybaco-plans:minimum:start -->¥9,800<!-- toybaco-plans:minimum:end -->〜</b></div>
+      <div class="t2o-new"><img src="assets/toybaco-app-icon-ivory.webp" alt="">トイバコ、これひとつ。<b>月<!-- toybaco-plans:minimum:start -->¥9,800<!-- toybaco-plans:minimum:end -->〜</b></div>
       <p class="t2o-note">※ 各カテゴリの主要ツールの公開料金の目安(2026年8月時点)</p>
     </div>
     <p class="sub2 reveal" style="--d:.13s; margin:36px auto 46px">受信 4チャネル+投稿 6チャネル、10の窓口がこの1契約に。<b style="color:var(--navy)">面倒な移行はゼロ</b>、いまのアカウントをそのままつなぐだけです。</p>
@@ -1687,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       <div class="flow-line" aria-hidden="true"></div>
       <div class="flow-box">
-        <img src="assets/logo.webp" alt="トイバコ">
+        <img src="assets/logo.webp?v=ivory-20260914" alt="トイバコ">
         <span>ひとつの受信箱・ひとつの投稿箱</span>
       </div>
       <div class="flow-line" aria-hidden="true"></div>
@@ -1728,7 +1728,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="app-body pbody">
           <nav class="app-nav" aria-hidden="true">
-            <div class="nav-acct"><img src="assets/toybaco-mark-c4.webp" alt="">トイバコ美容室</div>
+            <div class="nav-acct"><img src="assets/toybaco-app-icon-ivory.webp" alt="">トイバコ美容室</div>
             <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3.5 9.5 12 4l8.5 5.5v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-8z"/><path d="M3.5 13h5l1.5 2h4l1.5-2h5"/></svg>会話<span class="navdot">12</span></div>
             <div class="nav-item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>投稿</div>
             <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="6" width="17" height="12.5" rx="2.5"/><path d="M3.5 10h17"/></svg>ご契約内容</div>
@@ -1806,7 +1806,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="app-body pbody2">
           <nav class="app-nav" aria-hidden="true">
-            <div class="nav-acct"><img src="assets/toybaco-mark-c4.webp" alt=""><span id="packAcct">トイバコ美容室</span></div>
+            <div class="nav-acct"><img src="assets/toybaco-app-icon-ivory.webp" alt=""><span id="packAcct">トイバコ美容室</span></div>
             <div class="nav-item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3.5 9.5 12 4l8.5 5.5v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-8z"/><path d="M3.5 13h5l1.5 2h4l1.5-2h5"/></svg>会話<span class="navdot">3</span></div>
             <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>投稿</div>
             <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="6" width="17" height="12.5" rx="2.5"/><path d="M3.5 10h17"/></svg>ご契約内容</div>
@@ -1956,7 +1956,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <thead>
           <tr>
             <th></th>
-            <th class="me"><img src="assets/toybaco-mark-c4.webp" alt="">トイバコ</th>
+            <th class="me"><img src="assets/toybaco-app-icon-ivory.webp" alt="">トイバコ</th>
             <th>問い合わせ<br>管理ツール</th>
             <th>SNS投稿<br>管理ツール</th>
             <th>AIチャット<br>ボット</th>
@@ -2120,7 +2120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <span class="cl-chip" style="--sx:40px; --d:10.4s; --r0:-8deg; --r1:6deg"><i style="background:#EA4335"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="2"/></svg></i></span>
   </div>
   <div class="wrap2">
-    <img class="markimg reveal" src="assets/toybaco-mark-c4.webp" alt="">
+    <img class="markimg reveal" src="assets/toybaco-app-icon-ivory.webp" alt="">
     <p class="closing-pre reveal">「ありそうでなかった」を、あなたのお店に。</p>
     <h2 class="reveal" style="--d:.05s">申し込みは3分、開通は最短当日<span class="maru">。</span></h2>
     <p class="sub2 reveal" style="--d:.1s">相談無料・契約の縛りなし。接続代行は、ご希望の方が選べます。</p>
@@ -2139,7 +2139,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <footer class="site2">
   <div class="fgrid">
     <div class="fbrand">
-      <div class="fbrand-logo"><img src="assets/toybaco-mark-c4.webp" alt="" width="38" height="38"><span>トイバコ</span></div>
+      <div class="fbrand-logo"><img src="assets/toybaco-app-icon-ivory.webp" alt="" width="38" height="38"><span>トイバコ</span></div>
       <p>問い合わせも、投稿も。ひとつの箱に。<br>運営: 株式会社サイバーリレーションズ</p>
     </div>
     <div>
@@ -2722,7 +2722,7 @@ if (fm) {
 
 
 </script>
-<script src="assets/hero-movie.js?v=fb60975ea23a32c2" defer></script>
+<script src="assets/hero-movie.js?v=ivory-20260914" defer></script>
 
 <!-- toybaco_staging_site_v1: staging consultation is a preview only -->
 <button type="button" onclick="document.getElementById('toybaco-staging-chat-preview').showModal()" style="position:fixed;right:16px;bottom:16px;z-index:999;padding:12px 16px;border:0;border-radius:24px;background:#1F3A5F;color:#fff;font:inherit;font-size:13px;cursor:pointer">相談チャット（確認用）</button>
