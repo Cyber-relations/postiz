@@ -849,6 +849,10 @@ html[data-toybaco-embed] [data-toybaco-content-frame] {
   border-radius: 0;
 }
 
+/* A modal owns its recovery notice; never float shell warnings over controls. */
+body:has([data-toybaco-composer]) [data-toybaco-posting-notice="shell"] { display: none; }
+[data-toybaco-posting-notice="composer"] { margin-top: 12px; }
+
 /* トイバコ: 和文の見え方を受信箱と揃える。
    欧文は上流と同じ Plus Jakarta Sans のまま、和文だけ受信箱と同じ系統にする。 */
 body.toybaco-font,
@@ -1000,6 +1004,9 @@ html[data-toybaco-embed] .border-\[\#612BD3\] {
 @media (prefers-reduced-motion: reduce) {
   [data-toybaco-spinner] { animation: none !important; }
 }
+/* Copilot keeps its closed window mounted for the opening animation. Hidden
+   controls must also leave keyboard navigation and the accessibility tree. */
+html[data-toybaco-embed] .copilotKitWindow:not(.open) { visibility: hidden; }
 /* Posting settings use one compact tab row; all native forms/CRUD stay mounted
    by the existing permission-filtered tab selection. */
 html[data-toybaco-embed] [data-toybaco-content-frame]:has([data-toybaco-settings]) { position: relative; }
@@ -1131,6 +1138,18 @@ html[data-toybaco-embed] [data-toybaco-media-filename] {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* Native buttons retain Enter/Space activation without nested card actions. */
+[data-toybaco-media-select-control] {
+  position: absolute; inset: 0; z-index: 10; width: 100%; height: 100%;
+  padding: 0; border: 0; border-radius: 6px; background: transparent; cursor: pointer;
+}
+[data-toybaco-media-selectable] > :is([data-toybaco-media-filename], [data-toybaco-media-selected]) { pointer-events: none; }
+[data-toybaco-media-select-control]:focus-visible { outline: 3px solid var(--toybaco-navy, #1f3a5f); outline-offset: 2px; }
+[data-toybaco-media-open]:focus-visible, [data-toybaco-media-selection] button:focus-visible { outline: 2px solid var(--toybaco-navy, #1f3a5f); outline-offset: 2px; }
+[data-toybaco-media-selection] { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; margin-top: 12px; }
+[data-toybaco-media-selection] p { margin: 0; font-size: 14px; }
+[data-toybaco-media-selection] button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--toybaco-hairline, #dce2e8); border-radius: 8px; background: var(--toybaco-surface, #fcfbf8); color: var(--toybaco-ink, #24303f); }
+[data-toybaco-media-selection] button:disabled { opacity: .55; cursor: not-allowed; }
 /* Responsive controls are only shown inside the embedded media surface. */
 [data-toybaco-media-actions] { display: none; }
 @media (max-width: 1023px) {
@@ -1477,7 +1496,7 @@ html[data-toybaco-embed] [data-toybaco-composer-footer] { gap: 8px; padding: 10p
   html[data-toybaco-embed] [data-toybaco-post-state='DRAFT'] [data-toybaco-post-status] { text-wrap: balance; }
   html[data-toybaco-embed] [data-toybaco-post-actions-trigger] { width: 32px; height: 32px; position: relative; margin-left: auto; }
   html[data-toybaco-embed] [data-toybaco-post-actions] .mantine-Menu-item { min-height: 44px; }
-  html[data-toybaco-embed] [data-toybaco-composer-close] { width: 36px; height: 36px; }
+  html[data-toybaco-embed] [data-toybaco-composer-close] { width: 44px; height: 44px; }
 }
 
 

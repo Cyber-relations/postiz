@@ -100,6 +100,61 @@ function toybacoAuthUiRequiresInbox(
   );
 }
 
+// Embedded authentication failure is a presentation-only recovery document.
+// Never navigate the iframe into the parent application or relax OIDC validation.
+function toybacoEmbeddedAuthRecovery(appOrigin: string, theme: string | null) {
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const initialTheme = theme === 'dark' ? 'dark' : 'light';
+  const originJson = JSON.stringify(appOrigin).replace(/</g, '\\u003c');
+  const originHref = appOrigin.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const client = `(() => {
+    const origin = ${originJson};
+    const parent = window.parent;
+    if (parent === window) return;
+    const documentId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : '';
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    window.addEventListener('message', (event) => {
+      if (event.origin !== origin || event.source !== parent || !event.data) return;
+      const data = event.data;
+      if (data.type === 'TOYBACO_POSTIZ_INIT' && uuid.test(documentId) &&
+          data.documentId === documentId && typeof data.frameId === 'string' && uuid.test(data.frameId) &&
+          typeof data.accountId === 'string' && /^[1-9][0-9]{0,18}$/.test(data.accountId)) {
+        parent.postMessage({ type: 'TOYBACO_POSTIZ_CONTEXT_DENIED', documentId,
+          frameId: data.frameId, accountId: data.accountId, reason: 'context-unavailable' }, origin);
+      }
+      if (data.type === 'TOYBACO_POSTIZ_THEME' && Number.isSafeInteger(data.requestId) && data.requestId > 0 &&
+          (data.theme === 'light' || data.theme === 'dark')) {
+        document.documentElement.dataset.theme = data.theme;
+        parent.postMessage({ type: 'TOYBACO_POSTIZ_THEME_APPLIED', theme: data.theme, requestId: data.requestId }, origin);
+      }
+    });
+    if (uuid.test(documentId)) parent.postMessage({ type: 'TOYBACO_POSTIZ_CONTEXT_REQUEST', documentId }, origin);
+    // Cached parents may reveal this neutral document only; no business UI exists.
+    parent.postMessage({ type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.theme }, origin);
+  })();`;
+  return new NextResponse(`<!doctype html><html lang="ja" data-theme="${initialTheme}"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>接続の確認 | トイバコ</title><style nonce="${nonce}">
+:root{color-scheme:light;--surface:#F8F4EE;--ink:#1F3A5F;--line:#DED6CA}
+:root[data-theme=dark]{color-scheme:dark;--surface:#181A1F;--ink:#F2EEE7;--line:#45464D}
+*{box-sizing:border-box}body{margin:0;background:var(--surface);color:var(--ink);font:14px/1.65 system-ui,sans-serif}
+main{min-height:240px;max-width:520px;margin:auto;padding:32px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+h1{font-size:18px;line-height:1.5;margin:0}p{margin:0}a{display:inline-flex;min-height:44px;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:12px;padding:10px 20px;color:inherit;text-decoration:none;font-weight:600}
+a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+</style></head><body><main data-toybaco-auth-recovery role="status"><h1>投稿への接続を確認できません</h1>
+<p>トイバコを開き直してから、もう一度投稿画面を開いてください。</p>
+<a href="${originHref}" target="_top">トイバコを開き直す</a></main><script nonce="${nonce}">${client}</script></body></html>`, {
+    status: 401,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; frame-ancestors 'self' ${appOrigin}; base-uri 'none'; form-action 'none'`,
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
+}
+
 function toybacoSafeReturnPath(rawValue: string | undefined) {
   if (typeof rawValue !== 'string' || rawValue.length > 4096) return null;
   let value: string;
@@ -223,6 +278,9 @@ export async function proxy(request: NextRequest) {
       request.cookies.has('toybaco_return')
     )
   ) {
+    if (request.method === 'GET' && toybacoEmbed) {
+      return toybacoEmbeddedAuthRecovery(appOrigin, toybacoTheme);
+    }
     return NextResponse.redirect(new URL('/', appOrigin));
   }
 
@@ -322,10 +380,16 @@ export async function proxy(request: NextRequest) {
     request.method === 'GET' &&
     toybacoEmbed &&
     !authCookie &&
-    nextUrl.pathname === '/'
+    !['code', 'state', 'error', 'id_token'].some((key) => nextUrl.searchParams.has(key)) &&
+    (nextUrl.pathname === '/' || toybacoSafeReturnPath(nextUrl.pathname + nextUrl.search))
   ) {
+    const returnUrl = new URL(nextUrl.pathname === '/' ? '/launches' : nextUrl.pathname, nextUrl.href);
+    returnUrl.search = nextUrl.search;
+    returnUrl.searchParams.set('tb_embed', '1');
+    const safeReturn = toybacoSafeReturnPath(returnUrl.pathname + returnUrl.search);
+    if (!safeReturn) return toybacoEmbeddedAuthRecovery(appOrigin, toybacoTheme);
     const entry = new URL('/toybaco/entry', nextUrl.href);
-    entry.searchParams.set('return', '/launches?tb_embed=1');
+    entry.searchParams.set('return', safeReturn);
     entry.searchParams.set('tb_embed', '1');
     return NextResponse.redirect(entry);
   }

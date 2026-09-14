@@ -14,6 +14,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
+import { useAddProvider } from '@gitroom/frontend/components/launches/add.provider.component';
 
 const SaveSetModal: FC<{
   postData: any;
@@ -66,10 +67,14 @@ export const Sets: FC = () => {
   const toaster = useToaster();
 
   const load = useCallback(async (path: string) => {
-    return (await (await fetch(path)).json()).integrations;
-  }, []);
+    const response = await fetch(path);
+    if (!response.ok) throw new Error('TOYBACO_CHANNELS_UNAVAILABLE');
+    const value = await response.json();
+    if (!Array.isArray(value?.integrations)) throw new Error('TOYBACO_CHANNELS_UNAVAILABLE');
+    return value.integrations;
+  }, [fetch]);
 
-  const { isLoading, data: integrations } = useSWR('/integrations/list', load, {
+  const { isLoading, error: integrationError, data: integrations = [], mutate: reloadIntegrations } = useSWR('/integrations/list', load, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     revalidateIfStale: false,
@@ -77,7 +82,13 @@ export const Sets: FC = () => {
     refreshWhenHidden: false,
     refreshWhenOffline: false,
     fallbackData: [],
+    shouldRetryOnError: false,
+    errorRetryCount: 0,
   });
+
+  const refreshChannels = useCallback(() => { void reloadIntegrations().catch(() => {}); }, [reloadIntegrations]);
+  const addProvider = useAddProvider(refreshChannels);
+  const canOpenTemplate = !isLoading && !integrationError && integrations.length > 0;
 
   const list = useCallback(async () => {
     return (await fetch('/sets')).json();
@@ -94,6 +105,7 @@ export const Sets: FC = () => {
 
   const addSet = useCallback(
     (params?: { id?: string; name?: string; content?: string }) => () => {
+      if (!canOpenTemplate) return;
       modal.openModal({
         id: 'add-edit-modal',
         closeOnClickOutside: false,
@@ -150,7 +162,7 @@ export const Sets: FC = () => {
         title: ``,
       });
     },
-    [fetch, integrations, modal, mutate, toaster]
+    [fetch, integrations, modal, mutate, toaster, canOpenTemplate]
   );
 
   const deleteSet = useCallback(
@@ -184,7 +196,7 @@ export const Sets: FC = () => {
                 <div data-toybaco-settings-record="" role="listitem" key={p.id}>
                   <div data-toybaco-settings-record-content=""><strong>{p.name}</strong></div>
                   <div data-toybaco-settings-record-actions="">
-                    <Button secondary data-toybaco-settings-action="edit" onClick={addSet(p)}>{t('edit', 'Edit')}</Button>
+                    <Button secondary data-toybaco-settings-action="edit" disabled={!canOpenTemplate} onClick={addSet(p)}>{t('edit', 'Edit')}</Button>
                     <Button secondary data-toybaco-settings-action="delete" onClick={deleteSet(p)}>{t('delete', 'Delete')}</Button>
                   </div>
                 </div>
@@ -192,7 +204,14 @@ export const Sets: FC = () => {
             </div>
           )}
           <div>
-            <Button data-toybaco-settings-action="add"
+            {!canOpenTemplate && <div data-toybaco-settings-notice="">
+              <p role="status">{isLoading ? '投稿先の連携を確認しています。' : integrationError
+                ? '投稿先を確認できませんでした。連携状態を再確認してください。'
+                : 'テンプレートを作成するには、先に投稿先のチャンネルを連携してください。'}</p>
+              {integrationError && !isLoading && <Button type="button" secondary onClick={refreshChannels}>連携状態を再確認</Button>}
+              {!isLoading && !integrationError && <Button type="button" secondary onClick={addProvider}>チャンネルを追加</Button>}
+            </div>}
+            <Button data-toybaco-settings-action="add" disabled={!canOpenTemplate}
               onClick={addSet()}
               className={clsx((data?.length || 0) > 0 && 'my-[16px]')}
             >

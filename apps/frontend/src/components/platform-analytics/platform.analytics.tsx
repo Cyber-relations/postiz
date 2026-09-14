@@ -8,10 +8,10 @@ import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { RenderAnalytics } from '@gitroom/frontend/components/platform-analytics/render.analytics';
+import { useChannelRefresh } from '@gitroom/frontend/components/platform-analytics/use.channel.refresh';
 import { Select } from '@gitroom/react/form/select';
 import { Button } from '@gitroom/react/form/button';
 import { useRouter } from 'next/navigation';
-import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { SVGLine, useToybacoChannelSidebar } from '@gitroom/frontend/components/launches/launches.component';
@@ -42,8 +42,8 @@ export const PlatformAnalytics = () => {
   const [current, setCurrent] = useState(0);
   const [key, setKey] = useState(7);
   const [refresh, setRefresh] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const { collapsed: toybacoChannelsCollapsed, toggle: toybacoToggleChannels } = useToybacoChannelSidebar();
-  const toaster = useToaster();
   const load = useCallback(async () => {
     const int = (
       await (await fetch('/integrations/list')).json()
@@ -55,7 +55,7 @@ export const PlatformAnalytics = () => {
     });
     return int.filter((f: any) => allowedIntegrations.includes(f.identifier));
   }, []);
-  const { data, isLoading } = useSWR('analytics-list', load, {
+  const { data, isLoading, mutate } = useSWR('analytics-list', load, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     revalidateIfStale: false,
@@ -64,6 +64,7 @@ export const PlatformAnalytics = () => {
     refreshWhenOffline: false,
     fallbackData: [],
   });
+  const reconnectChannel = useChannelRefresh(() => { void mutate(); setRefreshVersion(value => value + 1); });
   const sortedIntegrations = useMemo(() => {
     return orderBy(
       data,
@@ -223,10 +224,8 @@ export const PlatformAnalytics = () => {
               key={integration.id}
               onClick={() => {
                 if (integration.refreshNeeded) {
-                  toaster.show(
-                    'カレンダーからチャンネルを再接続してください',
-                    'warning'
-                  );
+                  setCurrent(index);
+                  void reconnectChannel(integration);
                   return;
                 }
                 setRefresh(true);
@@ -306,7 +305,8 @@ export const PlatformAnalytics = () => {
             </div>
             <div className="flex-1">
               {!!keys && !!currentIntegration && !refresh && (
-                <RenderAnalytics integration={currentIntegration} date={keys} />
+                <RenderAnalytics key={`${currentIntegration.id}:${refreshVersion}`} integration={currentIntegration} date={keys}
+                  onRefresh={() => { void reconnectChannel(currentIntegration); }} />
               )}
             </div>
           </div>

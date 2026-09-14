@@ -247,19 +247,33 @@ export async function toybacoLoadPostingIdentity(
 export async function toybacoVerifyPostingIdentity(backendUrl: string) {
   const ticket = state;
   if (!ticket.owner) return false;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const response = await window.fetch(backendUrl + '/user/self', {
-      credentials: 'include', cache: 'no-store', headers: headersFor(ticket, true),
-    });
+    // Both response headers and the streamed body share the same deadline.
+    // The losing read never updates identity, even if abort is ignored.
+    const read = (async () => {
+      const response = await window.fetch(backendUrl + '/user/self', {
+        credentials: 'include', cache: 'no-store', headers: headersFor(ticket, true), signal: controller.signal,
+      });
+      if (!response.ok) throw new Error('TOYBACO_POSTING_IDENTITY_UNAVAILABLE');
+      return await response.json();
+    })();
+    const user = await Promise.race([read, new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new Error('TOYBACO_POSTING_IDENTITY_TIMEOUT'));
+      }, 15000);
+    })]);
     if (!current(ticket)) return false;
-    if (!response.ok) { toybacoDenyPosting('context-unavailable', ticket); return false; }
-    const owner = toybacoPostingOwner(await response.json());
-    if (!current(ticket)) return false;
+    const owner = toybacoPostingOwner(user);
     if (!owner || !sameOwner(ticket.owner, owner)) { toybacoDenyPosting('session-changed', ticket); return false; }
     update({ ...state, phase: 'ready', message: '' });
     return true;
   } catch {
     if (current(ticket)) toybacoDenyPosting('context-unavailable', ticket);
     return false;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
 }

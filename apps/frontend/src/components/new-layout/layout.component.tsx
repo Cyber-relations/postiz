@@ -16,8 +16,9 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useSearchParams } from 'next/navigation';
 import useSWR, { SWRConfig } from 'swr';
-import { toybacoLoadPostingIdentity, toybacoPostingCopilotHeaders, toybacoPostingServerSnapshot, toybacoPostingSnapshot, toybacoSubscribePosting, toybacoVerifyPostingIdentity } from '@gitroom/frontend/components/layout/toybaco.posting.context';
+import { toybacoLoadPostingIdentity, toybacoPostingCopilotHeaders, toybacoPostingServerSnapshot, toybacoPostingSnapshot, toybacoSubscribePosting } from '@gitroom/frontend/components/layout/toybaco.posting.context';
 import LayoutContext from '@gitroom/frontend/components/layout/layout.context';
+import { ToybacoPostingConnectionNotice } from '@gitroom/frontend/components/layout/toybaco.posting.connection.notice';
 import { CheckPayment } from '@gitroom/frontend/components/layout/check.payment';
 import { ToolTip } from '@gitroom/frontend/components/layout/top.tip';
 import { ShowMediaBoxModal } from '@gitroom/frontend/components/media/media.component';
@@ -59,7 +60,6 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const posting = useSyncExternalStore(toybacoSubscribePosting, toybacoPostingSnapshot, toybacoPostingServerSnapshot);
   const [postingCache] = useState(() => ({ provider: () => new Map() }));
   const copilotHeaders = useMemo(() => posting.owner ? toybacoPostingCopilotHeaders(posting.owner, posting.documentId) : undefined, [posting.documentId, posting.owner]);
-  const [verifyingPosting, setVerifyingPosting] = useState(false);
 
   // Feedback icon component attaches Sentry feedback to a top-bar icon when DSN is present
   const searchParams = useSearchParams();
@@ -96,19 +96,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
     <LayoutContext key={posting.documentId} postingTicket={posting}>
     <SWRConfig key={posting.documentId} value={postingCache}>
     <ContextWrapper user={user}>
-      {posting.message && (
-        <div role="alert" className="sticky top-0 z-[9999] mx-3 mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-newTextColor/20 bg-newBgColorInner p-4 text-sm text-newTextColor">
-          <p className="min-w-0 flex-1">{posting.message}</p>
-          {posting.appOrigin && posting.context && (
-            <a href={`${posting.appOrigin}/app/accounts/${posting.context.accountId}/dashboard#/toybaco/posting?path=%2Flaunches`} target="_blank" rel="noopener noreferrer"
-              className="rounded-lg border border-newTextColor/20 px-4 py-2 font-semibold">別タブで再接続</a>
-          )}
-          <button type="button" disabled={verifyingPosting} className="rounded-lg border border-newTextColor/20 px-4 py-2 font-semibold disabled:opacity-50"
-            onClick={async () => { setVerifyingPosting(true); try { await toybacoVerifyPostingIdentity(backendUrl); } finally { setVerifyingPosting(false); } }}>
-            {verifyingPosting ? '確認中…' : '接続を確認'}
-          </button>
-        </div>
-      )}
+      <ToybacoPostingConnectionNotice />
       <CopilotKit
         credentials="include"
         headers={copilotHeaders}

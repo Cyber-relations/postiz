@@ -10,6 +10,7 @@ import React, {
   useState,
 } from 'react';
 import { AddEditModalProps } from '@gitroom/frontend/components/new-launch/add.edit.modal';
+import { ToybacoPostingConnectionNotice } from '@gitroom/frontend/components/layout/toybaco.posting.connection.notice';
 import clsx from 'clsx';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { PicksSocialsComponent } from '@gitroom/frontend/components/new-launch/picks.socials.component';
@@ -785,6 +786,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                 size="sm"
               />
             </div>
+            <ToybacoPostingConnectionNotice placement="composer" />
             <div className="flex-1 flex flex-col gap-[16px]">
               <div
                 className={clsx('flex-1 relative', showSettings && 'hidden')}
