@@ -173,7 +173,10 @@ export function toybacoInstallCopilotTransport(runtimeUrl: string, ticket = stat
     // calls retained by a disposed SDK must never bypass its old boundary.
     if (!active) {
       const forwarded = init && copilotForwards.get(init);
-      if (forwarded && current(forwarded)) return original.call(window, input, init);
+      if (forwarded && current(forwarded)) {
+        headersFor(forwarded);
+        return original.call(window, input, init);
+      }
       const retiredHeaders = new Headers(init?.headers !== undefined ? init.headers : input instanceof Request ? input.headers : undefined);
       if (['x-toybaco-posting-document-id', 'x-toybaco-composer-user-id', 'x-toybaco-composer-organization-id', 'x-toybaco-composer-role'].some(key => retiredHeaders.has(key))) {
         throw new Error('TOYBACO_COMPOSER_RECONNECT_REQUIRED');
@@ -217,10 +220,10 @@ export async function toybacoLoadPostingIdentity(
   if (!['context', 'standalone', 'ready'].includes(ticket.phase)) throw new Error('TOYBACO_POSTING_CONTEXT_REQUIRED');
   try {
     const response = await fetch('/user/self');
-    if (!current(ticket)) throw new Error('TOYBACO_POSTING_STALE_RESPONSE');
+    if (!current(ticket) || (!state.owner && !['context', 'standalone'].includes(state.phase))) throw new Error('TOYBACO_POSTING_STALE_RESPONSE');
     if (!response.ok) throw new Error('TOYBACO_POSTING_IDENTITY_UNAVAILABLE');
     const user = await response.json();
-    if (!current(ticket)) throw new Error('TOYBACO_POSTING_STALE_RESPONSE');
+    if (!current(ticket) || (!state.owner && !['context', 'standalone'].includes(state.phase))) throw new Error('TOYBACO_POSTING_STALE_RESPONSE');
     if (!user || typeof user !== 'object' || typeof user.id !== 'string' || typeof user.orgId !== 'string') throw new Error('TOYBACO_POSTING_IDENTITY_INVALID');
     if (!ticket.context && user.providerName !== 'GENERIC') return user;
     const owner = toybacoPostingOwner(user);
