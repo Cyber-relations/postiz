@@ -473,6 +473,7 @@ export const MediaBox: FC<{
         >
           <div
             data-toybaco-media-grid=""
+            data-toybaco-media-empty={!isLoading && !data?.results?.length ? '' : undefined}
             className={clsx(
               'absolute -left-[3px] -top-[3px] withp3 h-full overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-newColColor scrollbar-track-newBgColorInner',
               !isLoading &&
@@ -482,8 +483,8 @@ export const MediaBox: FC<{
           >
             {!isLoading && !data?.results?.length && (
               <>
-                <NoMediaIcon />
-                <div className="text-[20px] font-[600]">
+                <div data-toybaco-media-empty-illustration="" aria-hidden="true"><NoMediaIcon /></div>
+                <div data-toybaco-media-empty-title="" className="text-[20px] font-[600]">
                   {debouncedSearch
                     ? t(
                         'no_media_match_search',
