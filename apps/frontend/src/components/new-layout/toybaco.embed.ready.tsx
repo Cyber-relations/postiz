@@ -76,7 +76,7 @@ export function ToybacoEmbedReady({
 
     // iframeのキーイベントは親へ伝播しない。子の編集・確認・メニューを
     // 先に保護し、shellで消費されなかったEscapeだけを親へ通知する。
-    const dialogSelector = '[data-toybaco-modal], [data-toybaco-composer], [role="dialog"], [aria-modal="true"], [role="menu"], [role="listbox"], .bg-popup';
+    const dialogSelector = '[data-toybaco-modal], [data-toybaco-composer], [role="dialog"], [aria-modal="true"], [role="menu"], [role="listbox"], [data-toybaco-channel-menu], .bg-popup';
     const hasOpenDialog = () => Array.from(document.querySelectorAll(dialogSelector))
       .some((element) => element.getClientRects().length > 0);
     let active = true;

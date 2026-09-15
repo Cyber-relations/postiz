@@ -127,7 +127,7 @@ const AnalyticsCard: FC<{
 const AnalyticsNotice: FC<{ message: string; action: string; onAction: () => void; failed?: boolean }> = ({ message, action, onAction, failed }) => (
   <div role={failed ? 'alert' : 'status'} className="col-span-full flex flex-col items-center gap-[16px] rounded-[12px] border border-newTableBorder bg-newTableHeader px-[24px] py-[32px] text-center">
     <p className="text-[15px] leading-[1.6]">{message}</p>
-    <button type="button" onClick={onAction} className="min-h-[44px] rounded-[8px] bg-btnPrimary text-btnText px-[16px] text-[14px]">{action}</button>
+    <button type="button" onClick={onAction} className="min-h-[44px] rounded-[8px] bg-btnPrimary text-white px-[16px] text-[14px]">{action}</button>
   </div>
 );
 

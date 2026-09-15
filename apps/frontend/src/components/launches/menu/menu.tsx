@@ -4,6 +4,7 @@ import React, {
   FC,
   MouseEventHandler,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -70,6 +71,18 @@ export const Menu: FC<{
     setShow(false);
   });
   const showRef = useRef(undefined);
+
+  useEffect(() => {
+    if (!show) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.isComposing || event.keyCode === 229 || event.defaultPrevented) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setShow(false);
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [show]);
 
   // Adjust menu position if it would overflow viewport
   useLayoutEffect(() => {
@@ -353,6 +366,7 @@ export const Menu: FC<{
       </div>
       {show && (
         <div
+          data-toybaco-channel-menu=""
           ref={menuRef}
           onClick={(e) => e.stopPropagation()}
           style={{ left: show.x, top: show.y }}
