@@ -1,7 +1,8 @@
 'use client';
 
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import React, { FC, useCallback, useMemo } from 'react';
+import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChannelConnectionResult, connectionMessage, readConnectionResult } from '@gitroom/frontend/components/platform-analytics/channel.connection.result';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { Input } from '@gitroom/react/form/input';
 import { FieldValues, FormProvider, useForm } from 'react-hook-form';
@@ -393,6 +394,134 @@ const ChromeExtensionWarning: FC<{
   );
 };
 
+// A new connection has no callback when the user closes Google's account chooser.
+// Observe only this modal's exact popup; successful callbacks still reach the
+// calendar's existing origin/source-checked message listener.
+export function createAddProviderPopup(
+  browser: Window,
+  report: (result: ChannelConnectionResult | null) => void,
+  pending: (value: boolean) => void
+) {
+  const owner = browser as Window & { __toybacoConnectPopup?: Window | null };
+  type Attempt = {
+    popup: Window;
+    controller: AbortController;
+    cancel?: () => void;
+    interval?: number;
+    deadline?: number;
+    message: (event: MessageEvent) => void;
+  };
+  let current: Attempt | undefined;
+  let disposed = false;
+  const releases = new Map<number, () => void>();
+  const retire = (attempt: Attempt, result?: ChannelConnectionResult, close = false, deferOwner = false) => {
+    if (current !== attempt) return;
+    current = undefined;
+    browser.clearInterval(attempt.interval);
+    browser.clearTimeout(attempt.deadline);
+    browser.removeEventListener('message', attempt.message, true);
+    attempt.controller.abort();
+    attempt.cancel?.();
+    const releaseOwner = () => {
+      if (owner.__toybacoConnectPopup !== attempt.popup) return;
+      owner.__toybacoConnectPopup = null;
+      if (close && !attempt.popup.closed) attempt.popup.close();
+    };
+    // Browser microtask checkpoints may run between native message listeners.
+    // Release in the next task so the calendar bubble listener keeps its owner.
+    if (deferOwner) {
+      const task = browser.setTimeout(() => {
+        releases.delete(task);
+        releaseOwner();
+      }, 0);
+      releases.set(task, releaseOwner);
+    } else releaseOwner();
+    if (!disposed) {
+      pending(false);
+      if (result) report(result);
+    }
+  };
+  const active = (attempt: Attempt) => {
+    if (disposed || current !== attempt) return false;
+    if (owner.__toybacoConnectPopup !== attempt.popup) {
+      retire(attempt);
+      return false;
+    }
+    return true;
+  };
+  return {
+    async connect(loadUrl: (signal: AbortSignal) => Promise<string>, onStart: () => void) {
+      if (disposed) return;
+      if (current) {
+        if (active(current) && !current.popup.closed) {
+          current.popup.focus();
+          return;
+        }
+        if (current) retire(current);
+      }
+      onStart();
+      // A different mounted connection owns this reference. Never replace it.
+      if (owner.__toybacoConnectPopup) {
+        report({ outcome: 'failed', reason: 'unavailable' });
+        return;
+      }
+      report(null);
+      const popup = browser.open('about:blank', '_blank', 'width=600,height=800');
+      if (!popup) {
+        report({ outcome: 'failed', reason: 'popup-blocked' });
+        return;
+      }
+      const attempt: Attempt = { popup, controller: new AbortController(), message: () => {} };
+      current = attempt;
+      owner.__toybacoConnectPopup = popup;
+      pending(true);
+      attempt.message = (event) => {
+        if (!active(attempt) || event.origin !== browser.location.origin || event.source !== popup) return;
+        const result = readConnectionResult(event.data);
+        if (result) retire(attempt, result, result.outcome === 'failed', true);
+      };
+      browser.addEventListener('message', attempt.message, true);
+      attempt.interval = browser.setInterval(() => {
+        if (active(attempt) && popup.closed) retire(attempt, { outcome: 'failed', reason: 'interrupted' });
+      }, 1000);
+      try {
+        const url = await Promise.race([
+          loadUrl(attempt.controller.signal),
+          new Promise<never>((_, reject) => {
+            attempt.cancel = () => reject(new Error('CONNECTION_CANCELLED'));
+            attempt.deadline = browser.setTimeout(() => {
+              if (active(attempt)) retire(attempt, { outcome: 'failed', reason: 'unavailable' }, true);
+            }, 15000);
+          }),
+        ]);
+        browser.clearTimeout(attempt.deadline);
+        if (!active(attempt)) return;
+        if (popup.closed) {
+          retire(attempt, { outcome: 'failed', reason: 'interrupted' });
+          return;
+        }
+        const destination = new URL(url, browser.location.origin);
+        if (destination.username || destination.password || (destination.protocol !== 'https:' &&
+          !(destination.origin === browser.location.origin && destination.protocol === 'http:'))) {
+          throw new Error('CONNECTION_URL_INVALID');
+        }
+        popup.location.href = destination.href;
+      } catch {
+        if (active(attempt)) retire(attempt, { outcome: 'failed', reason: 'unavailable' }, true);
+      }
+    },
+    dispose() {
+      disposed = true;
+      if (current) retire(current, undefined, true);
+      for (const [task, release] of releases) {
+        browser.clearTimeout(task);
+        release();
+      }
+      releases.clear();
+    },
+  };
+}
+
 export const AddProviderComponent: FC<{
   social: Array<{
     identifier: string;
@@ -428,6 +557,20 @@ export const AddProviderComponent: FC<{
   const router = useRouter();
   const fetch = useFetch();
   const modal = useModals();
+  const t = useT();
+  const [connectionResult, setConnectionResult] = useState<ChannelConnectionResult | null>(null);
+  const [popupPending, setPopupPending] = useState(false);
+  const popupController = useRef<ReturnType<typeof createAddProviderPopup> | null>(null);
+  const retryConnection = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    const owned = createAddProviderPopup(window, setConnectionResult, setPopupPending);
+    popupController.current = owned;
+    return () => {
+      if (popupController.current === owned) popupController.current = null;
+      retryConnection.current = null;
+      owned.dispose();
+    };
+  }, []);
   const getSocialLink = useCallback(
     (
         invite: boolean,
@@ -482,38 +625,6 @@ export const AddProviderComponent: FC<{
           return;
         };
         const gotoIntegration = async (externalUrl?: string) => {
-          const toybacoWindow = window as Window & {
-            __toybacoConnectPopup?: Window | null;
-          };
-          let toybacoPopup: Window | null = null;
-          // OAuth 先は iframe 表示を拒否するため、埋め込み中だけ別ウィンドウで接続する。
-          // fetch の後に window.open するとユーザー操作が切れ、Chrome がブロックする。
-          // クリックと同じティックで空窓を開き、取得後に location だけ差し替える。
-          if (
-            document.documentElement.dataset.toybacoEmbed &&
-            !invite &&
-            !isMobile
-          ) {
-            // noopener は「付けない」のが既定で opener が残る。
-            // 'noopener=no' のような書き方は規格に無く、字面を見て
-            // noopener 扱いにするブラウザがある。そうなると完了通知
-            // (opener への postMessage)が届かないので、指定しない。
-            toybacoPopup = window.open(
-              'about:blank',
-              'toybaco-connect',
-              'width=600,height=800'
-            );
-            if (!toybacoPopup) {
-              toaster.show(
-                'チャネル接続用のポップアップを開けませんでした。ブラウザのポップアップを許可して、もう一度お試しください。',
-                'warning'
-              );
-              return;
-            }
-            // 完了通知はこのWindowProxyから来たものだけを受理する。
-            toybacoWindow.__toybacoConnectPopup = toybacoPopup;
-          }
-
           // Mobile WebView: reuse the existing `externalUrl` param to
           // carry the `postiz://` deep link so the backend redirects
           // back to the iOS/Android app after OAuth completes, instead
@@ -527,6 +638,19 @@ export const AddProviderComponent: FC<{
           ]
             .filter(Boolean)
             .join('&');
+          if (document.documentElement.dataset.toybacoEmbed && !invite && !isMobile) {
+            await popupController.current?.connect(async (signal) => {
+              const response = await fetch(
+                `/integrations/social/${identifier}${params ? `?${params}` : ''}`,
+                { signal }
+              );
+              if (!response.ok) throw new Error('CONNECTION_URL_UNAVAILABLE');
+              const { url, err } = await response.json();
+              if (err || typeof url !== 'string' || !url) throw new Error('CONNECTION_URL_UNAVAILABLE');
+              return url;
+            }, () => { retryConnection.current = () => { void gotoIntegration(externalUrl); }; });
+            return;
+          }
           const showConnectError = () => {
             toaster.show(
               t(
@@ -542,11 +666,8 @@ export const AddProviderComponent: FC<{
                 `/integrations/social/${identifier}${params ? `?${params}` : ''}`
               )
             ).json();
-            // 再接続と同じ。backend が {err} を返さない欠落/空/非string URL でも
-            // about:blank を残さず閉じる。生の err 内容は顧客へ出さない。
+            // 生のproviderエラーは顧客へ出さない。
             if (err || typeof url !== 'string' || !url) {
-              toybacoPopup?.close();
-              toybacoWindow.__toybacoConnectPopup = null;
               showConnectError();
               return;
             }
@@ -578,14 +699,8 @@ export const AddProviderComponent: FC<{
               return;
             }
 
-            if (toybacoPopup) {
-              toybacoPopup.location.href = url;
-              return;
-            }
             window.location.href = url;
           } catch {
-            toybacoPopup?.close();
-            toybacoWindow.__toybacoConnectPopup = null;
             showConnectError();
           }
         };
@@ -730,13 +845,21 @@ export const AddProviderComponent: FC<{
         }
         await gotoIntegration();
       },
-    [onboarding]
+    [extensionId, fetch, isMobile, modal, onboarding, router, t, toaster]
   );
-
-  const t = useT();
 
   return (
     <div className="w-full flex flex-col gap-[20px] rounded-[4px] relative]">
+      {connectionResult && <div data-toybaco-add-connection-result=""
+        role={connectionResult.outcome === 'connected' ? 'status' : 'alert'}
+        className="rounded-[8px] border border-newTableBorder p-[16px] text-[14px] leading-[1.6] text-textColor">
+        <p>{connectionMessage(connectionResult)}</p>
+        {connectionResult.outcome === 'failed' && <button type="button" disabled={popupPending}
+          onClick={() => retryConnection.current?.()}
+          className="mt-[12px] min-h-[44px] rounded-[8px] px-[16px] py-[8px] underline underline-offset-4 disabled:opacity-50">
+          もう一度接続する
+        </button>}
+      </div>}
       <div className="flex flex-col">
         <div
           className={clsx(
