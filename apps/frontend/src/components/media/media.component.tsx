@@ -117,16 +117,18 @@ export const Pagination: FC<{
   }, [current, totalPages]);
 
   return (
-    <ul className="flex flex-row items-center gap-1 justify-center mt-[15px]">
-      <li className={clsx(current === 0 && 'opacity-20 pointer-events-none')}>
-        <div
+    <ul data-toybaco-media-pagination="" className="flex flex-row flex-wrap items-center gap-1 justify-center mt-[15px]">
+      <li>
+        <button
+          type="button"
+          disabled={current <= 0}
           className="cursor-pointer inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 gap-1 ps-2.5 text-gray-400 hover:text-white border-[#1F1F1F] hover:bg-forth"
           aria-label="前のページへ"
           onClick={() => setPage(current - 1)}
         >
           <ChevronLeftIcon className="lucide lucide-chevron-left h-4 w-4" />
           <span>{t('previous', 'Previous')}</span>
-        </div>
+        </button>
       </li>
       {paginationItems.map((item, index) => (
         <li key={index}>
@@ -135,8 +137,10 @@ export const Pagination: FC<{
               ...
             </span>
           ) : (
-            <div
-              aria-current="page"
+            <button
+              type="button"
+              aria-label={`${item}ページ目`}
+              aria-current={current === item - 1 ? 'page' : undefined}
               onClick={() => setPage(item - 1)}
               className={clsx(
                 'cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:bg-forth h-10 w-10 hover:text-white border-newBorder',
@@ -146,23 +150,21 @@ export const Pagination: FC<{
               )}
             >
               {item}
-            </div>
+            </button>
           )}
         </li>
       ))}
-      <li
-        className={clsx(
-          current + 1 === totalPages && 'opacity-20 pointer-events-none'
-        )}
-      >
-        <a
+      <li>
+        <button
+          type="button"
+          disabled={current + 1 >= totalPages}
           className="text-textColor hover:text-white group cursor-pointer inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 gap-1 pe-2.5 text-gray-400 border-[#1F1F1F] hover:bg-forth"
           aria-label="次のページへ"
           onClick={() => setPage(current + 1)}
         >
           <span>{t('next', 'Next')}</span>
           <ChevronRightIcon className="lucide lucide-chevron-right h-4 w-4" />
-        </a>
+        </button>
       </li>
     </ul>
   );
@@ -447,7 +449,7 @@ export const MediaBox: FC<{
           </div>
         </div>
         <UploadFeedback uppy={uppy} />
-        <div className="w-full pointer-events-none relative mt-[5px] mb-[5px]">
+        <div data-toybaco-media-progress="" hidden={!loading} className="w-full pointer-events-none relative mt-[5px] mb-[5px]">
           <div className="w-full h-[46px] overflow-hidden absolute left-0 bg-newBgColorInner uppyChange">
             <Dashboard
               height={46}
@@ -657,7 +659,7 @@ export const MediaBox: FC<{
             >
               {t('cancel', 'Cancel')}
             </button>
-            {!isLoading && !!data?.results?.length && (
+            {(selected.length > 0 || (!isLoading && !!data?.results?.length)) && (
               <button
                 data-toybaco-media-confirm=""
                 onClick={standalone ? () => {} : addMedia}

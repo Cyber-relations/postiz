@@ -1194,6 +1194,8 @@ html[data-toybaco-embed] [data-toybaco-media-empty-illustration] [fill='white'] 
   html[data-toybaco-embed] [data-toybaco-media-toolbar] > div:first-child { min-width: 0; }
   html[data-toybaco-embed] [data-toybaco-media-toolbar] input { padding-inline: 10px; font-size: 13px; }
   html[data-toybaco-embed] [data-toybaco-media-toolbar] button { padding-inline: 12px; white-space: nowrap; font-size: 13px; }
+  html[data-toybaco-embed] [data-toybaco-media-pagination] { flex-shrink: 0; max-width: 100%; }
+  html[data-toybaco-embed] [data-toybaco-media-pagination] button { min-width: 44px; min-height: 44px; }
   html[data-toybaco-embed] [data-toybaco-media-empty] { padding: 20px 16px; gap: 16px; text-align: center; }
   html[data-toybaco-embed] [data-toybaco-media-empty-title] { max-width: 100%; font-size: 16px; line-height: 1.5; text-wrap: balance; }
   html[data-toybaco-embed] [data-toybaco-media-empty-illustration] { flex-shrink: 0; }
