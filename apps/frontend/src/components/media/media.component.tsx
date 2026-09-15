@@ -496,14 +496,24 @@ export const MediaBox: FC<{
                       )}
                 </div>
                 <div className="whitespace-pre-line text-newTextColor/[0.6] text-center">
-                  {t(
-                    'select_or_upload_pictures_max_1gb',
-                    'Select or upload pictures (maximum 1 GB per upload).'
-                  )}{' '}
+                  {type === 'image'
+                    ? t(
+                        'select_or_upload_pictures_max_1gb',
+                        'Select or upload pictures (maximum 1 GB per upload).'
+                      )
+                    : type === 'video'
+                      ? t(
+                          'select_or_upload_videos_max_1gb',
+                          'Select or upload videos (maximum 1 GB per upload).'
+                        )
+                      : t(
+                          'select_or_upload_media_max_1gb',
+                          'Select or upload images or videos (maximum 1 GB per upload).'
+                        )}{' '}
                   {'\n'}
                   {t(
-                    'you_can_drag_drop_pictures',
-                    'You can also drag & drop pictures.'
+                    'you_can_drag_drop_media',
+                    'You can also drag & drop files.'
                   )}
                 </div>
                 <div className="forceChange flex gap-[8px]">

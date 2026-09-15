@@ -1150,6 +1150,9 @@ html[data-toybaco-embed] [data-toybaco-media-filename] {
 [data-toybaco-media-selection] p { margin: 0; font-size: 14px; }
 [data-toybaco-media-selection] button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--toybaco-hairline, #dce2e8); border-radius: 8px; background: var(--toybaco-surface, #fcfbf8); color: var(--toybaco-ink, #24303f); }
 [data-toybaco-media-selection] button:disabled { opacity: .55; cursor: not-allowed; }
+html[data-toybaco-embed] [data-toybaco-media-empty-illustration] [stroke] { stroke: var(--toybaco-muted); stroke-opacity: 0.3; }
+html[data-toybaco-embed] [data-toybaco-media-empty-illustration] [fill]:not([fill='none']):not([fill='white']) { fill: var(--toybaco-navy); fill-opacity: 0.16; }
+html[data-toybaco-embed] [data-toybaco-media-empty-illustration] [fill='white'] { fill: var(--toybaco-muted); fill-opacity: 0.7; }
 /* Responsive controls are only shown inside the embedded media surface. */
 [data-toybaco-media-actions] { display: none; }
 @media (max-width: 1023px) {
@@ -1195,9 +1198,6 @@ html[data-toybaco-embed] [data-toybaco-media-filename] {
   html[data-toybaco-embed] [data-toybaco-media-empty-title] { max-width: 100%; font-size: 16px; line-height: 1.5; text-wrap: balance; }
   html[data-toybaco-embed] [data-toybaco-media-empty-illustration] { flex-shrink: 0; }
   html[data-toybaco-embed] [data-toybaco-media-empty-illustration] svg { width: 96px; height: auto; }
-  html[data-toybaco-embed] [data-toybaco-media-empty-illustration] [stroke] { stroke: var(--toybaco-muted); stroke-opacity: 0.3; }
-  html[data-toybaco-embed] [data-toybaco-media-empty-illustration] [fill]:not([fill='none']):not([fill='white']) { fill: var(--toybaco-navy); fill-opacity: 0.16; }
-  html[data-toybaco-embed] [data-toybaco-media-empty-illustration] [fill='white'] { fill: var(--toybaco-muted); fill-opacity: 0.7; }
   html[data-toybaco-embed] [data-toybaco-media-picker] {
     width: calc(100% - 24px) !important; height: calc(100dvh - 24px) !important;
     max-height: calc(100dvh - 24px); padding: 16px; gap: 16px; border-radius: 16px;
