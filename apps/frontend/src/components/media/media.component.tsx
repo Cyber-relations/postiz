@@ -432,7 +432,7 @@ export const MediaBox: FC<{
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('search_media_by_name', 'Search by file name')}
-              className="w-full h-[44px] px-[14px] rounded-[8px] bg-newBgColorInner border border-newColColor text-[14px] outline-none focus:border-[#612BD3]"
+              className="w-full h-[44px] px-[14px] rounded-[8px] bg-newBgColorInner border border-newColColor text-[14px] outline-none focus:border-[var(--toybaco-navy,#1f3a5f)]"
             />
           </div>
           <input
@@ -565,7 +565,7 @@ export const MediaBox: FC<{
                       />
                     )}
                     {!!selected.find((p: any) => p.id === media.id) ? (
-                      <div data-toybaco-media-selected="" className="text-white flex z-[101] justify-center items-center text-[14px] font-[500] w-[24px] h-[24px] rounded-full bg-[#612BD3] absolute -bottom-[10px] -end-[10px]">
+                      <div data-toybaco-media-selected="" className="text-[color:var(--toybaco-offwhite,#fff)] flex z-[101] justify-center items-center text-[14px] font-[500] w-[24px] h-[24px] rounded-full bg-[var(--toybaco-navy,#1f3a5f)] absolute -bottom-[10px] -end-[10px]">
                         {selected.findIndex((z: any) => z.id === media.id) + 1}
                       </div>
                     ) : (
@@ -652,7 +652,7 @@ export const MediaBox: FC<{
                 data-toybaco-media-confirm=""
                 onClick={standalone ? () => {} : addMedia}
                 disabled={selected.length === 0}
-                className="cursor-pointer text-white disabled:opacity-80 disabled:cursor-not-allowed h-[52px] px-[20px] items-center justify-center bg-[#612BD3] flex rounded-[10px]"
+                className="cursor-pointer text-[color:var(--toybaco-offwhite,#fff)] disabled:opacity-80 disabled:cursor-not-allowed h-[52px] px-[20px] items-center justify-center bg-[var(--toybaco-navy,#1f3a5f)] flex rounded-[10px]"
               >
                 {t('add_selected_media', 'Add selected media')}
               </button>
