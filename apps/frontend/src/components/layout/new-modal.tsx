@@ -79,6 +79,7 @@ export const useModalIsLast = () => useContext(CurrentModalContext).isLast;
 
 interface ModalManagerInterface extends ModalManagerStoreInterface {
   isOpen(id: string): boolean;
+  isTopModal(id: string): boolean;
   closeCurrent(): void;
 }
 
@@ -95,6 +96,7 @@ export const useModals = () => {
 
   return {
     isOpen: (id: string) => useModalStore.getState().modalManager.some((modal) => modal.id === id),
+    isTopModal: (id: string) => useModalStore.getState().modalManager.at(-1)?.id === id,
     openModal,
     closeAll,
     closeById,

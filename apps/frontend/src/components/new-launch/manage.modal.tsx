@@ -30,6 +30,9 @@ import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { SelectCustomer } from '@gitroom/frontend/components/launches/select.customer';
 import { CopilotPopup, useChatContext } from '@copilotkit/react-ui';
+import { AssistantMessage, AssistantMessageProps } from '@copilotkit/react-ui';
+import { useCopilotChat } from '@copilotkit/react-core';
+import { PostComment } from '@gitroom/frontend/components/new-launch/providers/post-comment.enum';
 import { DummyCodeComponent } from '@gitroom/frontend/components/new-launch/dummy.code.component';
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 import {
@@ -160,6 +163,38 @@ function ToybacoCopilotHeader() {
   );
 }
 
+const TOYBACO_POSTING_AI_HELP = '紹介したい商品やお知らせ、雰囲気、文字数を教えてください。文案は投稿欄で編集できます。下書き保存・公開は、ご自身で内容と投稿先を確認して操作してください。問い合わせ返信の月間利用枠とは別の文章支援です。';
+
+function ToybacoCopilotAssistantMessage(props: AssistantMessageProps) {
+  // CopilotKit assigns labels.initial itself as the synthetic welcome ID.
+  if (props.message?.id === TOYBACO_POSTING_AI_HELP && props.message.content === TOYBACO_POSTING_AI_HELP) {
+    return <p data-toybaco-ai-help="" className="copilotKitMessage copilotKitAssistantMessage text-[14px] leading-[1.7] font-normal">{TOYBACO_POSTING_AI_HELP}</p>;
+  }
+  return <AssistantMessage {...props} />;
+}
+
+function toybacoEmptyNewDraft(state: ReturnType<typeof useLaunchStore.getState>): string | null {
+  const row = state.global?.[0];
+  if (state.global?.length !== 1 || !row || typeof row.id !== 'string' || !row.id ||
+      !['', '<p></p>'].includes(row.content) || !Array.isArray(row.media) || row.media.length ||
+      (row.delay !== undefined && row.delay !== 0) ||
+      !Array.isArray(state.internal) || state.internal.length ||
+      !Array.isArray(state.selectedIntegrations) || state.selectedIntegrations.length ||
+      !Array.isArray(state.tags) || state.tags.length || state.repeater != null ||
+      state.current !== 'global' || state.editor !== 'normal' || state.loaded !== true ||
+      state.totalChars !== 0 || state.postComment !== PostComment.ALL || state.comments !== true ||
+      state.dummy !== false || state.isCreateSet !== false || state.locked !== false ||
+      state.activateExitButton !== true || !dayjs.isDayjs(state.date) || !state.date.isValid()) return null;
+  return JSON.stringify([row.id, state.date.valueOf()]);
+}
+
+function toybacoIsNewComposer(props: AddEditModalProps, existing: ReturnType<typeof useExistingData>): boolean {
+  return !props.dummy && !props.addEditSets && props.set == null && props.onlyValues === undefined &&
+    !props.focusedChannel && (props.selectedChannels === undefined || (Array.isArray(props.selectedChannels) && props.selectedChannels.length === 0)) &&
+    existing?.integration === '' && existing.group === undefined && Array.isArray(existing.posts) && existing.posts.length === 0 &&
+    !!existing.settings && typeof existing.settings === 'object' && !Array.isArray(existing.settings) && Object.keys(existing.settings).length === 0;
+}
+
 // toybaco_posting_result_guard: HTTP拒否と応答不明を成功に見せない。
 async function toybacoCheckedPostRequest(
   request: (url: string, options: RequestInit) => Promise<Response>,
@@ -249,6 +284,25 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   }, [uncheckedFetch, toybacoReleaseReconnect]);
   const ref = useRef(null);
   const existingData = useExistingData();
+  const { visibleMessages: toybacoAiMessages, isLoading: toybacoAiLoading } = useCopilotChat();
+  const toybacoTouched = useRef(false);
+  const [toybacoInitialDraft] = useState(() => toybacoIsNewComposer(props, existingData)
+    ? toybacoEmptyNewDraft(useLaunchStore.getState()) : null);
+  const toybacoMarkTouched = useCallback(() => { toybacoTouched.current = true; }, []);
+  const toybacoAiProgress = useCallback((inProgress: boolean) => {
+    if (inProgress) toybacoMarkTouched();
+  }, [toybacoMarkTouched]);
+  useEffect(() => {
+    // Any model change stays dirty even when the user later removes it.
+    const check = () => {
+      if (toybacoEmptyNewDraft(useLaunchStore.getState()) !== toybacoInitialDraft) toybacoMarkTouched();
+    };
+    check();
+    return useLaunchStore.subscribe(check);
+  }, [toybacoInitialDraft, toybacoMarkTouched]);
+  useEffect(() => {
+    if (toybacoAiLoading !== false || !Array.isArray(toybacoAiMessages) || toybacoAiMessages.length) toybacoMarkTouched();
+  }, [toybacoAiLoading, toybacoAiMessages, toybacoMarkTouched]);
   const toybacoCanEditDraft = !!user && (toybacoCanPublish || !existingData.integration || existingData?.posts?.[0]?.state === 'DRAFT');
   const [loading, setLoading] = useState(false);
   // 同期取得した保存ロックの解放を一か所にし、失敗・取消でも操作へ戻す。
@@ -357,7 +411,11 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       return false;
     }
 
-    if (
+    const pristine = modal.isTopModal('add-edit-modal') && toybacoInitialDraft !== null && !toybacoTouched.current &&
+      toybacoIsNewComposer(props, existingData) && toybacoEmptyNewDraft(useLaunchStore.getState()) === toybacoInitialDraft &&
+      toybacoAiLoading === false && Array.isArray(toybacoAiMessages) && toybacoAiMessages.length === 0 &&
+      !toybacoSaveRequestId.current && !toybacoSavedResult && !toybacoSaveError && !toybacoConnectionError && !toybacoCheckingConnection;
+    if (pristine ||
       await deleteDialog(
         t('composer_discard_description', '保存していない変更がある場合は破棄されます。保存済みの投稿は残ります。'),
         t('composer_discard_confirm', '保存せずに閉じる'),
@@ -370,7 +428,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       return true;
     }
     return false;
-  }, [activateExitButton, dummy, customClose, modal, t]);
+  }, [activateExitButton, dummy, customClose, modal, t, toybacoInitialDraft, props, existingData, toybacoAiLoading, toybacoAiMessages, toybacoSavedResult, toybacoSaveError, toybacoConnectionError, toybacoCheckingConnection]);
 
   useEffect(() => {
     const onRequestClose = (event: Event) => {
@@ -733,7 +791,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   );
 
   return (
-    <div data-toybaco-composer="" role="dialog" aria-modal="true" aria-labelledby="toybaco-composer-title" className="w-full h-full flex-1 p-[40px] flex relative">
+    <div data-toybaco-composer="" role="dialog" aria-modal="true" aria-labelledby="toybaco-composer-title" onInputCapture={toybacoMarkTouched} onChangeCapture={toybacoMarkTouched} onPasteCapture={toybacoMarkTouched} onDropCapture={toybacoMarkTouched} className="w-full h-full flex-1 p-[40px] flex relative">
       <div data-toybaco-composer-panel="" className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col">
         {addEditSets && <p data-toybaco-template-guidance="" className="px-[20px] py-[12px] text-[13px] leading-[1.6]">投稿文・メディア・投稿先ごとの設定を保存し、投稿作成で呼び出せます。この操作では公開・予約されません。</p>}
         <div data-toybaco-composer-body="" className="flex-1 flex">
@@ -745,6 +803,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         className="!relative !z-[200] !inset-auto order-3 col-span-2 w-full shrink-0 [&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
         Button={ToybacoCopilotButton}
         Header={ToybacoCopilotHeader}
+        AssistantMessage={ToybacoCopilotAssistantMessage}
+        onSubmitMessage={toybacoMarkTouched}
+        onInProgress={toybacoAiProgress}
         hitEscapeToClose={false}
         clickOutsideToClose={true}
         instructions={`
@@ -760,7 +821,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
 `}
         labels={{
           title: '投稿文づくり',
-          initial: '紹介したい商品やお知らせ、雰囲気、文字数を教えてください。文案は投稿欄で編集できます。下書き保存・公開は、ご自身で内容と投稿先を確認して操作してください。問い合わせ返信の月間利用枠とは別の文章支援です。',
+          initial: TOYBACO_POSTING_AI_HELP,
           placeholder: t(
             'ai_chat_placeholder',
             '例：新商品の紹介を、親しみやすく150文字で'
