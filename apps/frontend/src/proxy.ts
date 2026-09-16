@@ -80,18 +80,29 @@ const TOYBACO_LOGOUT_COOKIES = [
   'toybaco_embed',
 ];
 
+function toybacoCallbackParameters(params: URLSearchParams) {
+  const state = params.get('state');
+  const code = params.get('code');
+  const error = params.get('error');
+  if (params.getAll('state').length !== 1 || !state || !/^toybaco-[A-Za-z0-9_-]{43}$/.test(state) ||
+      params.getAll('code').length > 1 || params.getAll('error').length > 1 ||
+      params.getAll('provider').length > 1 || params.has('id_token') ||
+      Boolean(code) === Boolean(error) || (code !== null && (!code || code.length > 2048)) ||
+      (error !== null && (!error || error.length > 200))) return null;
+  return { state, code, error, cookieName: '__Host-toybaco_oidc_' + state.slice('toybaco-'.length) };
+}
+
 function toybacoAuthUiRequiresInbox(
   rawPath: unknown,
   searchParams: URLSearchParams,
-  hasReturnCookie: boolean
+  hasFlowCookie: boolean
 ) {
   const pathname = toybacoCanonicalUiPath(rawPath);
   const isGenericOidcReturn =
     pathname === '/auth' &&
     searchParams.get('provider')?.toUpperCase() === 'GENERIC' &&
-    Boolean(searchParams.get('code')) &&
-    Boolean(searchParams.get('state')) &&
-    hasReturnCookie;
+    toybacoCallbackParameters(searchParams) !== null &&
+    hasFlowCookie;
   return (
     pathname !== null &&
     (pathname === '/auth' || pathname.startsWith('/auth/')) &&
@@ -178,9 +189,13 @@ function toybacoSafeReturnPath(rawValue: string | undefined) {
   if (rawPath.split('/').some((segment) => segment === '.' || segment === '..')) {
     return null;
   }
-  const parsed = new URL(value, 'https://post.toybaco.invalid');
+  let parsed: URL;
+  try { parsed = new URL(value, 'https://post.toybaco.invalid'); } catch { return null; }
   if (
     parsed.origin !== 'https://post.toybaco.invalid' ||
+    [...parsed.searchParams.keys()].some((key) =>
+      ['code', 'state', 'error', 'id_token', 'error_description', 'access_token'].includes(key.toLowerCase())
+    ) ||
     !TOYBACO_RETURN_PATHS.some(
       (prefix) => parsed.pathname === prefix || parsed.pathname.startsWith(`${prefix}/`)
     )
@@ -269,13 +284,42 @@ export async function proxy(request: NextRequest) {
     topResponse.headers.set(cookieName, lng);
   }
 
+  // A callback always validates its own flow, even while another tab has a session.
+  const callbackPath = nextUrl.pathname === '/settings' &&
+    ['code', 'state', 'error', 'id_token'].some((key) => nextUrl.searchParams.has(key));
+  const genericAuthPath = nextUrl.pathname === '/auth' &&
+    nextUrl.searchParams.get('provider')?.toUpperCase() === 'GENERIC';
+  if (callbackPath || genericAuthPath) {
+    const callback = toybacoCallbackParameters(nextUrl.searchParams);
+    if (request.method !== 'GET' || !callback || !request.cookies.has(callback.cookieName)) {
+      return toybacoEmbed
+        ? toybacoEmbeddedAuthRecovery(appOrigin, toybacoTheme)
+        : NextResponse.redirect(new URL('/', appOrigin));
+    }
+    if (callbackPath) {
+      const target = new URL('/auth', nextUrl.href);
+      target.searchParams.set('provider', 'GENERIC');
+      target.searchParams.set('state', callback.state);
+      if (callback.code) target.searchParams.set('code', callback.code);
+      if (callback.error) target.searchParams.set('error', callback.error);
+      if (toybacoEmbed) target.searchParams.set('tb_embed', '1');
+      const response = NextResponse.redirect(target);
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('Referrer-Policy', 'no-referrer');
+      return response;
+    }
+    topResponse.headers.set('Cache-Control', 'no-store');
+    topResponse.headers.set('Referrer-Policy', 'no-referrer');
+    return topResponse;
+  }
+
   // Postiz固有のlogin/register画面は描画せず、常に統一Chatwoot入口へ戻す。
   // logoutだけは下のcookie失効処理へ通すため例外にする。
   if (
     toybacoAuthUiRequiresInbox(
       nextUrl.pathname,
       nextUrl.searchParams,
-      request.cookies.has('toybaco_return')
+      false // Valid GENERIC callbacks have already been handled above.
     )
   ) {
     if (request.method === 'GET' && toybacoEmbed) {
@@ -403,6 +447,11 @@ export async function proxy(request: NextRequest) {
       expireToybacoProxyCookie(response, name);
       expireToybacoProxyCookie(response, name, legacyDomain);
     }
+    for (const { name } of request.cookies.getAll()) {
+      if (/^__Host-toybaco_oidc_[A-Za-z0-9_-]{43}$/.test(name)) {
+        expireToybacoProxyCookie(response, name);
+      }
+    }
     return response;
   }
 
@@ -432,23 +481,10 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  // If the url is /auth and the cookie exists, redirect to the bound return.
+  // If the url is /auth and the cookie exists, redirect to the unified entry.
+  // GENERIC callbacks already returned above; shared return cookies are never consumed.
   if (nextUrl.pathname.startsWith('/auth') && authCookie) {
-    const returnCookie = request.cookies.get('toybaco_return')?.value;
-    const safeReturn = request.cookies.get('auth')?.value
-      ? toybacoSafeReturnPath(returnCookie)
-      : null;
-    const response = NextResponse.redirect(
-      new URL(safeReturn || `/${url}`, nextUrl.href)
-    );
-    if (returnCookie !== undefined) {
-      const legacyDomain = getCookieUrlFromDomain(process.env.FRONTEND_URL!);
-      for (const name of ['toybaco_return', 'oauth_state']) {
-        expireToybacoProxyCookie(response, name);
-        expireToybacoProxyCookie(response, name, legacyDomain);
-      }
-    }
-    return response;
+    return NextResponse.redirect(new URL('/', appOrigin));
   }
   if (nextUrl.pathname.startsWith('/auth') && !authCookie) {
     if (org) {

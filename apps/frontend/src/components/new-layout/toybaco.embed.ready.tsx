@@ -42,12 +42,26 @@ export function ToybacoEmbedReady({
     // /user/self の取得後に投稿shellが描画される場合もある。認証画面や
     // エラー画面はREADYと誤認せず、shellが揃った時だけ1回通知する。
     let readySent = false;
+    let routeBound = false;
+    let routeDenied = false;
+    let acceptedInitialRoute: { pathname: string; aiIntent: 'compose' | null } | null = null;
+    // Read only the presentation intent, before the composer consumes tb_ai.
+    // Never copy OAuth query values or the full URL into the parent protocol.
+    const initialPathname = window.location.pathname;
+    const initialAiIntent = new URLSearchParams(window.location.search).get('tb_ai') === 'compose' ? 'compose' : null;
+    const denyInitialRoute = (data: { documentId: string; frameId: string; accountId: string }, reason: 'path-mismatch' | 'context-unavailable') => {
+      if (routeDenied) return;
+      routeDenied = true;
+      toybacoDenyPosting('context-unavailable');
+      window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CONTEXT_DENIED',
+        documentId: data.documentId, frameId: data.frameId, accountId: data.accountId, reason }, appOrigin);
+    };
     const notifyParentIfReady = () => {
       if (readySent) return true;
       const posting = toybacoPostingSnapshot();
       // A cached legacy parent cannot answer INIT. It may reveal only this
       // neutral full-app recovery screen, never unbound business children.
-      if (needsContext && posting.phase === 'denied' && !posting.context &&
+      if (needsContext && !routeDenied && posting.phase === 'denied' && !posting.context &&
           document.querySelector('[data-toybaco-context-recovery]')) {
         window.parent.postMessage({ type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.toybacoTheme }, appOrigin);
         readySent = true;
@@ -55,8 +69,13 @@ export function ToybacoEmbedReady({
       }
       if (needsContext && (posting.phase !== 'ready' || !posting.context || !posting.owner)) return false;
       if (!document.querySelector('[data-toybaco-shell]')) return false;
+      if (needsContext && (!routeBound || routeDenied)) return false;
+      if (needsContext && acceptedInitialRoute && window.location.pathname !== acceptedInitialRoute.pathname) {
+        denyInitialRoute(posting.context!, 'path-mismatch');
+        return false;
+      }
       window.parent.postMessage(
-        { type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.toybacoTheme,
+        { type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.toybacoTheme, initialRoute: acceptedInitialRoute,
           ...(posting.context ? { ...posting.context, organizationId: posting.owner?.orgId } : {}) },
         appOrigin
       );
@@ -94,7 +113,34 @@ export function ToybacoEmbedReady({
     const onMessage = (event: MessageEvent) => {
       if (event.origin === appOrigin && event.source === window.parent &&
           event.data && event.data.type === 'TOYBACO_POSTIZ_INIT') {
-        if (needsContext && event.data.documentId === documentId) toybacoAcceptPostingContext(event.data);
+        if (!needsContext || event.data.documentId !== documentId || routeDenied) return;
+        const data = event.data;
+        if (typeof data.frameId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(data.frameId) ||
+            typeof data.accountId !== 'string' || !/^[1-9][0-9]{0,18}$/.test(data.accountId)) return;
+        if (!routeBound) {
+          const route = data.initialRoute;
+          // null means the parent already accepted the first document for this
+          // frame. A missing field is an old parent, requiring a full reopen.
+          if (route !== null) {
+            if (!route || typeof route !== 'object' || typeof route.pathname !== 'string' ||
+                route.pathname.length > 2000 || !/^\/(launches|analytics|media|settings)(?:\/[A-Za-z0-9._~/-]*)?$/.test(route.pathname) ||
+                route.pathname.split('/').some((segment: string) => segment === '.' || segment === '..') ||
+                route.pathname === '/settings/templates' || route.pathname.startsWith('/settings/templates/') ||
+                (route.aiIntent !== null && route.aiIntent !== 'compose')) {
+              denyInitialRoute(data, 'context-unavailable');
+              return;
+            }
+            if (route.pathname !== initialPathname || route.aiIntent !== initialAiIntent) {
+              denyInitialRoute(data, 'path-mismatch');
+              return;
+            }
+            acceptedInitialRoute = { pathname: route.pathname, aiIntent: route.aiIntent };
+          }
+          // Bind before notifying context subscribers; identity bootstrap may
+          // resolve synchronously in a cached document.
+          routeBound = true;
+        }
+        toybacoAcceptPostingContext(data);
         return;
       }
       // Parent theme is display-only. Never write the standalone mode cookie.
@@ -130,7 +176,7 @@ export function ToybacoEmbedReady({
     const unsubscribePosting = toybacoSubscribePosting(() => {
       const posting = toybacoPostingSnapshot();
       if (posting.documentId !== documentId) return;
-      if (!deniedSent && posting.context && ['blocked', 'denied'].includes(posting.phase)) {
+      if (!deniedSent && !routeDenied && posting.context && ['blocked', 'denied'].includes(posting.phase)) {
         deniedSent = true;
         window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CONTEXT_DENIED', ...posting.context,
           reason: posting.reason || 'context-unavailable' }, appOrigin);
