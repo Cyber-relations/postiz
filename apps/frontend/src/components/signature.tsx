@@ -1,4 +1,4 @@
-import { FC, useCallback } from 'react';
+import { FC, MouseEvent, useCallback } from 'react';
 import { SignaturesComponent } from '@gitroom/frontend/components/settings/signatures.component';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 export const SignatureBox: FC<{
@@ -10,9 +10,12 @@ export const SignatureBox: FC<{
     editor?.commands?.focus();
   };
 
-  const addSignature = useCallback(() => {
+  const addSignature = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     modals.openModal({
       title: '署名を追加',
+      toybacoSettingsDialog: true,
+      id: 'toybaco-signature-library',
+      toybacoReturnFocus: event.currentTarget,
       withCloseButton: true,
       children: (close) => (
         <SignatureModal appendSignature={appendValue} close={close} />
@@ -22,7 +25,9 @@ export const SignatureBox: FC<{
 
   return (
     <>
-      <div
+      <button
+        type="button"
+        aria-label="署名を追加"
         onClick={addSignature}
         data-tooltip-id="tooltip"
         data-tooltip-content="署名を追加"
@@ -55,7 +60,7 @@ export const SignatureBox: FC<{
             </clipPath>
           </defs>
         </svg>
-      </div>
+      </button>
     </>
   );
 };

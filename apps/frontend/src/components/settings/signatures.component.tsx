@@ -63,11 +63,13 @@ export const SignaturesComponent: FC<{
     void refreshList().catch(() => { if (alive.current) setOperationError('変更は保存されましたが、最新の一覧を確認できませんでした。前回の表示を残しています。一覧を再確認してください。'); });
   }, [refreshList, markNeedsReview]);
   const addSignature = useCallback(
-    (data?: any) => () => {
+    (data?: any) => (event: React.MouseEvent<HTMLButtonElement>) => {
       modal.openModal({
         title: data ? '署名を編集' : '署名を追加',
         withCloseButton: true,
         toybacoSettingsDialog: true,
+        id: `toybaco-signature-${data?.id || 'new'}`,
+        toybacoReturnFocus: event.currentTarget,
         children: <AddOrRemoveSignature data={data} reload={refreshList} onSaved={refreshAfterWrite} />,
       });
     },

@@ -202,6 +202,8 @@ export const Sets: FC = () => {
               modal.openModal({
                 title: 'テンプレートとして保存',
                 toybacoSettingsDialog: true,
+                id: `toybaco-template-name-${params?.id || 'new'}`,
+                toybacoReturnFocus: document.activeElement as HTMLElement,
                 children: (
                   <SaveSetModal
                     initialValue={params?.name || ''}
