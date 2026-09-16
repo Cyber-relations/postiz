@@ -69,12 +69,14 @@ export class CopilotController {
       throw new ServiceUnavailableException('投稿文AIの接続設定が完了していません。サポートにお問い合わせください。');
     }
 
+    const serviceAdapter = new OpenAIAdapter({ model: 'gpt-4.1' });
+    // Bound this SDK request without automatically retrying a provider failure.
+    serviceAdapter.openai.maxRetries = 0;
+    serviceAdapter.openai.timeout = 60_000;
     const copilotRuntimeHandler = copilotRuntimeNodeHttpEndpoint({
       endpoint: '/copilot/chat',
       runtime: new CopilotRuntime(),
-      serviceAdapter: new OpenAIAdapter({
-        model: 'gpt-4.1',
-      }),
+      serviceAdapter,
     });
 
     return copilotRuntimeHandler(req, res);
