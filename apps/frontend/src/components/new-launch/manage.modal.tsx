@@ -100,11 +100,41 @@ async function toybacoReadPostingAi(request: ReturnType<typeof useFetch>, signal
   return value.status;
 }
 
+// Wait for the open/close commit, without overriding a later user or child-dialog focus.
+function useToybacoComposerFocus() {
+  const { isTopModal } = useModals();
+  const topModal = useRef(isTopModal);
+  topModal.current = isTopModal;
+  const pending = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (pending.current !== null) cancelAnimationFrame(pending.current);
+  }, []);
+  return useCallback((source: HTMLElement, target: () => HTMLElement | null, initial = false) => {
+    if (pending.current !== null) cancelAnimationFrame(pending.current);
+    const composer = source.closest<HTMLElement>('[data-toybaco-composer]');
+    const wrapper = composer?.closest<HTMLElement>('[data-toybaco-modal="add-edit-modal"]');
+    const previous = document.activeElement;
+    pending.current = requestAnimationFrame(() => {
+      pending.current = null;
+      if (!source.isConnected || !composer?.isConnected || !wrapper || !topModal.current('add-edit-modal')) return;
+      const active = document.activeElement;
+      const unowned = active === document.body || active === wrapper;
+      if (initial ? !unowned : !unowned && active !== previous && active !== composer) return;
+      const next = target();
+      if (!next?.isConnected || !composer.contains(next) || next.closest('[inert]') ||
+          next.matches(':disabled') || !next.getClientRects().length) return;
+      next.focus({ preventScroll: true });
+    });
+  }, []);
+}
+
 function ToybacoCopilotButton() {
   const { open, setOpen, icons } = useChatContext();
   const request = useFetch();
   const requestedAi = React.useContext(ToybacoPostingAiIntent);
   const intentConsumed = useRef(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const focusAfterCommit = useToybacoComposerFocus();
   const statusId = React.useId();
   const [status, setStatus] = useState<ToybacoPostingAiStatus>('checking');
   const [attempt, setAttempt] = useState(0);
@@ -120,16 +150,31 @@ function ToybacoCopilotButton() {
       .finally(() => clearTimeout(timeout));
     return () => { current = false; clearTimeout(timeout); controller.abort(); };
   }, [attempt]);
+  const openChat = useCallback((source: HTMLButtonElement) => {
+    const popup = source.closest('.copilotKitPopup');
+    focusAfterCommit(source, () => popup?.querySelector<HTMLTextAreaElement>('.copilotKitInput textarea') || null);
+    setOpen(true);
+  }, [focusAfterCommit, setOpen]);
   useEffect(() => {
-    if (requestedAi && status === 'configured' && !intentConsumed.current) { intentConsumed.current = true; setOpen(true); }
-  }, [requestedAi, status, setOpen]);
+    if (requestedAi && status === 'configured' && !intentConsumed.current) {
+      intentConsumed.current = true;
+      const button = buttonRef.current;
+      const active = document.activeElement;
+      // A delayed capability response must not take focus from an editor or another dialog.
+      if (button && (active === document.body || active === button ||
+          active === button.closest('[data-toybaco-composer]') ||
+          active === button.closest('[data-toybaco-modal="add-edit-modal"]'))) openChat(button);
+      else setOpen(true);
+    }
+  }, [requestedAi, status, setOpen, openChat]);
   return (
     <div data-toybaco-composer-ai-entry="" hidden={open} className={open ? 'hidden' : 'flex flex-wrap items-center gap-x-[12px] gap-y-[4px]'}>
       <button
         type="button"
         data-toybaco-composer-ai=""
+        ref={buttonRef}
         disabled={status !== 'configured'}
-        onClick={() => { if (status === 'configured') setOpen(true); }}
+        onClick={(event) => { if (status === 'configured') openChat(event.currentTarget); }}
         className="inline-flex min-h-[44px] shrink-0 items-center gap-[6px] whitespace-nowrap rounded-[8px] border border-newBorder px-[12px] text-[12px] font-[600] text-textColor hover:bg-newBgColorInner disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="投稿文をAIで作る"
         aria-expanded={open}
@@ -146,13 +191,19 @@ function ToybacoCopilotButton() {
 
 function ToybacoCopilotHeader() {
   const { setOpen, icons, labels } = useChatContext();
+  const focusAfterCommit = useToybacoComposerFocus();
   return (
     <div className="copilotKitHeader">
       <div>{labels.title}</div>
       <div className="copilotKitHeaderControls">
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={(event) => {
+            const source = event.currentTarget;
+            const popup = source.closest('.copilotKitPopup');
+            focusAfterCommit(source, () => popup?.querySelector<HTMLButtonElement>('[data-toybaco-composer-ai]') || null);
+            setOpen(false);
+          }}
           aria-label="AIチャットを閉じる"
           className="copilotKitHeaderCloseButton"
         >
@@ -283,6 +334,12 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     }
   }, [uncheckedFetch, toybacoReleaseReconnect]);
   const ref = useRef(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+  const focusAfterCommit = useToybacoComposerFocus();
+  useEffect(() => {
+    const composer = composerRef.current;
+    if (composer) focusAfterCommit(composer, () => composer, true);
+  }, [focusAfterCommit]);
   const existingData = useExistingData();
   const { visibleMessages: toybacoAiMessages, isLoading: toybacoAiLoading } = useCopilotChat();
   const toybacoTouched = useRef(false);
@@ -791,7 +848,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   );
 
   return (
-    <div data-toybaco-composer="" role="dialog" aria-modal="true" aria-labelledby="toybaco-composer-title" onInputCapture={toybacoMarkTouched} onChangeCapture={toybacoMarkTouched} onPasteCapture={toybacoMarkTouched} onDropCapture={toybacoMarkTouched} className="w-full h-full flex-1 p-[40px] flex relative">
+    <div data-toybaco-composer="" ref={composerRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="toybaco-composer-title" onInputCapture={toybacoMarkTouched} onChangeCapture={toybacoMarkTouched} onPasteCapture={toybacoMarkTouched} onDropCapture={toybacoMarkTouched} className="w-full h-full flex-1 p-[40px] flex relative">
       <div data-toybaco-composer-panel="" className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col">
         {addEditSets && <p data-toybaco-template-guidance="" className="px-[20px] py-[12px] text-[13px] leading-[1.6]">投稿文・メディア・投稿先ごとの設定を保存し、投稿作成で呼び出せます。この操作では公開・予約されません。</p>}
         <div data-toybaco-composer-body="" className="flex-1 flex">

@@ -24,10 +24,21 @@ import { UserAgent } from '@gitroom/nestjs-libraries/user/user.agent';
 import { Provider } from '@prisma/client';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import * as Sentry from '@sentry/nestjs';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 // toybaco_identity_boundary_v1: 認証cookieは post.toybaco.jp host-only に固定。
 const TOYBACO_RETURN_PATHS = ['/launches', '/analytics', '/media', '/settings'];
-const TOYBACO_SESSION_COOKIES = ['auth', 'showorg', 'impersonate', 'oauth_state'];
+const TOYBACO_FLOW_PREFIX = '__Host-toybaco_oidc_';
+const TOYBACO_FLOW_STATE = /^toybaco-([A-Za-z0-9_-]{43})$/;
+const TOYBACO_FLOW_COOKIE = /^__Host-toybaco_oidc_[A-Za-z0-9_-]{43}$/;
+const TOYBACO_FLOW_TTL = 10 * 60;
+type ToybacoOidcFlow = {
+  v: 1;
+  state: string;
+  returnPath: string;
+  iat: number;
+  exp: number;
+};
 
 function toybacoHostCookieOptions() {
   return {
@@ -54,9 +65,13 @@ function toybacoSafeReturnPath(value: unknown): string | null {
   if (rawPath.split('/').some((segment) => segment === '.' || segment === '..')) {
     return null;
   }
-  const parsed = new URL(value, 'https://post.toybaco.invalid');
+  let parsed: URL;
+  try { parsed = new URL(value, 'https://post.toybaco.invalid'); } catch { return null; }
   if (
     parsed.origin !== 'https://post.toybaco.invalid' ||
+    [...parsed.searchParams.keys()].some((key) =>
+      ['code', 'state', 'error', 'id_token', 'error_description', 'access_token'].includes(key.toLowerCase())
+    ) ||
     !TOYBACO_RETURN_PATHS.some(
       (prefix) => parsed.pathname === prefix || parsed.pathname.startsWith(`${prefix}/`)
     )
@@ -79,15 +94,76 @@ function expireToybacoCookie(
   });
 }
 
-function clearToybacoCookies(response: Response, includeReturn = false) {
+function toybacoFlowName(state: unknown): string | null {
+  if (typeof state !== 'string') return null;
+  const match = TOYBACO_FLOW_STATE.exec(state);
+  return match ? TOYBACO_FLOW_PREFIX + match[1] : null;
+}
+
+function toybacoFlowMac(payload: string): Buffer {
+  const secret = process.env.JWT_SECRET;
+  const issuer = new URL(process.env.FRONTEND_URL || '');
+  if (!secret || issuer.protocol !== 'https:' || issuer.username || issuer.password) {
+    throw new Error('OIDC flow configuration is unavailable');
+  }
+  // Different purpose and wire format from auth JWTs, including the deployment origin.
+  return createHmac('sha256', secret)
+    .update(`toybaco/postiz/oidc-flow\0v1\0${issuer.origin}\0${payload}`)
+    .digest();
+}
+
+function toybacoSignFlow(flow: ToybacoOidcFlow): string {
+  const payload = Buffer.from(JSON.stringify(flow)).toString('base64url');
+  return `v1~${payload}~${toybacoFlowMac(payload).toString('base64url')}`;
+}
+
+function toybacoReadFlow(req: Request, state: unknown): ToybacoOidcFlow | null {
+  const name = toybacoFlowName(state);
+  const value: unknown = name ? req.cookies?.[name] : undefined;
+  if (typeof value !== 'string' || value.length > 3072) return null;
+  const parts = /^v1~([A-Za-z0-9_-]+)~([A-Za-z0-9_-]{43})$/.exec(value);
+  if (!parts) return null;
+  try {
+    const payload = Buffer.from(parts[1], 'base64url');
+    const mac = Buffer.from(parts[2], 'base64url');
+    if (payload.toString('base64url') !== parts[1] || mac.toString('base64url') !== parts[2] ||
+        mac.length !== 32 || !timingSafeEqual(mac, toybacoFlowMac(parts[1]))) return null;
+    const flow: unknown = JSON.parse(payload.toString('utf8'));
+    if (!flow || typeof flow !== 'object' || Array.isArray(flow) ||
+        Object.keys(flow).sort().join(',') !== 'exp,iat,returnPath,state,v' ||
+        !('v' in flow) || flow.v !== 1 || !('state' in flow) || flow.state !== state ||
+        !('returnPath' in flow) || typeof flow.returnPath !== 'string' || toybacoSafeReturnPath(flow.returnPath) !== flow.returnPath ||
+        !('iat' in flow) || typeof flow.iat !== 'number' || !Number.isSafeInteger(flow.iat) || flow.iat < 0 ||
+        !('exp' in flow) || typeof flow.exp !== 'number' || !Number.isSafeInteger(flow.exp) ||
+        flow.exp - flow.iat !== TOYBACO_FLOW_TTL) return null;
+    return flow as ToybacoOidcFlow;
+  } catch {
+    return null;
+  }
+}
+
+function toybacoFlowCurrent(flow: ToybacoOidcFlow): boolean {
+  const now = Math.floor(Date.now() / 1000);
+  return flow.iat <= now && now < flow.exp;
+}
+
+function toybacoFlowBudget(req: Request, name: string, value: string): boolean {
+  const pending = Object.entries(req.cookies || {}).filter(([key]) => TOYBACO_FLOW_COOKIE.test(key));
+  const segment = `${name}=${value}`;
+  const prior = pending.map(([key, entry]) => `${key}=${entry}`).join('; ');
+  const header = req.headers.cookie || '';
+  // Concurrent responses can see the same old jar: this is an issuance budget, not a shared lock.
+  return pending.length < 4 && value.length <= 3072 &&
+    Buffer.byteLength([prior, segment].filter(Boolean).join('; ')) <= 4096 &&
+    Buffer.byteLength([header, segment].filter(Boolean).join('; ')) <= 6144;
+}
+
+function replaceToybacoLegacySession(response: Response) {
   const domain = getCookieUrlFromDomain(process.env.FRONTEND_URL || '');
-  const names = includeReturn
-    ? [...TOYBACO_SESSION_COOKIES, 'toybaco_return']
-    : TOYBACO_SESSION_COOKIES;
-  for (const name of names) {
-    expireToybacoCookie(response, name);
+  for (const name of ['auth', 'showorg', 'impersonate']) {
     expireToybacoCookie(response, name, domain);
   }
+  expireToybacoCookie(response, 'impersonate');
 }
 
 @ApiTags('Auth')
@@ -278,38 +354,40 @@ export class AuthController {
     return response.redirect(302, `${scheme}?${params.toString()}`);
   }
 
-  // iframeを開くたび、古いPostiz sessionを破棄してChatwootへ再束縛する専用入口。
+  // Each iframe binds its own return without interrupting another tab's session.
   @Get('/toybaco-entry')
   async toybacoEntry(
+    @Req() req: Request,
     @Query('return') returnPath: string,
     @Res({ passthrough: false }) response: Response
   ) {
     const safeReturn = toybacoSafeReturnPath(returnPath);
     if (!safeReturn) {
-      clearToybacoCookies(response, true);
       return response.status(400).json({
         code: 'TOYBACO_IDENTITY_INVALID_RETURN',
         message: '投稿画面の移動先が不正です',
       });
     }
-
     try {
-      const state = `toybaco-${makeId(32)}`;
-      clearToybacoCookies(response, true);
-      response.cookie('toybaco_return', safeReturn, {
+      const state = `toybaco-${randomBytes(32).toString('base64url')}`;
+      const name = toybacoFlowName(state)!;
+      const iat = Math.floor(Date.now() / 1000);
+      const flow: ToybacoOidcFlow = { v: 1, state, returnPath: safeReturn, iat, exp: iat + TOYBACO_FLOW_TTL };
+      const value = toybacoSignFlow(flow);
+      if (!toybacoFlowBudget(req, name, value)) {
+        return response.status(429).json({
+          code: 'TOYBACO_IDENTITY_FLOW_LIMIT',
+          message: '接続の確認が複数進行中です。完了してからもう一度お試しください',
+        });
+      }
+      const link = await this._authService.oauthLink(Provider.GENERIC, { state });
+      response.cookie(name, value, {
         ...toybacoHostCookieOptions(),
-        expires: new Date(Date.now() + 10 * 60 * 1000),
-      });
-      response.cookie('oauth_state', state, {
-        ...toybacoHostCookieOptions(),
-        expires: new Date(Date.now() + 10 * 60 * 1000),
-      });
-      const link = await this._authService.oauthLink(Provider.GENERIC, {
-        state,
+        expires: new Date(flow.exp * 1000),
+        maxAge: TOYBACO_FLOW_TTL * 1000,
       });
       return response.redirect(303, link);
     } catch (_error) {
-      clearToybacoCookies(response, true);
       return response.status(503).json({
         code: 'TOYBACO_IDENTITY_UNAVAILABLE',
         message: 'トイバコIDを現在利用できません',
@@ -423,6 +501,7 @@ export class AuthController {
     @Body('code') code: string,
     @Body('redirect_uri') redirect_uri: string,
     @Body('state') state: string,
+    @Body('error') providerError: unknown,
     @Param('provider') provider: string,
     @Res({ passthrough: false }) response: Response
   ) {
@@ -436,22 +515,26 @@ export class AuthController {
         : response.status(400).send('Invalid request');
     }
 
+    const flow = generic ? toybacoReadFlow(req, state) : null;
     try {
+      if (generic && (!flow || !toybacoFlowCurrent(flow) ||
+          providerError !== undefined || typeof code !== 'string' || !code || code.length > 2048)) {
+        throw new Error('OIDC flow is invalid');
+      }
       const { jwt, token, organizationId } =
         await this._authService.checkExists(
           provider,
           code,
           redirect_uri,
           state,
-          req?.cookies?.oauth_state
+          generic ? flow?.state : req?.cookies?.oauth_state
         );
 
       if (generic) {
-        if (!jwt || token || !organizationId) {
+        if (!jwt || token || !organizationId || !flow || !toybacoFlowCurrent(flow)) {
           throw new Error('trusted membership is missing');
         }
-        // 旧domain cookieを消してから、host-onlyのauth/showorgだけを再発行する。
-        clearToybacoCookies(response);
+        replaceToybacoLegacySession(response);
         response.cookie('auth', jwt, {
           ...toybacoHostCookieOptions(),
           expires: new Date(Date.now() + 10 * 60 * 1000),
@@ -460,12 +543,8 @@ export class AuthController {
           ...toybacoHostCookieOptions(),
           expires: new Date(Date.now() + 10 * 60 * 1000),
         });
-        if (process.env.NOT_SECURED) {
-          response.header('auth', jwt);
-          response.header('showorg', organizationId);
-        }
-        response.header('reload', 'true');
-        return response.status(200).json({ login: true });
+        expireToybacoCookie(response, toybacoFlowName(flow.state)!);
+        return response.status(200).json({ login: true, returnPath: flow.returnPath });
       }
 
       if (token) {
@@ -486,8 +565,8 @@ export class AuthController {
     } catch (error) {
       if (!generic) throw error;
       // A stale callback must not clear another flow or an established session.
-      if (state && state === req?.cookies?.oauth_state) {
-        clearToybacoCookies(response, true);
+      if (flow) {
+        expireToybacoCookie(response, toybacoFlowName(flow.state)!);
       }
       return response.status(403).json({
         code: 'TOYBACO_IDENTITY_DENIED',

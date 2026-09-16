@@ -361,11 +361,11 @@ export class UsersController {
 
     await this._userService.deleteAccount(user.id);
 
-    return this.logout(response);
+    return this.logout(response, req);
   }
 
   @Post('/logout')
-  logout(@Res({ passthrough: true }) response: Response) {
+  logout(@Res({ passthrough: true }) response: Response, @Req() req: Request) {
     // toybaco_identity_boundary_v1: GENERICはhost-only cookieを発行するため、
     // 現行host cookieと旧registrable-domain cookieの両方を同じlogoutで消す。
     const legacyDomain = getCookieUrlFromDomain(process.env.FRONTEND_URL || '');
@@ -387,6 +387,13 @@ export class UsersController {
       };
       response.cookie(name, '', options);
       response.cookie(name, '', { ...options, domain: legacyDomain });
+    }
+    for (const name of Object.keys(req.cookies || {})) {
+      if (!/^__Host-toybaco_oidc_[A-Za-z0-9_-]{43}$/.test(name)) continue;
+      response.cookie(name, '', {
+        path: '/', secure: true, httpOnly: true, sameSite: 'lax',
+        maxAge: -1, expires: new Date(0),
+      });
     }
     response.header('logout', 'true');
     response.status(200).send();

@@ -5,7 +5,7 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import Link from 'next/link';
 import { Button } from '@gitroom/react/form/button';
 import { Input } from '@gitroom/react/form/input';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { classValidatorResolver } from '@hookform/resolvers/class-validator';
 import { CreateOrgUserDto } from '@gitroom/nestjs-libraries/dtos/auth/create.org.user.dto';
 import { GithubProvider } from '@gitroom/frontend/components/auth/providers/github.provider';
@@ -38,33 +38,81 @@ type Inputs = {
   providerToken: string;
   provider: string;
 };
+// toybaco_identity_boundary_v1: completion uses only this verified flow's return.
+function toybacoCallbackReturn(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length < 1 || value.length > 2000 ||
+      !/^\/[A-Za-z0-9._~/?=&-]*$/.test(value) || value.includes('%') ||
+      value.includes('\\') || value.includes('#')) return null;
+  if (value.split('?', 1)[0].split('/').some((part) => part === '.' || part === '..')) return null;
+  let target: URL;
+  try { target = new URL(value, 'https://post.toybaco.invalid'); } catch { return null; }
+  if (target.origin !== 'https://post.toybaco.invalid' ||
+      !['/launches', '/analytics', '/media', '/settings'].some((path) =>
+        target.pathname === path || target.pathname.startsWith(`${path}/`)) ||
+      [...target.searchParams.keys()].some((key) =>
+        ['code', 'state', 'error', 'id_token', 'error_description', 'access_token'].includes(key.toLowerCase()))) return null;
+  return target.pathname + target.search;
+}
+
 export function Register() {
   const getQuery = useSearchParams();
   const fetch = useFetch();
   const [provider] = useState(getQuery?.get('provider')?.toUpperCase());
   const [code, setCode] = useState(getQuery?.get('code') || '');
   const [state] = useState(getQuery?.get('state') || '');
+  const [providerError] = useState(getQuery?.get('error') || undefined);
+  const [invalidGeneric] = useState(() =>
+    getQuery?.getAll('state').length !== 1 || getQuery?.getAll('provider').length !== 1 ||
+    (getQuery?.getAll('code').length || 0) > 1 || (getQuery?.getAll('error').length || 0) > 1 ||
+    Boolean(getQuery?.has('id_token')) || !/^toybaco-[A-Za-z0-9_-]{43}$/.test(state) ||
+    Boolean(code) === Boolean(providerError) || (getQuery?.has('code') && !code) ||
+    (getQuery?.has('error') && !providerError) || code.length > 2048 || (providerError?.length || 0) > 200
+  );
   const [show, setShow] = useState(false);
-  useEffect(() => {
-    if (provider && code) {
-      load();
-    }
-  }, []);
+  const started = useRef(false);
+  const alive = useRef(false);
   const load = useCallback(async () => {
+    if (provider === 'GENERIC') {
+      try {
+        if (invalidGeneric) throw new Error('Invalid callback');
+        const response = await fetch('/auth/oauth/GENERIC/exists', {
+          method: 'POST', credentials: 'include',
+          body: JSON.stringify({ code: code || undefined, state, error: providerError }),
+        });
+        const result: unknown = await response.json();
+        if (!response.ok || !result || typeof result !== 'object' || Array.isArray(result) ||
+            Object.keys(result).sort().join(',') !== 'login,returnPath' ||
+            !('login' in result) || result.login !== true || !('returnPath' in result)) {
+          throw new Error('Callback was not accepted');
+        }
+        const returnPath = toybacoCallbackReturn(result.returnPath);
+        if (!returnPath) throw new Error('Invalid callback return');
+        if (alive.current) window.location.replace(returnPath);
+      } catch {
+        // Remove callback credentials; the proxy renders its existing neutral recovery.
+        if (alive.current) window.location.replace('/auth?provider=GENERIC' + (window.parent !== window ? '&tb_embed=1' : ''));
+      }
+      return;
+    }
     const { token } = await (
       await fetch(`/auth/oauth/${provider?.toUpperCase() || 'LOCAL'}/exists`, {
         method: 'POST',
-        body: JSON.stringify({
-          code,
-          state,
-        }),
+        body: JSON.stringify({ code, state }),
       })
     ).json();
     if (token) {
       setCode(token);
       setShow(true);
     }
-  }, [provider, code]);
+  }, [provider, code, state, providerError, invalidGeneric, fetch]);
+  useEffect(() => {
+    alive.current = true;
+    if (!started.current && provider && (code || provider === 'GENERIC')) {
+      started.current = true;
+      void load();
+    }
+    return () => { alive.current = false; };
+  }, [provider, code, load]);
   if (!code && !provider) {
     return <RegisterAfter token="" provider="LOCAL" />;
   }
