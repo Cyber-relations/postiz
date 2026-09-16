@@ -1,6 +1,14 @@
 'use client';
 
-import React, { FC, Fragment, useMemo } from 'react';
+import React, {
+  FC,
+  Fragment,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
 import clsx from 'clsx';
@@ -168,44 +176,104 @@ export const InformationComponent: FC<{
     return validLimit ?? limits[0];
   }, [isGlobal, selectedIntegrations, chars, isInternal, totalChars]);
 
+  const hasDetails = Boolean((isGlobal && selectedIntegrations.length) || !isValid);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsId = useId();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!hasDetails) {
+      setDetailsOpen(false);
+      return;
+    }
+    if (!detailsOpen) {
+      return;
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !wrapperRef.current?.contains(event.target)
+      ) {
+        setDetailsOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [detailsOpen, hasDetails]);
+
   return (
     <div
-      className={clsx(
-        'group rounded-[6px] gap-[4px] h-[30px] px-[6px] flex justify-center items-center relative',
-        isValid ? 'border border-newColColor' : 'bg-[#FF3F3F]'
-      )}
+      ref={wrapperRef}
+      className="relative"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setDetailsOpen(false);
+        }
+      }}
+      onKeyDown={(event) => {
+        if (
+          !detailsOpen ||
+          event.key !== 'Escape' ||
+          event.defaultPrevented ||
+          event.nativeEvent.isComposing ||
+          event.nativeEvent.keyCode === 229
+        ) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        setDetailsOpen(false);
+        triggerRef.current?.focus({ preventScroll: true });
+      }}
     >
-      {isValid ? <Valid /> : <Invalid />}
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={!hasDetails}
+        aria-label={t('post_validation_details', '投稿内容の確認事項')}
+        aria-expanded={hasDetails ? detailsOpen : undefined}
+        aria-controls={hasDetails ? detailsId : undefined}
+        onClick={() => setDetailsOpen((open) => !open)}
+        className={clsx(
+          'rounded-[6px] gap-[4px] min-h-[44px] min-w-[44px] px-[6px] flex justify-center items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current',
+          isValid ? 'border border-newColColor' : 'bg-[#FF3F3F]'
+        )}
+      >
+        {isValid ? <Valid /> : <Invalid />}
 
-      {!isGlobal && (
-        <div className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && 'text-white')}>
-          {totalChars}/{totalAllowedChars}
-        </div>
-      )}
-      {isGlobal && globalDisplayLimit !== null && (
-        <div className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && 'text-white')}>
-          {totalChars}/{globalDisplayLimit}
-        </div>
-      )}
-      {((isGlobal && selectedIntegrations.length) || !isValid) && (
-        <svg
-          className={clsx('group-hover:rotate-180', !isValid && 'text-white')}
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-        >
-          <path
-            d="M5.4563 6L10.5437 6C10.9494 6 11.1526 6.56798 10.8657 6.90016L8.32201 9.84556C8.14417 10.0515 7.85583 10.0515 7.67799 9.84556L5.13429 6.90016C4.84741 6.56798 5.05059 6 5.4563 6Z"
-            fill="currentColor"
-          />
-        </svg>
-      )}
-      {((isGlobal && selectedIntegrations.length) || !isValid) && (
+        {!isGlobal && (
+          <span className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && 'text-white')}>
+            {totalChars}/{totalAllowedChars}
+          </span>
+        )}
+        {isGlobal && globalDisplayLimit !== null && (
+          <span className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && 'text-white')}>
+            {totalChars}/{globalDisplayLimit}
+          </span>
+        )}
+        {hasDetails && (
+          <svg
+            className={clsx(detailsOpen && 'rotate-180', !isValid && 'text-white')}
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+          >
+            <path
+              d="M5.4563 6L10.5437 6C10.9494 6 11.1526 6.56798 10.8657 6.90016L8.32201 9.84556C8.14417 10.0515 7.85583 10.0515 7.67799 9.84556L5.13429 6.90016C4.84741 6.56798 5.05059 6 5.4563 6Z"
+              fill="currentColor"
+            />
+          </svg>
+        )}
+      </button>
+      {hasDetails && detailsOpen && (
         <div
+          id={detailsId}
+          tabIndex={-1}
           className={clsx(
-            'z-[300] hidden rounded-[12px] bg-newBgColorInner group-hover:flex absolute end-0 bottom-[100%] mb-[5px] p-[12px] flex-col',
+            'z-[300] rounded-[12px] bg-newBgColorInner flex absolute end-0 bottom-[100%] mb-[5px] p-[12px] flex-col',
             isValid ? 'border border-newColColor' : 'border border-[#FF3F3F]'
           )}
         >
