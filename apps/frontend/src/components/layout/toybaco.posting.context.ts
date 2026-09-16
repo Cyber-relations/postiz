@@ -13,7 +13,8 @@ type PostingState = {
   context?: ToybacoPostingContext;
   owner?: ToybacoPostingOwner;
   message: string;
-  reason?: 'account-mismatch' | 'context-unavailable' | 'session-changed';
+  renewing?: boolean;
+  reason?: 'account-mismatch' | 'context-unavailable' | 'session-changed' | 'revoked';
 };
 type ResponseStatus = { status: number; headers: { get(name: string): string | null } };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -24,6 +25,7 @@ const initial: PostingState = { generation: 0, phase: 'uninitialized', documentI
 let state: PostingState = initial;
 const listeners = new Set<() => void>();
 const requestOwners = new WeakMap<RequestInit, PostingState>();
+const requestVersions = new WeakMap<RequestInit, number>();
 const copilotForwards = new WeakMap<RequestInit, PostingState>();
 let releaseCopilot: (() => void) | undefined;
 const changedMessage = '利用者または店舗が変わっています。入力はこの画面に残っています。元の利用者・店舗で再接続してください。';
@@ -72,6 +74,7 @@ export function toybacoExpectedPostingOrganization(accountId: string) {
 export function toybacoBeginPosting(documentId: string, embeddedGeneric: boolean, appOrigin = '') {
   if (!TOYBACO_DOCUMENT_ID.test(documentId)) throw new Error('TOYBACO_POSTING_INVALID_DOCUMENT');
   releaseCopilot?.(); releaseCopilot = undefined;
+  releaseRenewal();
   let recoveryOrigin: string | undefined;
   try {
     if (new URL(appOrigin).origin === appOrigin && new URL(appOrigin).protocol === 'https:') recoveryOrigin = appOrigin;
@@ -81,6 +84,7 @@ export function toybacoBeginPosting(documentId: string, embeddedGeneric: boolean
   return () => {
     if (!current(ticket)) return;
     releaseCopilot?.(); releaseCopilot = undefined;
+    releaseRenewal();
     update({ generation: state.generation + 1, phase: 'uninitialized', documentId: '', message: '' });
   };
 }
@@ -97,9 +101,13 @@ export function toybacoAcceptPostingContext(value: unknown) {
   update({ ...state, context: { documentId: context.documentId, frameId: context.frameId, accountId: context.accountId }, phase: 'context' });
   return true;
 }
-export function toybacoDenyPosting(reason: 'account-mismatch' | 'context-unavailable' | 'session-changed', ticket = state) {
+export function toybacoDenyPosting(reason: 'account-mismatch' | 'context-unavailable' | 'session-changed' | 'revoked', ticket = state) {
   if (!current(ticket)) return;
-  update({ ...state, phase: state.owner ? 'blocked' : 'denied', reason, message: reason === 'context-unavailable' ? expiredMessage : changedMessage });
+  if (reason !== 'context-unavailable') {
+    hardDenial += 1;
+    pendingRenewal?.finish(false);
+  }
+  update({ ...state, phase: state.owner ? 'blocked' : 'denied', reason, message: reason === 'context-unavailable' ? expiredMessage : reason === 'revoked' ? 'この店舗を利用する権限を確認できません。管理者に確認してください。入力はこの画面に残っています。' : changedMessage });
 }
 function headersFor(ticket: PostingState, verification = false): Record<string, string> {
   if (!current(ticket) || !state.owner || (state.phase !== 'ready' && !(verification && state.phase === 'blocked'))) {
@@ -111,18 +119,27 @@ function headersFor(ticket: PostingState, verification = false): Record<string, 
     'x-toybaco-composer-role': state.owner.role,
   };
 }
-function observeResponse(response: ResponseStatus, ticket: PostingState) {
+function observeResponse(response: ResponseStatus, ticket: PostingState, version = sessionVersion) {
   if (!current(ticket)) return false;
+  const echoed = response.headers.get('x-toybaco-session-version');
+  if (version !== sessionVersion || (echoed !== null && echoed !== String(sessionVersion))) return true;
   const changed = response.status === 409 && response.headers.get('x-toybaco-session') === 'identity-changed';
   if (response.status !== 401 && !response.headers.get('logout') && !changed) return false;
-  toybacoDenyPosting(changed ? 'session-changed' : 'context-unavailable', ticket);
+  const session = response.headers.get('x-toybaco-session');
+  toybacoDenyPosting(changed ? 'session-changed' : session === 'revoked' ? 'revoked' : 'context-unavailable', ticket);
+  // Only an explicit backend expiry/missing-cookie classification may renew.
+  // The failed operation itself is returned untouched and is never replayed.
+  if (!changed && response.status === 401 && ['expired', 'missing'].includes(session || '')) void renewPosting();
   return true;
 }
 export async function toybacoPostingBeforeRequest(url: string, options: RequestInit, ticket = state): Promise<RequestInit> {
   if (!current(ticket)) throw new Error('TOYBACO_COMPOSER_RECONNECT_REQUIRED');
   // Auth pages and non-posting consumers have no active posting boundary.
   if (state.phase === 'uninitialized' || (state.phase === 'standalone' && !state.owner)) return options;
-  if (url.startsWith('/auth/') || url === '/user/logout') return options;
+  if (url === '/user/logout') { releaseRenewal(); return options; }
+  if (url.startsWith('/auth/')) return options;
+  if (state.owner && (pendingRenewal || (state.phase === 'ready' && renewalDue()))) await renewPosting();
+  if (!current(ticket)) throw new Error('TOYBACO_COMPOSER_RECONNECT_REQUIRED');
   let next = { ...options };
   if (!state.owner) {
     if (url !== '/user/self' || state.phase !== 'context') throw new Error('TOYBACO_POSTING_CONTEXT_REQUIRED');
@@ -134,6 +151,7 @@ export async function toybacoPostingBeforeRequest(url: string, options: RequestI
     next = { ...options, headers: merged };
   }
   requestOwners.set(next, ticket);
+  requestVersions.set(next, sessionVersion);
   return next;
 }
 export function toybacoPostingAfterResponse(url: string, options: RequestInit, response: ResponseStatus) {
@@ -145,7 +163,7 @@ export function toybacoPostingAfterResponse(url: string, options: RequestInit, r
     toybacoDenyPosting('context-unavailable', ticket);
     return true;
   }
-  return observeResponse(response, ticket);
+  return observeResponse(response, ticket, requestVersions.get(options));
 }
 
 export function toybacoPostingCopilotHeaders(owner = state.owner, documentId = state.documentId) {
@@ -184,7 +202,9 @@ export function toybacoInstallCopilotTransport(runtimeUrl: string, ticket = stat
       return original.call(window, input, init);
     }
     const headers = new Headers(init?.headers !== undefined ? init.headers : input instanceof Request ? input.headers : undefined);
+    if (pendingRenewal || (state.phase === 'ready' && renewalDue())) await renewPosting();
     const expected = headersFor(ticket);
+    const version = sessionVersion;
     if (headers.get('x-toybaco-posting-document-id') !== ticket.documentId ||
         Object.entries(expected).some(([key, value]) => headers.get(key) !== value)) {
       throw new Error('TOYBACO_COMPOSER_RECONNECT_REQUIRED');
@@ -192,7 +212,7 @@ export function toybacoInstallCopilotTransport(runtimeUrl: string, ticket = stat
     const forwarded = { ...init, headers };
     copilotForwards.set(forwarded, ticket);
     const response = await original.call(window, input, forwarded);
-    if (active) observeResponse(response, ticket);
+    if (active) observeResponse(response, ticket, version);
     return response;
   };
   window.fetch = wrapped;
@@ -207,7 +227,7 @@ export function toybacoPostingUploadGuard() {
   if (!state.owner) return undefined;
   const ticket = state;
   return {
-    beforeRequest: () => headersFor(ticket),
+    beforeRequest: () => ({ ...headersFor(ticket), 'x-toybaco-session-version': String(sessionVersion) }),
     afterResponse: (status: number, headers: { get(name: string): string | null }) => observeResponse({ status, headers }, ticket),
   };
 }
@@ -237,6 +257,7 @@ export async function toybacoLoadPostingIdentity(
       state = { ...state, owner, phase: 'ready', message: '' };
       releaseCopilot = toybacoInstallCopilotTransport(backendUrl + '/copilot/chat', state);
       listeners.forEach(listener => listener());
+      acceptSessionExpiry(response, backendUrl);
     }
     return user;
   } catch (error) {
@@ -246,6 +267,8 @@ export async function toybacoLoadPostingIdentity(
 }
 export async function toybacoVerifyPostingIdentity(backendUrl: string) {
   const ticket = state;
+  const denial = hardDenial;
+  const version = sessionVersion;
   if (!ticket.owner) return false;
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -256,24 +279,131 @@ export async function toybacoVerifyPostingIdentity(backendUrl: string) {
       const response = await window.fetch(backendUrl + '/user/self', {
         credentials: 'include', cache: 'no-store', headers: headersFor(ticket, true), signal: controller.signal,
       });
-      if (!response.ok) throw new Error('TOYBACO_POSTING_IDENTITY_UNAVAILABLE');
-      return await response.json();
+      if (!current(ticket) || denial !== hardDenial || version !== sessionVersion) throw new Error('TOYBACO_POSTING_STALE_RESPONSE');
+      if (!response.ok) { observeResponse(response, ticket, version); throw new Error('TOYBACO_POSTING_IDENTITY_UNAVAILABLE'); }
+      return { user: await response.json(), response };
     })();
-    const user = await Promise.race([read, new Promise<never>((_, reject) => {
+    const result = await Promise.race([read, new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
         controller.abort();
         reject(new Error('TOYBACO_POSTING_IDENTITY_TIMEOUT'));
       }, 15000);
     })]);
-    if (!current(ticket)) return false;
-    const owner = toybacoPostingOwner(user);
+    if (!current(ticket) || denial !== hardDenial || version !== sessionVersion) return false;
+    const owner = toybacoPostingOwner(result.user);
     if (!owner || !sameOwner(ticket.owner, owner)) { toybacoDenyPosting('session-changed', ticket); return false; }
-    update({ ...state, phase: 'ready', message: '' });
+    update({ ...state, phase: 'ready', message: '', reason: undefined, renewing: false });
+    acceptSessionExpiry(result.response, backendUrl);
     return true;
   } catch {
-    if (current(ticket)) toybacoDenyPosting('context-unavailable', ticket);
+    if (current(ticket) && denial === hardDenial && version === sessionVersion && (!state.reason || state.reason === 'context-unavailable')) toybacoDenyPosting('context-unavailable', ticket);
     return false;
   } finally {
     if (timer !== undefined) clearTimeout(timer);
   }
+}
+
+// Renewal changes the HttpOnly credential, never the mounted document or draft.
+// One attempt per accepted session; only a fresh same-owner verification enables
+// another scheduled attempt. Failed requests and uploads are never replayed.
+let sessionVersion = 0;
+let sessionExpiresAt = 0;
+let renewalBackend = '';
+let renewalSequence = 0;
+let attemptedVersion = -1;
+let hardDenial = 0;
+let expiryTimer: ReturnType<typeof setTimeout> | undefined;
+let renewalListeners: (() => void) | undefined;
+let pendingRenewal: { requestId: string; requestSequence: number; ticket: PostingState; promise: Promise<boolean>; finish(ok: boolean): void } | undefined;
+
+function renewalDue() {
+  return !!sessionExpiresAt && Date.now() >= sessionExpiresAt * 1000 - 60000;
+}
+
+function releaseRenewal() {
+  hardDenial += 1;
+  pendingRenewal?.finish(false);
+  if (expiryTimer !== undefined) clearTimeout(expiryTimer);
+  expiryTimer = undefined;
+  renewalListeners?.(); renewalListeners = undefined;
+  sessionExpiresAt = 0; renewalBackend = ''; renewalSequence = 0;
+  sessionVersion += 1; attemptedVersion = -1;
+}
+
+function acceptSessionExpiry(response: ResponseStatus, backendUrl: string) {
+  const raw = response.headers.get('x-toybaco-session-expires-at');
+  const expiry = Number(raw);
+  if (!raw || !/^[1-9][0-9]{0,11}$/.test(raw) || !Number.isSafeInteger(expiry) ||
+      expiry <= Math.floor(Date.now() / 1000) || expiry > Math.floor(Date.now() / 1000) + 600 ||
+      !state.owner || !state.context || !state.appOrigin || window.parent === window) return;
+  renewalBackend = backendUrl;
+  if (sessionExpiresAt !== expiry) sessionVersion += 1;
+  sessionExpiresAt = expiry;
+  if (expiryTimer !== undefined) clearTimeout(expiryTimer);
+  const visibleRenew = () => {
+    if (document.visibilityState !== 'hidden' && state.phase === 'ready' && renewalDue()) void renewPosting();
+  };
+  if (!renewalListeners) {
+    const onResult = (event: MessageEvent) => {
+      const pending = pendingRenewal;
+      if (!pending || !current(pending.ticket) || event.origin !== state.appOrigin || event.source !== window.parent) return;
+      const value = event.data;
+      if (!value || typeof value !== 'object' || Array.isArray(value) ||
+          Object.keys(value).sort().join(',') !== 'accountId,documentId,frameId,ok,requestId,requestSequence,type' ||
+          value.type !== 'TOYBACO_POSTIZ_RENEW_RESULT' || value.requestId !== pending.requestId ||
+          value.requestSequence !== pending.requestSequence || value.documentId !== pending.ticket.documentId ||
+          value.frameId !== pending.ticket.context?.frameId || value.accountId !== pending.ticket.context?.accountId ||
+          typeof value.ok !== 'boolean') return;
+      pending.finish(value.ok);
+    };
+    window.addEventListener('message', onResult);
+    document.addEventListener('visibilitychange', visibleRenew);
+    renewalListeners = () => {
+      window.removeEventListener('message', onResult);
+      document.removeEventListener('visibilitychange', visibleRenew);
+    };
+  }
+  expiryTimer = setTimeout(visibleRenew, Math.max(0, expiry * 1000 - Date.now() - 60000));
+}
+
+async function renewPosting(): Promise<boolean> {
+  if (pendingRenewal) return pendingRenewal.promise;
+  const ticket = state;
+  if (!renewalBackend || !ticket.owner || !ticket.context || !ticket.appOrigin ||
+      !['ready', 'blocked'].includes(ticket.phase) ||
+      (ticket.reason && ticket.reason !== 'context-unavailable') || attemptedVersion === sessionVersion) return false;
+  attemptedVersion = sessionVersion;
+  const version = sessionVersion;
+  const requestId = toybacoPostingDocumentId();
+  const requestSequence = ++renewalSequence;
+  let resolve!: (ok: boolean) => void;
+  const promise = new Promise<boolean>(done => { resolve = done; });
+  let settled = false;
+  let verifying = false;
+  const cancelMessage = () => window.parent.postMessage({ type: 'TOYBACO_POSTIZ_RENEW_CANCEL',
+    ...ticket.context, requestId, requestSequence }, ticket.appOrigin!);
+  const finish = (ok: boolean) => {
+    if (settled || (verifying && ok)) return;
+    if (ok) {
+      verifying = true;
+      void toybacoVerifyPostingIdentity(renewalBackend).then(valid => settle(valid));
+    } else settle(false);
+  };
+  const settle = (ok: boolean) => {
+    if (settled) return;
+    settled = true;
+    if (!ok && version === sessionVersion) hardDenial += 1;
+    clearTimeout(timer);
+    if (pendingRenewal?.requestId === requestId) pendingRenewal = undefined;
+    cancelMessage();
+    if (current(ticket) && state.renewing) update({ ...state, renewing: false });
+    if (current(ticket) && !ok && version === sessionVersion && (!state.reason || state.reason === 'context-unavailable')) toybacoDenyPosting('context-unavailable', ticket);
+    resolve(ok && current(ticket));
+  };
+  const timer = setTimeout(() => finish(false), 25000);
+  pendingRenewal = { requestId, requestSequence, ticket, promise, finish };
+  update({ ...state, phase: 'blocked', renewing: true, message: '接続を更新しています。入力はそのまま続けられます。', reason: 'context-unavailable' });
+  window.parent.postMessage({ type: 'TOYBACO_POSTIZ_RENEW_REQUEST', ...ticket.context,
+    requestId, requestSequence, owner: { ...ticket.owner } }, ticket.appOrigin);
+  return promise;
 }

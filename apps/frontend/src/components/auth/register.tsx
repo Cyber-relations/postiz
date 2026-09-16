@@ -80,6 +80,27 @@ export function Register() {
           body: JSON.stringify({ code: code || undefined, state, error: providerError }),
         });
         const result: unknown = await response.json();
+        // A server-authenticated renewal completes only its owned hidden frame.
+        // Normal login retains its exact response/return contract below.
+        if (result && typeof result === 'object' && !Array.isArray(result) &&
+            Object.keys(result).sort().join(',') === 'appOrigin,renewal' &&
+            'renewal' in result && 'appOrigin' in result && typeof result.appOrigin === 'string') {
+          const completion = result.renewal as Record<string, unknown>;
+          const app = new URL(result.appOrigin);
+          const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+          if (!completion || typeof completion !== 'object' || Array.isArray(completion) ||
+              Object.keys(completion).sort().join(',') !== 'accountId,documentId,frameId,ok,requestId' ||
+              !['requestId', 'documentId', 'frameId'].every(key => typeof completion[key] === 'string' && uuid.test(completion[key] as string)) ||
+              typeof completion.accountId !== 'string' || !/^[1-9][0-9]{0,18}$/.test(completion.accountId) ||
+              typeof completion.ok !== 'boolean' || completion.ok !== response.ok ||
+              app.origin !== result.appOrigin || app.protocol !== 'https:' || app.username || app.password ||
+              window.parent === window) throw new Error('Invalid renewal completion');
+          if (alive.current) {
+            window.history.replaceState(null, '', '/auth?provider=GENERIC&tb_embed=1');
+            window.parent.postMessage({ type: 'TOYBACO_POSTIZ_RENEW_COMPLETE', ...completion }, app.origin);
+          }
+          return;
+        }
         if (!response.ok || !result || typeof result !== 'object' || Array.isArray(result) ||
             Object.keys(result).sort().join(',') !== 'login,returnPath' ||
             !('login' in result) || result.login !== true || !('returnPath' in result)) {

@@ -12,6 +12,7 @@ export type AuthProviderIdentity = {
   email: string;
   id: string;
   organization?: AuthProviderOrganization;
+  sessionAuthTime?: number;
 };
 
 export abstract class AuthProviderAbstract {

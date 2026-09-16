@@ -304,8 +304,9 @@ export class AuthService {
     code: string,
     redirectUri?: string,
     state?: string,
-    stateCookie?: string
-  ) {
+    stateCookie?: string,
+    renewal?: { userId: string; organizationId: string; role: string; accountId: string }
+  ): Promise<{ jwt?: string; organizationId?: string; token?: string; cookieExpiresAt?: number }> {
     const normalizedProvider = String(provider).toUpperCase() as Provider;
     const toybacoIdentity = normalizedProvider === Provider.GENERIC;
 
@@ -369,8 +370,18 @@ export class AuthService {
         throw new Error('トイバコIDで有効な所属を確認できませんでした');
       }
 
+      // Renewal constraints restrict a fresh issuer identity; they never grant access.
+      // Bind expiry to the issuer's session check, so a delayed callback cannot
+      // extend the existing ten-minute logout failure bound.
+      const cookieExpiresAt = renewal ? (providerUser.sessionAuthTime || 0) + 600 : undefined;
+      if (renewal && (checkExists.id !== renewal.userId || organization.id !== renewal.organizationId ||
+          membership.role !== renewal.role || trusted.externalId !== renewal.accountId ||
+          !providerUser.sessionAuthTime || !cookieExpiresAt || cookieExpiresAt <= Math.floor(Date.now() / 1000))) {
+        throw new Error('更新する利用者・店舗・権限を確認できませんでした');
+      }
       return {
-        jwt: await this.jwt(checkExists, organization.id),
+        jwt: await this.jwt(checkExists, organization.id, cookieExpiresAt),
+        cookieExpiresAt,
         organizationId: organization.id,
         token: undefined,
       };
@@ -386,7 +397,7 @@ export class AuthService {
     return { token, jwt: undefined, organizationId: undefined };
   }
 
-  private async jwt(user: User, toybacoOrganizationId?: string) {
+  private async jwt(user: User, toybacoOrganizationId?: string, issuerExpiresAt?: number) {
     // 呼び出し元の Prisma object を破壊せず、password を token へ入れない。
     const safeUser = { ...user };
     delete safeUser.password;
@@ -399,7 +410,7 @@ export class AuthService {
             // showorg/request ではなく、userinfo+DB一致からだけ決まる不変claim。
             toybacoOrganizationId,
             // stateless JWTを増設せず、Chatwoot logout連動が失敗しても10分で失効。
-            exp: toybacoExpiresAt,
+            exp: issuerExpiresAt ?? toybacoExpiresAt,
           }
         : safeUser
     );
