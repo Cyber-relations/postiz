@@ -30,7 +30,7 @@ import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { SelectCustomer } from '@gitroom/frontend/components/launches/select.customer';
 import { CopilotPopup, useChatContext } from '@copilotkit/react-ui';
-import { AssistantMessage, AssistantMessageProps } from '@copilotkit/react-ui';
+import { AssistantMessage, AssistantMessageProps, ErrorMessageProps } from '@copilotkit/react-ui';
 import { useCopilotChat } from '@copilotkit/react-core';
 import { PostComment } from '@gitroom/frontend/components/new-launch/providers/post-comment.enum';
 import { DummyCodeComponent } from '@gitroom/frontend/components/new-launch/dummy.code.component';
@@ -222,6 +222,28 @@ function ToybacoCopilotAssistantMessage(props: AssistantMessageProps) {
     return <p data-toybaco-ai-help="" className="copilotKitMessage copilotKitAssistantMessage text-[14px] leading-[1.7] font-normal">{TOYBACO_POSTING_AI_HELP}</p>;
   }
   return <AssistantMessage {...props} />;
+}
+
+function ToybacoCopilotErrorMessage({ error }: ErrorMessageProps) {
+  const { isLoading } = useCopilotChat();
+  const wasLoading = useRef(isLoading);
+  const [dismissed, setDismissed] = useState<ErrorMessageProps['error'] | null>(null);
+  const focusAfterCommit = useToybacoComposerFocus();
+  useEffect(() => {
+    if (isLoading && !wasLoading.current) setDismissed(error);
+    wasLoading.current = isLoading;
+  }, [isLoading, error]);
+  if (isLoading || dismissed === error) return null;
+  return (
+    <div data-toybaco-ai-error="" role="alert" className="rounded-[8px] border border-[var(--toybaco-hairline)] bg-[var(--toybaco-offwhite)] p-[12px] text-[14px] leading-[1.7] text-[var(--toybaco-ink)]">
+      <p>文案を作成できませんでした。送信した内容と投稿欄の入力は残っています。時間をおいて、もう一度お試しください。繰り返し失敗する場合はサポートへお問い合わせください。</p>
+      <button type="button" className="mt-[8px] min-h-[44px] underline" onClick={(event) => {
+        const popup = event.currentTarget.closest<HTMLElement>('.copilotKitPopup');
+        setDismissed(error);
+        if (popup) focusAfterCommit(popup, () => popup.querySelector<HTMLTextAreaElement>('.copilotKitInput textarea'));
+      }}>入力に戻る</button>
+    </div>
+  );
 }
 
 function toybacoEmptyNewDraft(state: ReturnType<typeof useLaunchStore.getState>): string | null {
@@ -861,6 +883,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         Button={ToybacoCopilotButton}
         Header={ToybacoCopilotHeader}
         AssistantMessage={ToybacoCopilotAssistantMessage}
+        ErrorMessage={ToybacoCopilotErrorMessage}
         onSubmitMessage={toybacoMarkTouched}
         onInProgress={toybacoAiProgress}
         hitEscapeToClose={false}
