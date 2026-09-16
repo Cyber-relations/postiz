@@ -68,11 +68,13 @@ export const Autopost: FC = () => {
     void refreshList().catch(() => { if (alive.current) setOperationError('変更は保存されましたが、最新の一覧を確認できませんでした。前回の表示を残しています。一覧を再確認してください。'); });
   }, [refreshList, markNeedsReview]);
   const addWebhook = useCallback(
-    (data?: any) => () => {
+    (data?: any) => (event: React.MouseEvent<HTMLButtonElement>) => {
       modal.openModal({
         title: data ? 'RSSの下書き設定を編集' : 'RSSから下書きを作成',
         withCloseButton: true,
         toybacoSettingsDialog: true,
+        id: `toybaco-rss-${data?.id || 'new'}`,
+        toybacoReturnFocus: event.currentTarget,
         children: <AddOrEditWebhook data={data} reload={refreshList} onSaved={refreshAfterWrite} />,
       });
     },

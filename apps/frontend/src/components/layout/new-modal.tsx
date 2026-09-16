@@ -31,6 +31,8 @@ interface OpenModalInterface {
   toybacoMediaPicker?: boolean;
   toybacoMediaPreview?: boolean;
   toybacoSettingsDialog?: boolean;
+  toybacoReturnFocus?: HTMLElement;
+  toybacoReturnFallback?: HTMLElement | null;
   onClose?: () => void;
   children: ReactNode | ((close: () => void) => ReactNode);
   classNames?: {
@@ -76,6 +78,7 @@ const CurrentModalContext = createContext({ id: '', isLast: false });
 export const useModalIsLast = () => useContext(CurrentModalContext).isLast;
 
 interface ModalManagerInterface extends ModalManagerStoreInterface {
+  isOpen(id: string): boolean;
   closeCurrent(): void;
 }
 
@@ -91,6 +94,7 @@ export const useModals = () => {
   const modalContext = useContext(CurrentModalContext);
 
   return {
+    isOpen: (id: string) => useModalStore.getState().modalManager.some((modal) => modal.id === id),
     openModal,
     closeAll,
     closeById,
@@ -121,23 +125,33 @@ export const Component: FC<{
       else composer.setAttribute('aria-modal', previous);
     };
   }, [modal.id, isLast]);
+  const toybacoMediaDialog = !!(modal.toybacoMediaPicker || modal.toybacoMediaPreview);
+  const toybacoManagedDialog = toybacoMediaDialog || !!(modal.toybacoDecision || modal.toybacoTagDialog || modal.toybacoSettingsDialog);
   useEffect(() => {
-    if (modal.id !== 'add-edit-modal' && !modal.toybacoDecision) return;
-    const previous = document.activeElement as HTMLElement | null;
+    if (modal.id !== 'add-edit-modal' && !toybacoManagedDialog) return;
+    const previous = (toybacoManagedDialog ? modal.toybacoReturnFocus : null) || document.activeElement as HTMLElement | null;
+    const stack = toybacoManagedDialog ? useModalStore.getState().modalManager : [];
+    const returnModalId = stack[stack.findIndex((item) => item.id === modal.id) - 1]?.id;
+    const fallback = toybacoManagedDialog ? modal.toybacoReturnFallback || previous?.closest<HTMLElement>('[data-toybaco-dialog-id], [data-toybaco-modal], [role="tabpanel"]') ||
+      Array.from(document.querySelectorAll<HTMLElement>('[data-toybaco-dialog-id], [data-toybaco-modal]')).find((element) =>
+        (element.dataset.toybacoDialogId || element.dataset.toybacoModal) === returnModalId) : null;
     const dialog = toybacoDialogRef.current;
     const cancel = modal.toybacoDecision ? dialog?.querySelector<HTMLElement>('[data-toybaco-decision-cancel]') : null;
-    (cancel || dialog)?.focus();
+    if (!dialog?.contains(document.activeElement)) (cancel || dialog)?.focus();
     return () => {
-      if (previous?.isConnected) previous.focus();
+      if (toybacoManagedDialog && (document.activeElement !== document.body && !dialog?.contains(document.activeElement))) return;
+      if (toybacoManagedDialog && useModalStore.getState().modalManager.at(-1)?.id !== returnModalId) return;
+      if (previous?.isConnected) previous.focus(toybacoManagedDialog ? { preventScroll: true } : undefined);
+      if (toybacoManagedDialog && (document.activeElement !== previous || previous === document.body || previous === document.documentElement) && fallback?.isConnected) fallback.focus({ preventScroll: true });
     };
-  }, [modal.id, modal.toybacoDecision]);
+  }, [modal.id, toybacoManagedDialog]);
   useEffect(() => {
-    if (!isLast || (modal.id !== 'add-edit-modal' && !modal.toybacoDecision)) return;
+    if (!isLast || (modal.id !== 'add-edit-modal' && !toybacoManagedDialog)) return;
     const dialog = toybacoDialogRef.current;
     if (!dialog) return;
     // ネストした確認画面が開いている間は、その画面のフォーカス管理に任せる。
     const keepFocus = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
+      if (event.key !== 'Tab' || event.defaultPrevented) return;
       const controls = Array.from(dialog.querySelectorAll<HTMLElement>(
         'button, a[href], input, select, textarea, [contenteditable="true"], [tabindex]'
       )).filter((element) => element.tabIndex >= 0 && !element.hasAttribute('disabled') && element.getClientRects().length > 0);
@@ -156,7 +170,7 @@ export const Component: FC<{
     };
     dialog.addEventListener('keydown', keepFocus);
     return () => dialog.removeEventListener('keydown', keepFocus);
-  }, [isLast, modal.id, modal.toybacoDecision]);
+  }, [isLast, modal.id, toybacoManagedDialog]);
   const closeModalFunction = useCallback(async () => {
     if (modal.askClose) {
       const open = await decision.open();
@@ -168,6 +182,14 @@ export const Component: FC<{
     closeModal(modal.id);
   }, [modal.id, closeModal]);
 
+  const onDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!isLast || !toybacoManagedDialog || event.key !== 'Escape' || event.defaultPrevented ||
+        event.nativeEvent.isComposing || event.keyCode === 229 || modal.closeOnEscape === false) return;
+    event.preventDefault();
+    event.stopPropagation();
+    closeModalFunction();
+  };
+
   const RenderComponent = useMemo(() => {
     return typeof modal.children === 'function'
       ? modal.children(closeModalFunction)
@@ -177,11 +199,11 @@ export const Component: FC<{
   useHotkeys(
     'Escape',
     () => {
-      if (isLast && modal.closeOnEscape !== false) {
+      if (isLast && modal.closeOnEscape !== false && !toybacoManagedDialog) {
         closeModalFunction();
       }
     },
-    [isLast, closeModalFunction, modal.closeOnEscape]
+    [isLast, closeModalFunction, modal.closeOnEscape, toybacoManagedDialog]
   );
 
   if (modal.removeLayout) {
@@ -277,6 +299,18 @@ export const Component: FC<{
               data-toybaco-media-picker={modal.toybacoMediaPicker ? '' : undefined}
               data-toybaco-media-preview={modal.toybacoMediaPreview ? '' : undefined}
               {...(modal.toybacoSettingsDialog && { role: 'dialog', 'aria-modal': isLast, 'aria-labelledby': `toybaco-settings-title-${modal.id}`, 'data-toybaco-settings-dialog': '' })}
+              {...(toybacoManagedDialog && {
+                ref: toybacoDialogRef,
+                tabIndex: -1,
+                'data-toybaco-dialog-id': modal.id,
+                onKeyDown: onDialogKeyDown,
+              })}
+              {...(toybacoMediaDialog && {
+                role: 'dialog',
+                'aria-modal': isLast,
+                'aria-labelledby': modal.toybacoMediaPicker ? `toybaco-media-title-${modal.id}` : undefined,
+                'aria-label': modal.toybacoMediaPreview ? 'メディアのプレビュー' : undefined,
+              })}
               {...((!!modal.size || !!modal.height || !!modal.maxSize) && {
                 style: {
                   ...(modal.size ? { width: modal.size } : {}),
@@ -288,7 +322,7 @@ export const Component: FC<{
             >
               <div className="flex items-center">
                 <div id={modal.toybacoSettingsDialog ? `toybaco-settings-title-${modal.id}` : modal.toybacoDecision ? `toybaco-decision-title-${modal.id}` : modal.toybacoTagDialog ? `toybaco-tag-title-${modal.id}` : undefined} className="text-[24px] font-[600] flex-1">
-                  {modal.title}
+                  {modal.toybacoMediaPicker ? <span id={`toybaco-media-title-${modal.id}`}>{modal.title}</span> : modal.title}
                 </div>
                 {typeof modal.withCloseButton === 'undefined' ||
                 modal.withCloseButton ? (

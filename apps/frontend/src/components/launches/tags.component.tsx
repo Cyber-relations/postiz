@@ -49,48 +49,12 @@ export const TagsComponent: FC<{
 const FooterTagDialog: FC<{
   children: ReactNode;
   initialFocus: 'input' | 'button';
-  onCancel: () => void;
-  returnFocus: HTMLElement;
-  fallbackFocus: { current: HTMLButtonElement | null };
-}> = ({ children, initialFocus, onCancel, returnFocus, fallbackFocus }) => {
+}> = ({ children, initialFocus }) => {
   const ref = useRef<HTMLDivElement>(null);
   const isLast = useModalIsLast();
   useEffect(() => {
-    const content = ref.current;
-    const fallback = fallbackFocus.current;
-    return () => {
-      const active = document.activeElement;
-      const dialog = content?.closest('[data-toybaco-tag-dialog]');
-      if (active && active !== document.body && !dialog?.contains(active)) return;
-      const target = returnFocus.isConnected ? returnFocus : fallback;
-      if (target?.isConnected) target.focus({ preventScroll: true });
-    };
-  }, [returnFocus, fallbackFocus]);
-  useEffect(() => {
-    if (!isLast) return;
-    const content = ref.current;
-    const dialog = content?.closest<HTMLElement>('[data-toybaco-tag-dialog]');
-    if (!dialog) return;
-    (content?.querySelector<HTMLElement>(initialFocus) || content)?.focus();
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
-        if (!event.isComposing) { event.preventDefault(); onCancel(); }
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const controls = Array.from(dialog.querySelectorAll<HTMLElement>(
-        'button, input, select, textarea, [tabindex]'
-      )).filter((element) => element.tabIndex >= 0 && !element.hasAttribute('disabled') && element.getClientRects().length > 0);
-      const first = controls[0];
-      const last = controls[controls.length - 1];
-      if (!first) { event.preventDefault(); content?.focus(); }
-      else if (event.shiftKey && (document.activeElement === first || document.activeElement === content)) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    dialog.addEventListener('keydown', keydown);
-    return () => dialog.removeEventListener('keydown', keydown);
-  }, [isLast, initialFocus, onCancel]);
+    if (isLast) (ref.current?.querySelector<HTMLElement>(initialFocus) || ref.current)?.focus();
+  }, [isLast, initialFocus]);
   return <div ref={ref} tabIndex={-1} className="flex flex-col gap-[16px]">{children}</div>;
 };
 
@@ -129,15 +93,19 @@ export const TagsComponentInner: FC<{
   const keyboard = useFooterPopupFocus(isOpen, setIsOpen);
   const addTag = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
     const returnFocus = event.currentTarget;
+    if (modals.isOpen('toybaco-tag-add')) return;
     setAllowClose(false);
     const val: string | undefined = await new Promise((resolve) => {
       modals.openModal({
         title: t('add_new_tag', 'Add New Tag'),
         size: 'min(600px, calc(100vw - 32px))',
         toybacoTagDialog: true,
+        id: 'toybaco-tag-add',
+        toybacoReturnFocus: returnFocus,
+        toybacoReturnFallback: keyboard.triggerRef.current,
         onClose: () => resolve(undefined),
         children: (close) => (
-          <FooterTagDialog initialFocus="input" onCancel={close} returnFocus={returnFocus} fallbackFocus={keyboard.triggerRef}>
+          <FooterTagDialog initialFocus="input">
             <ShowModal tag="" close={close} resolve={resolve} />
             <Button onClick={close}>{t('cancel', 'Cancel')}</Button>
           </FooterTagDialog>
@@ -168,16 +136,20 @@ export const TagsComponentInner: FC<{
   const deleteTag = useCallback(
     async (tag: any, e: React.MouseEvent) => {
       const returnFocus = e.currentTarget as HTMLElement;
-      setAllowClose(false);
       e.stopPropagation();
+      if (modals.isOpen(`toybaco-tag-delete-${tag.id}`)) return;
+      setAllowClose(false);
       const confirmed: boolean = await new Promise((resolve) => {
         modals.openModal({
           title: t('delete_tag', 'Delete Tag'),
           size: 'min(600px, calc(100vw - 32px))',
           toybacoTagDialog: true,
+          id: `toybaco-tag-delete-${tag.id}`,
+          toybacoReturnFocus: returnFocus,
+          toybacoReturnFallback: keyboard.triggerRef.current,
           onClose: () => resolve(false),
           children: (close) => (
-            <FooterTagDialog initialFocus="button" onCancel={close} returnFocus={returnFocus} fallbackFocus={keyboard.triggerRef}>
+            <FooterTagDialog initialFocus="button">
               <ConfirmDeleteModal
                 tagName={tag.name}
                 close={close}

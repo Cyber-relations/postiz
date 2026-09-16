@@ -352,6 +352,8 @@ export const MediaBox: FC<{
         title: '',
         top: 10,
         toybacoMediaPreview: true,
+        id: 'toybaco-media-preview',
+        toybacoReturnFocus: e.currentTarget,
         children: (
           <div data-toybaco-media-preview-surface="" className="w-full h-full p-[50px]">
             {hasExtension(media.path, 'mp4') ? (
@@ -762,13 +764,15 @@ export const MultiMediaComponent: FC<{
     },
     [currentMedia]
   );
-  const showModal = useCallback(() => {
+  const showModal = useCallback((event: React.MouseEvent<HTMLElement>) => {
     modals.openModal({
       title: t('media_library', 'Media Library'),
       askClose: false,
       closeOnEscape: true,
       fullScreen: true,
       toybacoMediaPicker: true,
+      id: 'toybaco-media-picker',
+      toybacoReturnFocus: event.currentTarget,
       size: 'calc(100% - 80px)',
       height: 'calc(100% - 80px)',
       children: (close) => (
@@ -1001,13 +1005,15 @@ export const MediaComponent: FC<{
       },
     });
   }, []);
-  const showModal = useCallback(() => {
+  const showModal = useCallback((event: React.MouseEvent<HTMLElement>) => {
     modals.openModal({
       title: t('media_library', 'Media Library'),
       askClose: false,
       closeOnEscape: true,
       fullScreen: true,
       toybacoMediaPicker: true,
+      id: 'toybaco-media-picker',
+      toybacoReturnFocus: event.currentTarget,
       size: 'calc(100% - 80px)',
       height: 'calc(100% - 80px)',
       children: (close) => (
