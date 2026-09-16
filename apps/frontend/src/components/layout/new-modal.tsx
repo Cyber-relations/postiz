@@ -144,7 +144,7 @@ export const Component: FC<{
       if (previous?.isConnected) previous.focus(toybacoManagedDialog ? { preventScroll: true } : undefined);
       if (toybacoManagedDialog && (document.activeElement !== previous || previous === document.body || previous === document.documentElement) && fallback?.isConnected) fallback.focus({ preventScroll: true });
     };
-  }, [modal.id, toybacoManagedDialog]);
+  }, [modal.id, modal.toybacoDecision, modal.toybacoReturnFallback, modal.toybacoReturnFocus, toybacoManagedDialog]);
   useEffect(() => {
     if (!isLast || (modal.id !== 'add-edit-modal' && !toybacoManagedDialog)) return;
     const dialog = toybacoDialogRef.current;
