@@ -917,5 +917,6 @@
   "toybaco_rss_label_url": "RSSフィードのURL",
   "toybaco_rss_label_should_sync_last_post": "現在の最新記事も取り込む",
   "toybaco_rss_label_autogenerate_content": "AIで下書き本文を作成",
-  "toybaco_rss_label_integrations": "下書きの作成先"
+  "toybaco_rss_label_integrations": "下書きの作成先",
+  "post_validation_details": "投稿内容の確認事項"
 }
