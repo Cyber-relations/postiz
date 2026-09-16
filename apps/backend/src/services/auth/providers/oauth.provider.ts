@@ -37,6 +37,10 @@ export function toybacoValidateOidcUserInfo(
   const externalId = org.external_id;
   const name = org.name;
   const role = org.role;
+  const hasSession = 'toybaco_session_bound' in value || 'auth_time' in value;
+  if (hasSession && (value.toybaco_session_bound !== true || typeof value.auth_time !== 'number' ||
+      !Number.isSafeInteger(value.auth_time) || value.auth_time <= 0 || value.auth_time > Math.floor(Date.now() / 1000) ||
+      value.auth_time + 600 <= Math.floor(Date.now() / 1000))) return invalidIdentity();
 
   if (
     typeof email !== 'string' ||
@@ -63,6 +67,7 @@ export function toybacoValidateOidcUserInfo(
   return {
     email,
     id,
+    ...(hasSession ? { sessionAuthTime: value.auth_time as number } : {}),
     organization: {
       id: organizationId,
       externalId,
@@ -105,7 +110,7 @@ export class OauthProvider extends AuthProviderAbstract {
     };
   }
 
-  generateLink(query?: { state?: string }): string {
+  generateLink(query?: { state?: string; renewal?: boolean }): string {
     const state = query?.state;
     if (
       typeof state !== 'string' ||
@@ -122,6 +127,7 @@ export class OauthProvider extends AuthProviderAbstract {
       state,
       return_to: `${frontendUrl}/settings`,
     });
+    if (query?.renewal === true) params.set('toybaco_renew', '1');
 
     return `${authUrl}?${params.toString()}`;
   }

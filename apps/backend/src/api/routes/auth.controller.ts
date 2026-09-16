@@ -25,6 +25,7 @@ import { Provider } from '@prisma/client';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import * as Sentry from '@sentry/nestjs';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { verify as verifyJwt } from 'jsonwebtoken';
 
 // toybaco_identity_boundary_v1: 認証cookieは post.toybaco.jp host-only に固定。
 const TOYBACO_RETURN_PATHS = ['/launches', '/analytics', '/media', '/settings'];
@@ -32,13 +33,53 @@ const TOYBACO_FLOW_PREFIX = '__Host-toybaco_oidc_';
 const TOYBACO_FLOW_STATE = /^toybaco-([A-Za-z0-9_-]{43})$/;
 const TOYBACO_FLOW_COOKIE = /^__Host-toybaco_oidc_[A-Za-z0-9_-]{43}$/;
 const TOYBACO_FLOW_TTL = 10 * 60;
+const TOYBACO_RENEW_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const TOYBACO_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+type ToybacoRenewal = {
+  requestId: string; documentId: string; frameId: string; accountId: string;
+  userId: string; organizationId: string; role: 'ADMIN' | 'USER';
+};
 type ToybacoOidcFlow = {
   v: 1;
   state: string;
   returnPath: string;
   iat: number;
   exp: number;
+  renewal?: ToybacoRenewal;
 };
+
+function toybacoValidRenewal(value: unknown): value is ToybacoRenewal {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const renewal = value as ToybacoRenewal;
+  return Object.keys(renewal).sort().join(',') === 'accountId,documentId,frameId,organizationId,requestId,role,userId' &&
+    ['requestId', 'documentId', 'frameId'].every(key => typeof renewal[key as keyof ToybacoRenewal] === 'string' && TOYBACO_RENEW_ID.test(renewal[key as keyof ToybacoRenewal])) &&
+    typeof renewal.accountId === 'string' && /^[1-9][0-9]{0,18}$/.test(renewal.accountId) &&
+    typeof renewal.userId === 'string' && TOYBACO_ID.test(renewal.userId) &&
+    typeof renewal.organizationId === 'string' && TOYBACO_ID.test(renewal.organizationId) &&
+    ['ADMIN', 'USER'].includes(renewal.role);
+}
+
+function toybacoRenewalCompletion(renewal: ToybacoRenewal, ok: boolean) {
+  const app = new URL(process.env.TOYBACO_APP_ORIGIN || '');
+  if (app.protocol !== 'https:' || app.username || app.password || app.pathname !== '/' || app.search || app.hash) throw new Error('Invalid app origin');
+  const { requestId, documentId, frameId, accountId } = renewal;
+  return { appOrigin: app.origin, renewal: { requestId, documentId, frameId, accountId, ok } };
+}
+
+function toybacoCurrentRenewalOwner(req: Request, renewal: ToybacoRenewal): boolean {
+  const cookie = req.headers.auth || req.cookies?.auth;
+  if (cookie === undefined) return true;
+  if (typeof cookie !== 'string' || !cookie) return false;
+  try {
+    // Signature verification with ignored expiry is a rejection constraint only.
+    // Fresh issuer session/DB checks remain mandatory before renewing. This
+    // avoids a late background renewal replacing another tab's selected owner.
+    const payload = verifyJwt(cookie, process.env.JWT_SECRET!, { ignoreExpiration: true });
+    return typeof payload === 'object' && payload.id === renewal.userId &&
+      payload.toybacoOrganizationId === renewal.organizationId &&
+      payload.toybacoIdentityVersion === 1 && payload.providerName === 'GENERIC';
+  } catch { return false; }
+}
 
 function toybacoHostCookieOptions() {
   return {
@@ -130,7 +171,8 @@ function toybacoReadFlow(req: Request, state: unknown): ToybacoOidcFlow | null {
         mac.length !== 32 || !timingSafeEqual(mac, toybacoFlowMac(parts[1]))) return null;
     const flow: unknown = JSON.parse(payload.toString('utf8'));
     if (!flow || typeof flow !== 'object' || Array.isArray(flow) ||
-        Object.keys(flow).sort().join(',') !== 'exp,iat,returnPath,state,v' ||
+        Object.keys(flow).sort().join(',') !== ('renewal' in flow ? 'exp,iat,renewal,returnPath,state,v' : 'exp,iat,returnPath,state,v') ||
+        ('renewal' in flow && (!toybacoValidRenewal(flow.renewal) || !('returnPath' in flow) || flow.returnPath !== '/launches?tb_embed=1')) ||
         !('v' in flow) || flow.v !== 1 || !('state' in flow) || flow.state !== state ||
         !('returnPath' in flow) || typeof flow.returnPath !== 'string' || toybacoSafeReturnPath(flow.returnPath) !== flow.returnPath ||
         !('iat' in flow) || typeof flow.iat !== 'number' || !Number.isSafeInteger(flow.iat) || flow.iat < 0 ||
@@ -362,7 +404,13 @@ export class AuthController {
     @Res({ passthrough: false }) response: Response
   ) {
     const safeReturn = toybacoSafeReturnPath(returnPath);
-    if (!safeReturn) {
+    const query = req.query || {};
+    const renewal = query.purpose === 'renew' ? {
+      requestId: query.request_id, documentId: query.document_id, frameId: query.frame_id, accountId: query.account_id,
+      userId: query.user_id, organizationId: query.organization_id, role: query.role,
+    } : undefined;
+    if (!safeReturn || (query.purpose !== undefined && query.purpose !== 'renew') ||
+        (renewal && (!toybacoValidRenewal(renewal) || safeReturn !== '/launches?tb_embed=1'))) {
       return response.status(400).json({
         code: 'TOYBACO_IDENTITY_INVALID_RETURN',
         message: '投稿画面の移動先が不正です',
@@ -372,7 +420,8 @@ export class AuthController {
       const state = `toybaco-${randomBytes(32).toString('base64url')}`;
       const name = toybacoFlowName(state)!;
       const iat = Math.floor(Date.now() / 1000);
-      const flow: ToybacoOidcFlow = { v: 1, state, returnPath: safeReturn, iat, exp: iat + TOYBACO_FLOW_TTL };
+      const flow: ToybacoOidcFlow = { v: 1, state, returnPath: safeReturn, iat, exp: iat + TOYBACO_FLOW_TTL,
+        ...(toybacoValidRenewal(renewal) ? { renewal } : {}) };
       const value = toybacoSignFlow(flow);
       if (!toybacoFlowBudget(req, name, value)) {
         return response.status(429).json({
@@ -380,7 +429,7 @@ export class AuthController {
           message: '接続の確認が複数進行中です。完了してからもう一度お試しください',
         });
       }
-      const link = await this._authService.oauthLink(Provider.GENERIC, { state });
+      const link = await this._authService.oauthLink(Provider.GENERIC, { state, ...(flow.renewal ? { renewal: true } : {}) });
       response.cookie(name, value, {
         ...toybacoHostCookieOptions(),
         expires: new Date(flow.exp * 1000),
@@ -521,29 +570,34 @@ export class AuthController {
           providerError !== undefined || typeof code !== 'string' || !code || code.length > 2048)) {
         throw new Error('OIDC flow is invalid');
       }
-      const { jwt, token, organizationId } =
+      const { jwt, token, organizationId, cookieExpiresAt } =
         await this._authService.checkExists(
           provider,
           code,
           redirect_uri,
           state,
-          generic ? flow?.state : req?.cookies?.oauth_state
+          generic ? flow?.state : req?.cookies?.oauth_state,
+          flow?.renewal
         );
 
       if (generic) {
         if (!jwt || token || !organizationId || !flow || !toybacoFlowCurrent(flow)) {
           throw new Error('trusted membership is missing');
         }
+        if (flow.renewal && (!cookieExpiresAt || cookieExpiresAt <= Math.floor(Date.now() / 1000))) throw new Error('Renewal expired');
+        if (flow.renewal && !toybacoCurrentRenewalOwner(req, flow.renewal)) throw new Error('Current session owner changed');
+        const completion = flow.renewal ? toybacoRenewalCompletion(flow.renewal, true) : null;
         replaceToybacoLegacySession(response);
         response.cookie('auth', jwt, {
           ...toybacoHostCookieOptions(),
-          expires: new Date(Date.now() + 10 * 60 * 1000),
+          expires: flow.renewal ? new Date(cookieExpiresAt! * 1000) : new Date(Date.now() + 10 * 60 * 1000),
         });
         response.cookie('showorg', organizationId, {
           ...toybacoHostCookieOptions(),
-          expires: new Date(Date.now() + 10 * 60 * 1000),
+          expires: flow.renewal ? new Date(cookieExpiresAt! * 1000) : new Date(Date.now() + 10 * 60 * 1000),
         });
         expireToybacoCookie(response, toybacoFlowName(flow.state)!);
+        if (completion) return response.status(200).json(completion);
         return response.status(200).json({ login: true, returnPath: flow.returnPath });
       }
 
@@ -568,6 +622,7 @@ export class AuthController {
       if (flow) {
         expireToybacoCookie(response, toybacoFlowName(flow.state)!);
       }
+      if (flow?.renewal) return response.status(403).json(toybacoRenewalCompletion(flow.renewal, false));
       return response.status(403).json({
         code: 'TOYBACO_IDENTITY_DENIED',
         message: 'トイバコIDで有効な所属を確認できませんでした',

@@ -32,6 +32,13 @@ function expireAuthCookie(res: Response, domain?: string) {
 }
 
 export const removeAuth = (res: Response) => {
+  // An old GENERIC API response may arrive after another tab renewed. Deny the
+  // request without deleting its newer host cookie. Explicit logout still
+  // clears host and legacy cookies in users.controller/proxy.
+  if (process.env.POSTIZ_GENERIC_OAUTH === 'true') {
+    res.header('logout', 'true');
+    return;
+  }
   // host-only 現行cookieと、旧 .toybaco.jp domain cookieを同時に消す。
   expireAuthCookie(res);
   expireAuthCookie(
@@ -42,6 +49,7 @@ export const removeAuth = (res: Response) => {
 };
 
 type ToybacoJwtPayload = User & {
+  exp?: number;
   toybacoIdentityVersion?: unknown;
   toybacoOrganizationId?: unknown;
 };
@@ -54,8 +62,14 @@ export class AuthMiddleware implements NestMiddleware {
   ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
+    const requestVersion = req.headers['x-toybaco-session-version'];
+    if (process.env.POSTIZ_GENERIC_OAUTH === 'true' && typeof requestVersion === 'string' && /^[0-9]{1,12}$/.test(requestVersion)) {
+      // Transport correlation only, never an identity or authorization input.
+      res.header('x-toybaco-session-version', requestVersion);
+    }
     const auth = req.headers.auth || req.cookies.auth;
     if (!auth || typeof auth !== 'string') {
+      if (process.env.POSTIZ_GENERIC_OAUTH === 'true') res.header('x-toybaco-session', 'missing');
       throw new HttpForbiddenException();
     }
 
@@ -138,6 +152,7 @@ export class AuthMiddleware implements NestMiddleware {
           orgId: organization.id,
           paymentId: organization.paymentId,
         });
+        if (typeof payload.exp === 'number') res.header('x-toybaco-session-expires-at', String(payload.exp));
         next();
         return;
       }
@@ -201,6 +216,9 @@ export class AuthMiddleware implements NestMiddleware {
         paymentId: organization.paymentId,
       });
     } catch (_error) {
+      if (process.env.POSTIZ_GENERIC_OAUTH === 'true') {
+        res.header('x-toybaco-session', _error instanceof Error && _error.name === 'TokenExpiredError' ? 'expired' : 'revoked');
+      }
       throw new HttpForbiddenException();
     }
     next();

@@ -76,7 +76,7 @@ export function ToybacoEmbedReady({
       }
       window.parent.postMessage(
         { type: 'TOYBACO_POSTIZ_READY', theme: document.documentElement.dataset.toybacoTheme, initialRoute: acceptedInitialRoute,
-          ...(posting.context ? { ...posting.context, organizationId: posting.owner?.orgId } : {}) },
+          ...(posting.context ? { ...posting.context, organizationId: posting.owner?.orgId, owner: posting.owner } : {}) },
         appOrigin
       );
       readySent = true;
@@ -179,7 +179,7 @@ export function ToybacoEmbedReady({
       if (!deniedSent && !routeDenied && posting.context && ['blocked', 'denied'].includes(posting.phase)) {
         deniedSent = true;
         window.parent.postMessage({ type: 'TOYBACO_POSTIZ_CONTEXT_DENIED', ...posting.context,
-          reason: posting.reason || 'context-unavailable' }, appOrigin);
+          reason: posting.reason === 'revoked' ? 'context-unavailable' : posting.reason || 'context-unavailable' }, appOrigin);
       }
       notifyParentIfReady();
     });
