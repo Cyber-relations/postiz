@@ -1392,18 +1392,19 @@ html[data-toybaco-embed] [data-toybaco-header-controls] { gap: 8px; font-size: 1
 html[data-toybaco-embed] [data-toybaco-calendar-main] { padding: 12px; gap: 8px; }
 html[data-toybaco-embed] [data-toybaco-calendar-toolbar] { flex-direction: row; flex-wrap: wrap; gap: 8px; }
 html[data-toybaco-embed] [data-toybaco-calendar-toolbar] > div { flex-wrap: nowrap; }
+html[data-toybaco-embed] [data-toybaco-calendar-toolbar] button:focus-visible { outline-offset: -2px; }
 html[data-toybaco-embed] [data-toybaco-calendar-toolbar] > [data-toybaco-list-controls] { flex-wrap: wrap; }
 html[data-toybaco-embed] [data-toybaco-list-controls] > [data-toybaco-date-range] { flex: 0 0 auto; min-width: 160px; }
 html[data-toybaco-embed] [data-toybaco-date-controls] { gap: 6px; min-width: 0; }
 html[data-toybaco-embed] [data-toybaco-date-range],
 html[data-toybaco-embed] [data-toybaco-today] { height: 32px; font-size: 13px; }
 html[data-toybaco-embed] [data-toybaco-date-range] { border-color: #82878F; }
-html[data-toybaco-embed] [data-toybaco-date-range] > div:first-child,
-html[data-toybaco-embed] [data-toybaco-date-range] > div:last-child { min-width: 30px; padding: 0 8px; }
+html[data-toybaco-embed] [data-toybaco-date-range] > button:first-child,
+html[data-toybaco-embed] [data-toybaco-date-range] > button:last-child { min-width: 30px; padding: 0 8px; }
 html[data-toybaco-embed] [data-toybaco-date-range] .min-w-\[200px\] > div { font-size: inherit; padding: 0 6px; }
-html[data-toybaco-embed] [data-toybaco-today] > div { font-size: inherit; border-color: #82878F; }
+html[data-toybaco-embed] [data-toybaco-today] > button { font-size: inherit; border-color: #82878F; }
 html[data-toybaco-embed] [data-toybaco-toolbar-group] { padding: 2px; font-size: 13px; border-color: #82878F; }
-html[data-toybaco-embed] [data-toybaco-toolbar-group] > div { display: flex; align-items: center; justify-content: center; min-height: 26px; padding: 2px 8px; }
+html[data-toybaco-embed] [data-toybaco-toolbar-group] > button { display: flex; align-items: center; justify-content: center; min-height: 26px; padding: 2px 8px; }
 html[data-toybaco-embed] [data-toybaco-toolbar-group] > .w-\[74px\] { width: 48px; }
 html[data-toybaco-embed] [data-toybaco-toolbar-group] > .w-\[34px\] { width: 28px; }
 html[data-toybaco-embed] [data-toybaco-toolbar-group] > .min-w-\[80px\] { min-width: 64px; }
@@ -1467,18 +1468,18 @@ html[data-toybaco-embed] [data-toybaco-composer-footer] { gap: 8px; padding: 10p
   html[data-toybaco-embed] [data-toybaco-date-range],
   html[data-toybaco-embed] [data-toybaco-today] { height: 44px; }
   html[data-toybaco-embed] [data-toybaco-date-range],
-  html[data-toybaco-embed] [data-toybaco-today] > div,
+  html[data-toybaco-embed] [data-toybaco-today] > button,
   html[data-toybaco-embed] [data-toybaco-toolbar-group] { position: relative; border: 0; background: transparent; }
   html[data-toybaco-embed] [data-toybaco-date-range]::before,
-  html[data-toybaco-embed] [data-toybaco-today] > div::before,
+  html[data-toybaco-embed] [data-toybaco-today] > button::before,
   html[data-toybaco-embed] [data-toybaco-toolbar-group]::before { content: ''; position: absolute; inset: 4px 0; border: 1px solid #82878F; border-radius: 8px; pointer-events: none; z-index: 1; }
   html[data-toybaco-embed] [data-toybaco-date-range] { flex: 1; min-width: 0; }
-  html[data-toybaco-embed] [data-toybaco-date-range] > div { height: 44px; padding-block: 4px; background-clip: content-box; }
-  html[data-toybaco-embed] [data-toybaco-date-range] > div:first-child,
-  html[data-toybaco-embed] [data-toybaco-date-range] > div:last-child { min-width: 44px; }
-  html[data-toybaco-embed] [data-toybaco-today] > div { min-width: 44px; padding-block: 4px; background-clip: content-box; }
+  html[data-toybaco-embed] [data-toybaco-date-range] > :is(button, div) { height: 44px; padding-block: 4px; background-clip: content-box; }
+  html[data-toybaco-embed] [data-toybaco-date-range] > button:first-child,
+  html[data-toybaco-embed] [data-toybaco-date-range] > button:last-child { min-width: 44px; }
+  html[data-toybaco-embed] [data-toybaco-today] > button { min-width: 44px; padding-block: 4px; background-clip: content-box; }
   html[data-toybaco-embed] [data-toybaco-toolbar-group] { height: 44px; padding: 0; }
-  html[data-toybaco-embed] [data-toybaco-toolbar-group] > div { min-height: 44px; padding: 4px 0; background-clip: content-box; }
+  html[data-toybaco-embed] [data-toybaco-toolbar-group] > button { min-height: 44px; padding: 4px 0; background-clip: content-box; }
   html[data-toybaco-embed] [data-toybaco-toolbar-group] > .w-\[74px\],
   html[data-toybaco-embed] [data-toybaco-toolbar-group] > .w-\[34px\] { width: 44px; }
   html[data-toybaco-embed] [data-toybaco-channel-sidebar] > div { padding: 8px; gap: 8px; }
