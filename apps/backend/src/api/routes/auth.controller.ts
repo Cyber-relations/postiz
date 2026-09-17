@@ -113,9 +113,9 @@ function toybacoSafeReturnPath(value: unknown): string | null {
     [...parsed.searchParams.keys()].some((key) =>
       ['code', 'state', 'error', 'id_token', 'error_description', 'access_token'].includes(key.toLowerCase())
     ) ||
-    !TOYBACO_RETURN_PATHS.some(
+    (!TOYBACO_RETURN_PATHS.some(
       (prefix) => parsed.pathname === prefix || parsed.pathname.startsWith(`${prefix}/`)
-    )
+    ) && !/^\/p\/c[a-z0-9]{24}(?:\?share=true)?$/.test(value))
   ) {
     return null;
   }
