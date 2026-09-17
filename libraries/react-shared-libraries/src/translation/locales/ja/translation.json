@@ -48,7 +48,7 @@
   "post": "投稿",
   "comments": "コメント",
   "user": "ユーザー",
-  "login_register_to_add_comments": "コメントを追加するにはログイン／登録してください",
+  "login_register_to_add_comments": "ログインしてコメントする",
   "status": "ステータス：",
   "there_are_not_plugs_matching_your_channels": "あなたのチャンネルに一致するプラグはありません",
   "you_have_to_add_x_linkedin_page_threads_or_bluesky": "X、LinkedInページ、Threads、またはBlueskyを追加する必要があります",
