@@ -13,7 +13,6 @@ import { VideoOrImage } from '@gitroom/react/helpers/video.or.image';
 import { CopyClient } from '@gitroom/frontend/components/preview/copy.client';
 import { getT } from '@gitroom/react/translation/get.translation.service.backend';
 import { RenderPreviewDateClient } from '@gitroom/frontend/components/preview/render.preview.date.client';
-import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 
 dayjs.extend(utc);
 export const metadata: Metadata = {
@@ -65,7 +64,7 @@ export default async function Auth(
       <div className={styles.content}>
         <div className={styles.posts}>
           <div className="gap-[20px] flex flex-col">
-            {post.map((p: any, index: number) => (
+            {post.map((p: any) => (
               <div
                 key={String(p.id)}
                 className={`${styles.post} relative px-4 py-4 bg-third border border-tableBorder`}
@@ -95,19 +94,15 @@ export default async function Auth(
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center space-x-2">
+                  <div className={`${styles.postBody} space-y-1`}>
+                    <div className={styles.identity}>
                       <h2 className="text-sm font-semibold">
                         {post[0].integration.name}
                       </h2>
-                      <span className="text-sm text-gray-500">
-                        @{post[0].integration.profile}
-                      </span>
-                      {index === 0 && (
-                        <CreationMethodBadge
-                          creationMethod={p.creationMethod}
-                          size="md"
-                        />
+                      {post[0].integration.profile?.trim() && (
+                        <span className="text-sm text-gray-500">
+                          @{post[0].integration.profile.trim()}
+                        </span>
                       )}
                     </div>
                     <div className="flex flex-col gap-[20px]">
