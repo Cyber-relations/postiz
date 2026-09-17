@@ -82,7 +82,7 @@ export default async function Auth(
                           />
                         ) : (
                           <span className={styles.avatarFallback} role="img" aria-label={post[0].integration.name || '連携先'}>
-                            {Array.from(post[0].integration.name?.trim() || '連携先')[0]}
+                            {Array.from(String(post[0].integration.name?.trim() || '連携先'))[0]}
                           </span>
                         )}
                       </div>
