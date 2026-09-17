@@ -1,0 +1,86 @@
+.preview {
+  --color-text: #24303f;
+  --color-third: #fcfbf8;
+  --color-forth: #1f3a5f;
+  --color-table-border: #e7e4dc;
+  --new-border: #e7e4dc;
+  --new-table-border: #e7e4dc;
+  --new-btn-text: #24303f;
+  --preview-background: #faf7f2;
+  --preview-muted: #596675;
+  color-scheme: light;
+  min-height: 100vh;
+  background: var(--preview-background);
+  color: var(--color-text);
+
+  &[data-theme='dark'] {
+    --color-text: #d6e4f2;
+    --color-third: #121a26;
+    --color-forth: #2e5580;
+    --color-table-border: #22304a;
+    --new-border: #22304a;
+    --new-table-border: #22304a;
+    --new-btn-text: #d6e4f2;
+    --preview-background: #0f151e;
+    --preview-muted: #8ea6c0;
+    color-scheme: dark;
+  }
+
+  button {
+    min-height: 44px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  textarea {
+    color: var(--color-text);
+    border-radius: 8px;
+    padding: 12px;
+    line-height: 1.7;
+  }
+
+  textarea::placeholder { color: var(--preview-muted); }
+  :global(.text-gray-300) { color: var(--color-text); }
+  :global(.text-gray-400), :global(.text-gray-500) { color: var(--preview-muted); }
+
+  :is(a, button, textarea):focus-visible {
+    outline: 2px solid var(--color-text) !important;
+    outline-offset: 3px;
+  }
+}
+
+.page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-table-border);
+}
+
+.brand { color: inherit; border-radius: 8px; }
+.heading { flex: 1 1 200px; min-width: 0; }
+.heading h1 { font-size: 18px; font-weight: 700; line-height: 1.5; }
+.heading p, .date { color: var(--preview-muted); font-size: 13px; line-height: 1.7; }
+.heading p { margin-top: 4px; }
+.date { padding: 20px 0; }
+.content { display: flex; align-items: flex-start; gap: 24px; }
+.posts { flex: 1 1 0; min-width: 0; }
+.post { border-radius: 12px; overflow-wrap: anywhere; }
+.comments { flex: 0 0 320px; min-width: 0; }
+
+@media (max-width: 767px) {
+  .page { padding: 20px 16px 32px; }
+  .header { gap: 16px; padding-bottom: 20px; }
+  .heading { flex-basis: 100%; order: 2; }
+  .header > button { margin-left: auto; padding-inline: 12px; }
+  .content { flex-direction: column; }
+  .posts, .comments { width: 100%; flex-basis: auto; }
+}

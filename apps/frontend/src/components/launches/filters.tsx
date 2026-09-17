@@ -291,7 +291,9 @@ export const Filters = () => {
       {!isListView && (
         <div data-toybaco-date-controls="" className="flex flex-grow flex-row items-center gap-[10px]">
           <div data-toybaco-date-range="" className="border h-[42px] border-newTableBorder bg-newTableBorder gap-[1px] flex items-center rounded-[8px] overflow-hidden">
-            <div
+            <button
+              type="button"
+              aria-label="前の期間"
               onClick={previous}
               className="cursor-pointer text-textColor rtl:rotate-180 px-[9px] bg-newBgColorInner h-full flex items-center justify-center hover:text-textItemFocused hover:bg-boxFocused"
             >
@@ -310,13 +312,15 @@ export const Filters = () => {
                   strokeLinejoin="round"
                 />
               </svg>
-            </div>
+            </button>
             <div className="min-w-[200px] text-center bg-newBgColorInner h-full flex items-center justify-center">
               <div className="py-[3px] px-[9px] rounded-[5px] transition-all text-[14px]">
                 {getDisplayText()}
               </div>
             </div>
-            <div
+            <button
+              type="button"
+              aria-label="次の期間"
               onClick={next}
               className="cursor-pointer text-textColor rtl:rotate-180 px-[9px] bg-newBgColorInner h-full flex items-center justify-center hover:text-textItemFocused hover:bg-boxFocused"
             >
@@ -335,16 +339,18 @@ export const Filters = () => {
                   strokeLinejoin="round"
                 />
               </svg>
-            </div>
+            </button>
           </div>
           <div className="flex-1 text-[14px] font-[500]">
             <div data-toybaco-today="" className="text-center flex h-[42px]">
-              <div
+              <button
+                type="button"
+                aria-label="今日を表示"
                 onClick={setToday}
                 className="hover:text-textItemFocused hover:bg-boxFocused py-[3px] px-[9px] flex justify-center items-center rounded-[8px] transition-all cursor-pointer text-[14px] bg-newBgColorInner border border-newTableBorder"
               >
                 {t('today', 'Today')}
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -352,7 +358,10 @@ export const Filters = () => {
       {isListView && (
         <div data-toybaco-list-controls="" data-toybaco-date-controls="" className="flex flex-grow flex-row items-center gap-[10px]">
           <div data-toybaco-date-range="" className="border h-[42px] border-newTableBorder bg-newTableBorder gap-[1px] flex items-center rounded-[8px] overflow-hidden">
-            <div
+            <button
+              type="button"
+              aria-label="前のページ"
+              disabled={!(calendar.listPage > 0)}
               onClick={previousPage}
               className={clsx(
                 'text-textColor rtl:rotate-180 px-[9px] bg-newBgColorInner h-full flex items-center justify-center',
@@ -376,13 +385,16 @@ export const Filters = () => {
                   strokeLinejoin="round"
                 />
               </svg>
-            </div>
+            </button>
             <div className="min-w-[200px] text-center bg-newBgColorInner h-full flex items-center justify-center">
               <div className="py-[3px] px-[9px] rounded-[5px] transition-all text-[14px]">
                 {t('page', 'Page')} {calendar.listPage + 1} {t('of', 'of')} {Math.max(1, calendar.listTotalPages)}
               </div>
             </div>
-            <div
+            <button
+              type="button"
+              aria-label="次のページ"
+              disabled={!(calendar.listPage < calendar.listTotalPages - 1)}
               onClick={nextPage}
               className={clsx(
                 'text-textColor rtl:rotate-180 px-[9px] bg-newBgColorInner h-full flex items-center justify-center',
@@ -406,11 +418,13 @@ export const Filters = () => {
                   strokeLinejoin="round"
                 />
               </svg>
-            </div>
+            </button>
           </div>
           <div data-toybaco-toolbar-group="" className="flex flex-row p-[4px] border border-newTableBorder rounded-[8px] text-[14px] font-[500]">
             {listStateOptions.map((option) => (
-              <div
+              <button
+                type="button"
+                aria-pressed={calendar.listState === option.value}
                 key={option.value}
                 onClick={setListStateFilter(option.value)}
                 className={clsx(
@@ -420,7 +434,7 @@ export const Filters = () => {
                 )}
               >
                 {option.label}
-              </div>
+              </button>
             ))}
           </div>
           <div className="flex-1" />
@@ -433,7 +447,10 @@ export const Filters = () => {
       />
       {!isListView && (
         <div data-toybaco-toolbar-group="" className="flex flex-row p-[4px] border border-newTableBorder rounded-[8px] text-[14px] font-[500]">
-          <div
+          <button
+            type="button"
+            aria-label="日表示"
+            aria-pressed={calendar.display === 'day'}
             className={clsx(
               'pt-[6px] pb-[5px] cursor-pointer w-[74px] text-center rounded-[6px]',
               calendar.display === 'day' && 'text-textItemFocused bg-boxFocused'
@@ -441,8 +458,11 @@ export const Filters = () => {
             onClick={setDay}
           >
             {t('day', 'Day')}
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
+            aria-label="週表示"
+            aria-pressed={calendar.display === 'week'}
             className={clsx(
               'pt-[6px] pb-[5px] cursor-pointer w-[74px] text-center rounded-[6px]',
               calendar.display === 'week' && 'text-textItemFocused bg-boxFocused'
@@ -450,8 +470,11 @@ export const Filters = () => {
             onClick={setWeek}
           >
             {t('week', 'Week')}
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
+            aria-label="月表示"
+            aria-pressed={calendar.display === 'month'}
             className={clsx(
               'pt-[6px] pb-[5px] cursor-pointer w-[74px] text-center rounded-[6px]',
               calendar.display === 'month' && 'text-textItemFocused bg-boxFocused'
@@ -459,11 +482,14 @@ export const Filters = () => {
             onClick={setMonth}
           >
             {t('month', 'Month')}
-          </div>
+          </button>
         </div>
       )}
       <div data-toybaco-toolbar-group="" className="flex flex-row p-[4px] border border-newTableBorder rounded-[8px] text-[14px] font-[500]">
-        <div
+        <button
+          type="button"
+          aria-label="カレンダー表示"
+          aria-pressed={!isListView}
           onClick={setCalendarView}
           className={clsx(
             'pt-[6px] pb-[5px] cursor-pointer flex justify-center items-center w-[34px] text-center rounded-[6px]',
@@ -486,8 +512,11 @@ export const Filters = () => {
               strokeLinejoin="round"
             />
           </svg>
-        </div>
-        <div
+        </button>
+        <button
+          type="button"
+          aria-label="一覧表示"
+          aria-pressed={isListView}
           onClick={setList}
           className={clsx(
             'pt-[6px] pb-[5px] flex justify-center items-center cursor-pointer w-[34px] text-center rounded-[6px]',
@@ -510,7 +539,7 @@ export const Filters = () => {
               strokeLinejoin="round"
             />
           </svg>
-        </div>
+        </button>
       </div>
     </div>
   );
