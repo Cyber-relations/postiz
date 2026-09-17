@@ -49,6 +49,19 @@
   }
 }
 
+.avatarFallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--color-table-border);
+  border-radius: 50%;
+  background: var(--color-third);
+  color: var(--preview-muted);
+  font-size: 20px;
+  font-weight: 600;
+}
+
 .page {
   width: 100%;
   max-width: 1200px;

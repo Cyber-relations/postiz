@@ -55,7 +55,8 @@ export const RenderComponents: FC<{
               required: true,
             })}
             className="flex w-full px-3 py-2 h-[98px] text-sm ring-offset-background placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px] resize-none text-white bg-third border border-tableBorder placeholder-gray-500 focus:ring-0"
-            placeholder="Add a comment..."
+            aria-label={t('comments', 'Comments')}
+            placeholder={t('add_comment', 'Add comment')}
             defaultValue={''}
           />
           <div className="flex justify-end">
@@ -75,7 +76,7 @@ export const RenderComponents: FC<{
                 <path d="m22 2-7 20-4-9-9-4Z" />
                 <path d="M22 2 11 13" />
               </svg>
-              {t('post', 'Post')}
+              {t('send_comment', 'Send comment')}
             </Button>
           </div>
         </form>

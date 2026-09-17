@@ -738,6 +738,8 @@
   "post_already_published_republish_warning": "この投稿は既に公開されています。再公開すると、もう一度投稿されます：",
   "republish_at": "公開日時：",
   "republish_recurring_note": "これは定期投稿です：今後すべての繰り返しに対して変更が適用されます。",
+  "send_comment": "コメントを送信",
+  "preview_date_format": "YYYY年M月D日 H:mm",
   "composer_discard_description": "保存していない変更がある場合は破棄されます。保存済みの投稿は残ります。",
   "composer_discard_confirm": "保存せずに閉じる",
   "composer_discard_title": "この画面を閉じますか？",

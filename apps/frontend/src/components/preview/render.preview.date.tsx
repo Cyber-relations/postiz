@@ -1,11 +1,12 @@
 'use client';
 
 import { FC } from 'react';
+import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 dayjs.extend(utc);
 
 export const RenderPreviewDate: FC<{ date: string }> = ({ date }) => {
-  console.log(date);
-  return <>{dayjs.utc(date).local().format('MMMM D, YYYY h:mm A')}</>;
+  const t = useT();
+  return <>{dayjs.utc(date).local().format(t('preview_date_format', 'MMMM D, YYYY h:mm A'))}</>;
 };
