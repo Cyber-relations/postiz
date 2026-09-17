@@ -69,7 +69,7 @@ function toybacoUiBlocked(rawPath: unknown) {
   );
 }
 
-// toybaco_identity_boundary_v1: OIDC往復後の戻り先も4画面に閉じる。
+// toybaco_identity_boundary_v1: 通常4画面と正規CUIDの共有プレビューだけに戻す。
 const TOYBACO_RETURN_PATHS = ['/launches', '/analytics', '/media', '/settings'];
 const TOYBACO_LOGOUT_COOKIES = [
   'auth',
@@ -196,9 +196,9 @@ function toybacoSafeReturnPath(rawValue: string | undefined) {
     [...parsed.searchParams.keys()].some((key) =>
       ['code', 'state', 'error', 'id_token', 'error_description', 'access_token'].includes(key.toLowerCase())
     ) ||
-    !TOYBACO_RETURN_PATHS.some(
+    (!TOYBACO_RETURN_PATHS.some(
       (prefix) => parsed.pathname === prefix || parsed.pathname.startsWith(`${prefix}/`)
-    )
+    ) && !/^\/p\/c[a-z0-9]{24}(?:\?share=true)?$/.test(value))
   ) {
     return null;
   }

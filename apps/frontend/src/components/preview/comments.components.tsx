@@ -113,8 +113,11 @@ export const CommentsComponents: FC<{
 
   const { postId } = props;
   const goToComments = useCallback(() => {
-    window.location.href = `/auth?returnUrl=${window.location.href}`;
-  }, []);
+    const target = new URL('/toybaco/entry', window.location.origin);
+    const share = new URL(window.location.href).searchParams.get('share') === 'true';
+    target.searchParams.set('return', `/p/${postId}${share ? '?share=true' : ''}`);
+    window.location.assign(target.href);
+  }, [postId]);
   if (!user?.id) {
     return (
       <Button onClick={goToComments}>

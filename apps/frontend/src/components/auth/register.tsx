@@ -47,8 +47,9 @@ function toybacoCallbackReturn(value: unknown): string | null {
   let target: URL;
   try { target = new URL(value, 'https://post.toybaco.invalid'); } catch { return null; }
   if (target.origin !== 'https://post.toybaco.invalid' ||
-      !['/launches', '/analytics', '/media', '/settings'].some((path) =>
-        target.pathname === path || target.pathname.startsWith(`${path}/`)) ||
+      (!['/launches', '/analytics', '/media', '/settings'].some((path) =>
+        target.pathname === path || target.pathname.startsWith(`${path}/`)) &&
+        !/^\/p\/c[a-z0-9]{24}(?:\?share=true)?$/.test(value)) ||
       [...target.searchParams.keys()].some((key) =>
         ['code', 'state', 'error', 'id_token', 'error_description', 'access_token'].includes(key.toLowerCase()))) return null;
   return target.pathname + target.search;
