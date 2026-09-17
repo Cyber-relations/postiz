@@ -87,6 +87,8 @@
 .content { display: flex; align-items: flex-start; gap: 24px; }
 .posts { flex: 1 1 0; min-width: 0; }
 .post { border-radius: 12px; overflow-wrap: anywhere; }
+.postBody { flex: 1 1 0; min-width: 0; }
+.identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .comments { flex: 0 0 320px; min-width: 0; }
 
 @media (max-width: 767px) {
