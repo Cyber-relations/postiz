@@ -220,8 +220,12 @@ export const PlatformAnalytics = () => {
             </button>
           </div>
           {sortedIntegrations.map((integration, index) => (
-            <div
+            <button
+              type="button"
               data-toybaco-analytics-channel=""
+              aria-pressed={currentIntegration.id === integration.id}
+              aria-label={`${integration.name}の分析を表示${integration.refreshNeeded ? '（再接続が必要）' : ''}`}
+              style={{ textAlign: 'start' }}
               title={integration.name}
               key={integration.id}
               onClick={() => {
@@ -287,7 +291,7 @@ export const PlatformAnalytics = () => {
               >
                 {integration.name}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
