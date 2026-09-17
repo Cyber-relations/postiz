@@ -74,11 +74,17 @@ export default async function Auth(
                   <div>
                     <div className="flex shrink-0 rounded-full h-30 w-30 relative">
                       <div className="w-[50px] h-[50px] z-[20]">
-                        <img
-                          className="w-full h-full relative z-[20] bg-black aspect-square rounded-full border-tableBorder"
-                          alt={post[0].integration.name}
-                          src={post[0].integration.picture}
-                        />
+                        {post[0].integration.picture?.trim() ? (
+                          <img
+                            className="w-full h-full relative z-[20] bg-black aspect-square rounded-full border-tableBorder"
+                            alt={post[0].integration.name}
+                            src={post[0].integration.picture}
+                          />
+                        ) : (
+                          <span className={styles.avatarFallback} role="img" aria-label={post[0].integration.name || '連携先'}>
+                            {Array.from(post[0].integration.name?.trim() || '連携先')[0]}
+                          </span>
+                        )}
                       </div>
                       <div className="absolute -end-[5px] -bottom-[5px] w-[30px] h-[30px] z-[20]">
                         <img
