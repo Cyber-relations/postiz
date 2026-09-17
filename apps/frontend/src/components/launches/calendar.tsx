@@ -941,7 +941,7 @@ export const CalendarColumn: FC<{
               )}
               {display === 'day' && (
                 <div
-                  className={`w-full h-full rounded-[10px] py-[10px] flex-wrap hover:border hover:border-seventh flex justify-center items-center gap-[20px] opacity-30 grayscale hover:grayscale-0 hover:opacity-100`}
+                  className={`w-full h-full rounded-[10px] py-[10px] flex-wrap hover:border hover:border-seventh flex justify-center items-center gap-[20px]`}
                 >
                   {integrations.map((selectedIntegrations) => (
                     <div
@@ -1026,6 +1026,15 @@ const CalendarItem: FC<{
     missingRelease,
   } = props;
   const { disableXAnalytics } = useVariables();
+  const toybacoPlatformName = ({
+    'instagram-standalone': 'Instagram',
+    instagram: 'Instagram',
+    facebook: 'Facebook',
+    threads: 'Threads',
+    x: 'X',
+    tiktok: 'TikTok',
+    gmb: 'Google マップ',
+  } as Record<string, string>)[post.integration.providerIdentifier] || post.integration.providerIdentifier;
   const user = useUser();
   const toybacoCanManagePost = !!user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN' || state === 'DRAFT');
   const toybacoFailure = toybacoPostingFailure({ ...post, state });
@@ -1087,7 +1096,7 @@ const CalendarItem: FC<{
         onClick={editPost}
         role="button"
         tabIndex={0}
-        aria-label={`${post.integration.name}の投稿を開く：${toybacoPostStatus(state)}`}
+        aria-label={`${toybacoPlatformName}・${post.integration.name}の投稿を開く：${toybacoPostStatus(state)}`}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -1096,34 +1105,36 @@ const CalendarItem: FC<{
         }}
         className={clsx(
           'gap-[5px] w-full flex h-full flex-1 rounded-br-[10px] rounded-bl-[10px] p-[8px] text-[14px] bg-newColColor',
-          'relative',
-          isBeforeNow && '!grayscale'
+          'relative flex-col'
         )}
       >
-        <div className={clsx('relative min-w-[20px]')}>
+        <div data-toybaco-post-heading="" className="flex items-center gap-[6px] w-full min-w-0">
           <img
-            className="w-[20px] h-[20px] rounded-[8px]"
-            src={post.integration.picture! || '/no-picture.jpg'}
+            data-toybaco-post-platform-icon=""
+            className="w-[20px] h-[20px] rounded-[6px] shrink-0 object-contain"
+            src={`/icons/platforms/${post.integration.providerIdentifier}.png`}
+            alt=""
+            aria-hidden="true"
+            width={20}
+            height={20}
           />
-          <img
-            className="w-[12px] h-[12px] rounded-[8px] absolute z-10 top-[10px] end-0 border border-fifth"
-            src={`/icons/platforms/${post.integration?.providerIdentifier}.png`}
-          />
+          <span data-toybaco-post-platform-name="" className="min-w-0 text-[12px] font-semibold text-start">
+            {toybacoPlatformName}
+          </span>
+          {showTime && (
+            <time data-toybaco-post-time="" className="ms-auto text-[12px] whitespace-nowrap" dateTime={newDayjs(post.publishDate).toISOString()}>
+              {newDayjs(post.publishDate).local().format('HH:mm')}
+            </time>
+          )}
         </div>
-        <div className="w-full flex-1 flex flex-col min-h-[40px]">
-
-            <div className="w-full relative">
-              <div className="absolute top-0 start-0 w-full text-ellipsis break-words line-clamp-1 text-start">
-                {stripHtmlValidation('none', post.content, false, true, false) ||
-                  t('no_content', 'no content')}
-              </div>
-            </div>
+        <div data-toybaco-post-account="" className="flex items-center gap-[4px] w-full min-w-0" title={post.integration.name}>
+          <img className="w-[14px] h-[14px] rounded-full shrink-0 object-cover" src={post.integration.picture || '/no-picture.jpg'} alt="" width={14} height={14} />
+          <span className="truncate">{post.integration.name}</span>
         </div>
-        {showTime && (
-          <div className="text-textColor/50 text-[12px] whitespace-nowrap flex items-center">
-            {newDayjs(post.publishDate).local().format('HH:mm')}
-          </div>
-        )}
+        <div data-toybaco-post-excerpt="" className="w-full min-w-0 line-clamp-2 text-start">
+          {stripHtmlValidation('none', post.content, false, true, false) ||
+            t('no_content', 'no content')}
+        </div>
       </div>
       {post.tags.length > 0 && (
         <div data-toybaco-post-tags="" style={{ borderInlineStart: `3px solid ${post.tags[0].tag.color}` }}>
