@@ -1,6 +1,6 @@
 // Only finite codes cross the popup boundary; provider messages and metadata stay server-side.
 export type ConnectionReason = 'access-not-ready' | 'rate-limited' | 'reauthenticate' | 'permission-denied' | 'unavailable' | 'interrupted' | 'popup-blocked';
-export type ChannelConnectionResult = { outcome: 'connected' | 'review' | 'precondition' | 'failed'; reason?: ConnectionReason; channel?: { identifier: string; internalId: string } };
+export type ChannelConnectionResult = { outcome: 'connected' | 'setup-pending' | 'review' | 'precondition' | 'failed'; reason?: ConnectionReason; channel?: { identifier: string; internalId: string } };
 const reasons: ConnectionReason[] = ['access-not-ready', 'rate-limited', 'reauthenticate', 'permission-denied', 'unavailable', 'interrupted', 'popup-blocked'];
 export function connectionReason(value: unknown): ConnectionReason {
   return typeof value === 'string' && reasons.includes(value as ConnectionReason) ? value as ConnectionReason : 'unavailable';
@@ -8,11 +8,12 @@ export function connectionReason(value: unknown): ConnectionReason {
 export function readConnectionResult(value: unknown): ChannelConnectionResult | null {
   if (!value || typeof value !== 'object') return null;
   const data = value as Record<string, unknown>;
-  if (data.type !== 'toybaco-connect' || (typeof data.outcome !== 'string' || !['connected', 'review', 'precondition', 'failed'].includes(data.outcome))) return null;
+  if (data.type !== 'toybaco-connect' || (typeof data.outcome !== 'string' || !['connected', 'setup-pending', 'review', 'precondition', 'failed'].includes(data.outcome))) return null;
   return { outcome: data.outcome as ChannelConnectionResult['outcome'], ...(data.outcome === 'failed' ? { reason: connectionReason(data.reason) } : {}) };
 }
 export function connectionMessage(result: ChannelConnectionResult): string {
   if (result.outcome === 'connected') return 'チャンネルを接続しました。';
+  if (result.outcome === 'setup-pending') return 'Google アカウントとの連携を保存しました。チャンネルの「店舗を選ぶ」から設定を続けられます。';
   if (result.outcome === 'review') return 'チャンネルの接続を完了できませんでした。接続先の条件を確認して、もう一度お試しください。';
   if (result.outcome === 'precondition') return 'チャンネルを接続するための条件を満たしていません。利用条件を確認してください。';
   const messages: Record<ConnectionReason, string> = {
