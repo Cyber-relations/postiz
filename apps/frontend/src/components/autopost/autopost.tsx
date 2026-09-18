@@ -411,7 +411,7 @@ export const AddOrEditWebhook: FC<{
                   disableBranding={true}
                   aria-label="下書き本文"
                   className={clsx(
-                    '!min-h-40 !max-h-80 p-2 overflow-x-hidden scrollbar scrollbar-thumb-[#612AD5] bg-customColor2 outline-none mb-[16px] border-fifth border rounded-[4px]'
+                    '!min-h-40 !max-h-80 p-2 overflow-x-hidden scrollbar scrollbar-thumb-[#1F3A5F] bg-customColor2 outline-none mb-[16px] border-fifth border rounded-[4px]'
                   )}
                   value={content}
                   disabled={form.formState.isSubmitting}

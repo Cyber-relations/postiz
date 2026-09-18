@@ -359,8 +359,8 @@ export async function proxy(request: NextRequest) {
   if (toybacoUnified) {
     const dest = request.headers.get('sec-fetch-dest');
     const urlMarker = nextUrl.searchParams.get('tb_embed') === '1';
-    // cookie での抑止は「ヘッダを送らない古い UA」のためだけに使う。
-    // 新しいブラウザの top-level(dest==='document')は cookie が残っていても必ず転送する。
+    // URL/cookie の目印は、ヘッダを送らない古い UA の互換用途に限定する。
+    // iframe URLを新しいタブで開いても、必ずトイバコ本体へ戻す。
     // ここを混ぜると、一度埋め込みを使った人のメールリンクが二度と統合ビューへ着地しなくなる。
     const cookieMarker =
       request.cookies.get('toybaco_embed')?.value === '1';
@@ -380,19 +380,18 @@ export async function proxy(request: NextRequest) {
     // (拒否時は error と state だけで戻る)。どれか1つでもあれば転送しない。
     // ここを取りこぼすと、認可の帰りが受信箱へ飛ばされてログインが完了しない。
     const isOidcReturn =
-      nextUrl.pathname === '/settings' &&
+      normalizedPath === '/settings' &&
       (nextUrl.searchParams.has('code') ||
         nextUrl.searchParams.has('state') ||
         nextUrl.searchParams.has('error') ||
         nextUrl.searchParams.has('id_token'));
     if (
       request.method === 'GET' &&
-      !urlMarker &&
       allow.has(normalizedPath) &&
       !isOidcReturn &&
       // iframe(dest==='iframe')はここで自然に除外される。
       // 'empty'(fetch/RSC)や HEAD も転送しない。画面遷移だけを対象にする。
-      (dest === 'document' || (dest === null && !cookieMarker))
+      (dest === 'document' || (dest === null && !urlMarker && !cookieMarker))
     ) {
       const target = new URL(toybacoUnified);
       // 「/」のままだと投稿画面側が /launches へ内部転送し、その際に
@@ -403,9 +402,13 @@ export async function proxy(request: NextRequest) {
             ? '/launches'
             : '/analytics'
           : normalizedPath;
+      const landingQuery = new URLSearchParams(nextUrl.searchParams);
+      landingQuery.delete('tb_embed');
+      landingQuery.delete('tb_theme');
+      const landingSearch = landingQuery.toString();
       target.hash =
         '/toybaco/posting?path=' +
-        encodeURIComponent(landingPath + nextUrl.search);
+        encodeURIComponent(landingPath + (landingSearch ? '?' + landingSearch : ''));
       return NextResponse.redirect(target, 302);
     }
     if (nextUrl.searchParams.get('tb_embed') === '1') {

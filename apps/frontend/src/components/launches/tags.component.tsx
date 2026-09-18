@@ -202,7 +202,7 @@ export const TagsComponentInner: FC<{
       onBlur={allowClose ? keyboard.onBlur : undefined}
       className={clsx(
         'border rounded-[8px] justify-center flex items-center relative h-[44px] text-[15px] font-[600] select-none',
-        isOpen ? 'border-[#612BD3]' : 'border-newTextColor/10'
+        isOpen ? 'border-[#1F3A5F]' : 'border-newTextColor/10'
       )}
     >
       <button
@@ -284,7 +284,7 @@ export const TagsComponentInner: FC<{
           <button
             type="button"
             onClick={addTag}
-            className="cursor-pointer gap-[8px] flex w-full h-[34px] rounded-[8px] mt-[12px] px-[16px] justify-center items-center bg-[#612BD3] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B5B]"
+            className="cursor-pointer gap-[8px] flex w-full h-[34px] rounded-[8px] mt-[12px] px-[16px] justify-center items-center bg-[#1F3A5F] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B5B]"
           >
             <span aria-hidden="true">
               <PlusIcon />
@@ -305,7 +305,7 @@ const Check: FC<{ value: boolean }> = ({ value }) => {
       aria-hidden="true"
       className={clsx(
         'text-[10px] font-[500] text-center flex border border-btnSimple rounded-[6px] min-w-[20px] min-h-[20px] w-[20px] h-[20px] justify-center items-center',
-        value && 'bg-[#612BD3]'
+        value && 'bg-[#1F3A5F]'
       )}
     >
       {value ? <CheckmarkIcon className="text-white" /> : ''}
