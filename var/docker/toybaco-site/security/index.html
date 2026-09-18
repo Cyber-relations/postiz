@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<script src="/assets/measurement.js?v=20260918"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <title>セキュリティ — 会話データは国内保管 | トイバコ</title>
@@ -47,7 +48,7 @@
     <p class="crumbs"><a href="../index.html">トップ</a><span class="sep">/</span>セキュリティ</p>
     <span class="eyebrow2"><span class="dots"><i></i><i></i><i></i><i></i></span>セキュリティ</span>
     <h1>会話データは、<br>すべて日本国内で保管<span class="maru">。</span></h1>
-    <p class="lead">お客様との会話は、お店にとって大切な資産であり、個人情報でもあります。トイバコは<strong>会話データをすべて日本国内のサーバーで保管</strong>し、海外へ持ち出すことはありません。</p>
+    <p class="lead">お客様との会話は、お店にとって大切な資産であり、個人情報でもあります。トイバコの<strong>データベース・保存ファイル・バックアップは AWS 東京リージョンに保管</strong>します。通信の中継や連携先サービスでは、日本以外で処理される場合があります。</p>
     <div class="pstats reveal" style="--d:.2s">
       <div class="pstat"><i style="background:var(--ch-blue)"></i><b>日本国内</b><span>データ保管の場所</span></div>
       <div class="pstat"><i style="background:var(--ch-green)"></i><b>会社ごと分離</b><span>他社データにアクセス不可</span></div>
@@ -65,7 +66,7 @@
       <div class="fcard reveal" style="--d:0s">
         <div class="ico" style="background:var(--ch-blue)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 9.5C8 19.4 5 15.4 5 11V6l7-3z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="m9 11.5 2 2 4-4.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <h3>日本国内でデータ保管</h3>
-        <p>会話データ・添付ファイル・バックアップのすべてを国内(東京リージョン)で保管。海外へ持ち出すことはありません。</p>
+        <p>トイバコ側の会話データ・添付ファイル・バックアップは AWS 東京リージョンに保管します。通信の中継には Cloudflare のグローバルネットワークを利用します。処理地域の詳細は<a href="../privacy/">プライバシーポリシー</a>をご覧ください。</p>
       </div>
       <div class="fcard reveal" style="--d:.08s">
         <div class="ico" style="background:var(--ch-green)"><svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4" width="7.5" height="16" rx="2" stroke="#fff" stroke-width="2"/><rect x="13" y="4" width="7.5" height="16" rx="2" stroke="#fff" stroke-width="2"/></svg></div>
@@ -107,7 +108,7 @@
         <li><b>使うかどうかは、お店が決める。</b>初期状態はオフ。オンにした範囲でだけ働きます</li>
         <li><b>AI の返信であることを明示。</b>お客様はいつでも人への切り替えを求められます</li>
         <li><b>会話を AI の学習に使わない。</b>会話内容は応答の生成にだけ使われます</li>
-        <li><b>処理も保管も日本国内。</b>AI の推論処理も国内のサーバーで行います</li>
+        <li><b>受信箱の AI 生成は日本国内。</b>Amazon Bedrock の東京・大阪の環境で生成します。通信の中継等では国外で処理される場合があります</li>
         <li><b>いつでも止められる。</b>設定をオフにすれば、その場で停止します</li>
       </ul>
     </div>
