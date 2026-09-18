@@ -1082,6 +1082,7 @@
     "site/start/index.html": "f172d729d85a9f1df9582e93685cc98014b4f717eff77068c37a1839997a979d",
     "site/style.css": "b81c99786cbff1c3b52eaf734a4fd2f6c1342154be622987a7a3607ed06da884",
     "site/terms/index.html": "fe61d3268b417f8a6eae4452da75a069ca72f07ea055d4240c4a94acbb764a65",
+    "site/tiktok9q9zReg7iiuwLPiJERiLUmFq8kFpJetq.txt": "91bf2ea881ba92625459701fd85d628b34756420e5637b1fb6df28715f9467a9",
     "site/tokushoho/index.html": "b77251d1de14e5516a40a8bb47a759ce7243d19429e216c83312023a723ae676",
     "site/welcome/index.html": "f966d42bdc11e8359fe1c5ffa90f9c2d079a917384f86d4ba57c26a73ce63643"
   },
@@ -2166,11 +2167,12 @@
     "start/index.html": "b49d8391fe118cfd34b11b5fbe29f04859730cca9a7052c943b5a0c39a2e53a0",
     "style.css": "b81c99786cbff1c3b52eaf734a4fd2f6c1342154be622987a7a3607ed06da884",
     "terms/index.html": "aa5afa127d478533c5bd1bf168b148ff07fa94cc27ad8c439d6719e492c090fe",
+    "tiktok9q9zReg7iiuwLPiJERiLUmFq8kFpJetq.txt": "91bf2ea881ba92625459701fd85d628b34756420e5637b1fb6df28715f9467a9",
     "tokushoho/index.html": "0f45f26e247cc04bf557779740d567129ed6a036b2127bb830159bc15c81f660",
     "welcome/index.html": "1dee59980b5610e64e44dc6cfe8b1dffa78704392178fe9583f9f072ad04e4ea"
   },
   "renderer_sha256": "1bc11c036aab8802bea31ae63e28cc9a959f467e0196b8af474c4df3c31fbb59",
-  "roster_sha256": "37fa5e1171c8a4dc6b034384ac5a246bccc249a3adb727634568e53217ed2c6d",
+  "roster_sha256": "8766218f5402fab171c2766a0d54489265e2b7325687ad323f86d25378c11cb7",
   "schema_version": 1,
   "site_origin": "https://staging.toybaco.jp"
 }
