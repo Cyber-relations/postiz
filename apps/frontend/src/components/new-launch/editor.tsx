@@ -12,6 +12,7 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import clsx from 'clsx';
+import { ToybacoPostingDraft } from '@gitroom/frontend/components/new-launch/toybaco-posting-draft';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import EmojiPicker from 'emoji-picker-react';
 import { Theme } from 'emoji-picker-react';
@@ -442,6 +443,7 @@ export const EditorWrapper: FC<{
                 </div>
               )}
               <Editor
+                toybacoDraftKey={current + ":" + g.id}
                 comments={comments}
                 editorType={editor}
                 allValues={items}
@@ -534,6 +536,7 @@ export const EditorWrapper: FC<{
 };
 
 export const Editor: FC<{
+  toybacoDraftKey?: string;
   editorType?: 'none' | 'normal' | 'markdown' | 'html';
   totalPosts: number;
   value: string;
@@ -743,6 +746,14 @@ export const Editor: FC<{
               }}
             />
             <UploadFeedback uppy={uppy} />
+            <ToybacoPostingDraft value={props.value || ''} plainText={valueWithoutHtml} slotKey={props.toybacoDraftKey || id} first={num === 0}
+              apply={html => {
+                const currentEditor = editorRef.current?.editor;
+                if (!currentEditor || currentEditor.isDestroyed) return;
+                currentEditor.commands.setContent(html);
+                currentEditor.commands.focus('end');
+                return currentEditor.getHTML();
+              }} />
             <div className="w-full pointer-events-none">
               <div className="w-full h-[46px] overflow-hidden absolute left-0 bg-newBgColorInner uppyChange">
                 <Dashboard

@@ -1,5 +1,9 @@
+import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
+import { toybacoPostingPolicy } from '@gitroom/nestjs-libraries/toybaco/posting-draft-bridge';
+import { ToybacoLegacyAiGuard } from '@gitroom/backend/services/auth/permissions/toybaco-legacy-ai.guard';
 import {
   ForbiddenException,
+  UseGuards,
   ServiceUnavailableException,
   Logger,
   Controller,
@@ -17,7 +21,7 @@ import {
   copilotRuntimeNextJSAppRouterEndpoint,
 } from '@copilotkit/runtime';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
-import { Organization } from '@prisma/client';
+import { Organization, User } from '@prisma/client';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
 import { MastraAgent } from '@ag-ui/mastra';
 import { MastraService } from '@gitroom/nestjs-libraries/chat/mastra.service';
@@ -40,8 +44,10 @@ export class CopilotController {
   ) {}
   // Metadata only: configuration is not proof of a successful model request.
   @Get('/capabilities')
-  capabilities() {
-    const status = process.env.TOYBACO_DISABLE_AI
+  async capabilities(@GetUserFromRequest() user: User, @GetOrgFromRequest() organization: Organization) {
+    const shared = user?.providerName === 'GENERIC' || process.env.POSTIZ_OAUTH_CLIENT_ID === 'toybaco-postiz'
+      ? (await toybacoPostingPolicy(user, organization)).shared : false;
+    const status = shared || process.env.TOYBACO_DISABLE_AI
       ? 'disabled'
       : !process.env.OPENAI_API_KEY
       ? 'not_configured'
@@ -52,10 +58,12 @@ export class CopilotController {
       canStart: status === 'configured',
       verification: 'not_run',
       replyQuotaShared: false,
+      ...(shared ? { reason: 'posting_editor' } : {}),
     };
   }
 
   @Post('/chat')
+  @UseGuards(ToybacoLegacyAiGuard)
   chatAgent(@Req() req: Request, @Res() res: Response) {
     // 画面を隠すだけでは API を直接呼べてしまうため、ここでも止める。
     // 接続先を東京の Bedrock に向けたら、この環境変数を外して有効化する。
@@ -83,6 +91,7 @@ export class CopilotController {
   }
 
   @Post('/agent')
+  @UseGuards(ToybacoLegacyAiGuard)
   @CheckPolicies([AuthorizationActions.Create, Sections.AI])
   async agent(
     @Req() req: Request,
