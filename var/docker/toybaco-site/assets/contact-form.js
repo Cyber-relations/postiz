@@ -18,13 +18,15 @@
   const topic = new URLSearchParams(location.search).get('topic');
   if ([...form.elements.topic.options].some(option => option.value === topic)) form.elements.topic.value = topic;
 
+  const notify = (name, detail = {}) => form.dispatchEvent(new CustomEvent(name, { detail }));
   function step(number) {
     steps.forEach((item, index) => {
       if (index + 1 === number) item.setAttribute('aria-current', 'step');
       else item.removeAttribute('aria-current');
     });
   }
-  function showError(message) {
+  function showError(message, type = 'api', field = 'form') {
+    notify('toybaco:error', { type, field });
     error.textContent = message;
     error.hidden = false;
     error.focus();
@@ -35,7 +37,7 @@
     if (!form.reportValidity()) return;
     for (const key of ['name', 'email', 'message']) {
       if (!form.elements[key].value.trim()) {
-        showError('必須項目を入力してください。');
+        showError('必須項目を入力してください。', 'validation', key);
         form.elements[key].focus();
         return;
       }
@@ -52,6 +54,7 @@
     review.hidden = false;
     step(2);
     document.getElementById('contact-review-title').focus();
+    notify('toybaco:review-shown');
   });
   back.addEventListener('click', () => {
     if (busy || uncertain) return;
@@ -64,7 +67,7 @@
   send.addEventListener('click', async () => {
     if (busy || !payload) return;
     if (!live) {
-      showError('この確認用画面からは送信できません。入力内容は送信されていません。');
+      showError('この確認用画面からは送信できません。入力内容は送信されていません。', 'system');
       return;
     }
     busy = true;
@@ -78,6 +81,7 @@
       const result = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal, credentials: 'omit' });
       const data = await result.json();
       if (result.ok && data.code === 'sent' && data.receipt === payload.request_id) {
+        notify('toybaco:accepted', { receipt: data.receipt, topic: payload.topic });
         review.hidden = true;
         done.hidden = false;
         document.getElementById('contact-receipt').textContent = data.receipt;
@@ -103,7 +107,7 @@
       }
     } catch (_) {
       uncertain = true;
-      showError('通信が途切れたため、送信結果を確認できませんでした。入力内容を保持しています。下のボタンで送信状況を確認してください。');
+      showError('通信が途切れたため、送信結果を確認できませんでした。入力内容を保持しています。下のボタンで送信状況を確認してください。', 'network');
     } finally {
       clearTimeout(timer);
       busy = false;
