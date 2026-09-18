@@ -392,7 +392,26 @@ export class IntegrationsController {
         return load;
       } catch (err) {
         if (getIntegration.providerIdentifier === 'gmb' && err instanceof ToybacoGmbLookupError) {
-          throw err;
+          const failure = err.getResponse() as { reason?: string };
+          if (failure.reason !== 'reauthenticate' || !getIntegration.refreshToken || getIntegration.deletedAt) {
+            throw err;
+          }
+          const refreshed = await this._refreshIntegrationService.refresh(getIntegration).catch(() => false as const);
+          const current = await this._integrationService.getIntegrationById(org.id, body.id);
+          if (!refreshed || !refreshed.accessToken) {
+            throw new ToybacoGmbLookupError(current && !current.deletedAt && current.refreshNeeded ? 'reauthenticate' : 'unavailable');
+          }
+          if (!current || current.deletedAt || current.providerIdentifier !== 'gmb' || current.token !== refreshed.accessToken) {
+            throw new ToybacoGmbLookupError('unavailable');
+          }
+          try {
+            // Direct retry, not recursion: a second rejection is returned safely.
+            // @ts-ignore
+            return await integrationProvider[body.name](current.token, body.data, current.internalId, current);
+          } catch (retryError) {
+            if (retryError instanceof ToybacoGmbLookupError) throw retryError;
+            throw new ToybacoGmbLookupError('unavailable');
+          }
         }
         // The platform will keep rejecting this channel until the user
         // re-connects it: mark it as needing a refresh instead of retrying.
