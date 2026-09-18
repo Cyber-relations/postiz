@@ -45,7 +45,7 @@ export function createChannelRefresh({ browser, fetch, show, completed, result }
     generation++;
     release(data.outcome === 'failed');
     report(data);
-    if (data.outcome === 'connected') completed();
+    if (data.outcome === 'connected' || data.outcome === 'setup-pending') completed();
   };
   browser.addEventListener('message', onMessage);
   return {

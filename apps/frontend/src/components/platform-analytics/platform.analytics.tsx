@@ -296,7 +296,7 @@ export const PlatformAnalytics = () => {
         </div>
       </div>
       <div data-toybaco-analytics-main="" className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
-        {connectionResult && <div data-toybaco-connection-result="" role={connectionResult.outcome === 'connected' ? 'status' : 'alert'} className="rounded-[8px] border border-newTableBorder p-[16px] text-[14px] leading-[1.6]">
+        {connectionResult && <div data-toybaco-connection-result="" role={['connected', 'setup-pending'].includes(connectionResult.outcome) ? 'status' : 'alert'} className="rounded-[8px] border border-newTableBorder p-[16px] text-[14px] leading-[1.6]">
           <p>{connectionMessage(connectionResult)}</p>
           {connectionResult.outcome === 'failed' && connectionResult.channel && ['unavailable', 'interrupted', 'popup-blocked', 'reauthenticate'].includes(connectionResult.reason || 'unavailable') &&
             <button type="button" className="mt-[12px] min-h-[44px] rounded-[8px] border px-[16px]" onClick={() => { void reconnectChannel(connectionResult.channel!); }}>接続をやり直す</button>}

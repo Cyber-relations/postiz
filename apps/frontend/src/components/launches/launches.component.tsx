@@ -307,7 +307,16 @@ export const MenuComponent: FC<
           integration.disabled && 'opacity-50'
         )}
       >
-        {integration.name}
+        <span>{integration.name}</span>
+        {integration.inBetweenSteps && !integration.refreshNeeded && (
+          <button type="button"
+            aria-label={`${integration.name}の${integration.identifier === 'gmb' ? '店舗を選ぶ' : '設定を続ける'}`}
+            className="mt-1 flex min-h-[44px] w-full items-center text-left text-xs font-semibold text-primary underline underline-offset-4"
+            onPointerDown={event => event.stopPropagation()}
+            onClick={event => { event.stopPropagation(); continueIntegration(integration)(); }}>
+            {integration.identifier === 'gmb' ? '店舗を選ぶ' : '設定を続ける'}
+          </button>
+        )}
       </div>
       <Menu
         canChangeProfilePicture={integration.changeProfilePicture}
@@ -530,7 +539,7 @@ export const LaunchesComponent = () => {
       }, 0);
       setConnectionResult(result);
       toast.show(connectionMessage(result), result.outcome === 'connected' ? 'success' : 'warning');
-      if (result.outcome === 'connected') void mutate();
+      if (result.outcome === 'connected' || result.outcome === 'setup-pending') void mutate();
     };
     if (document.documentElement.dataset.toybacoEmbed) {
       window.addEventListener('message', handleToybacoConnectMessage);
@@ -563,12 +572,19 @@ export const LaunchesComponent = () => {
         window.location.origin
       );
     }
+    if (search.get('connection') === 'setup-pending') {
+      const result: ChannelConnectionResult = { outcome: 'setup-pending' };
+      setConnectionResult(result);
+      toast.show(connectionMessage(result), 'warning');
+      window.opener?.postMessage({ type: 'toybaco-connect', ...result }, window.location.origin);
+      if (!window.opener) void mutate();
+    }
     if (search.get('connection') === 'failed') {
       const result: ChannelConnectionResult = { outcome: 'failed', reason: connectionReason(search.get('reason')) };
       setConnectionResult(result);
       window.opener?.postMessage({ type: 'toybaco-connect', ...result }, window.location.origin);
     }
-    if (search.get('added')) {
+    if (search.get('added') && !search.get('continue')) {
       fireEvents('channel_added');
       window?.opener?.postMessage(
         {
@@ -578,7 +594,7 @@ export const LaunchesComponent = () => {
         window.location.origin
       );
     }
-    if (window.opener && (search.get('added') || search.get('connection') === 'review' || search.get('connection') === 'failed' || search.get('precondition') === 'true')) {
+    if (window.opener && ((search.get('added') && !search.get('continue')) || search.get('connection') === 'setup-pending' || search.get('connection') === 'review' || search.get('connection') === 'failed' || search.get('precondition') === 'true')) {
       window.close();
     }
 
@@ -715,7 +731,7 @@ export const LaunchesComponent = () => {
           </div>
         </div>
         <div data-toybaco-calendar-main="" className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
-          {connectionResult && <p data-toybaco-connection-result="" role={connectionResult.outcome === 'connected' ? 'status' : 'alert'} className="rounded-[8px] border border-newTableBorder p-[16px] text-[14px] leading-[1.6]">{connectionMessage(connectionResult)}</p>}
+          {connectionResult && <p data-toybaco-connection-result="" role={['connected', 'setup-pending'].includes(connectionResult.outcome) ? 'status' : 'alert'} className="rounded-[8px] border border-newTableBorder p-[16px] text-[14px] leading-[1.6]">{connectionMessage(connectionResult)}</p>}
           <Filters />
           <div className="flex-1 flex">
             <Calendar />

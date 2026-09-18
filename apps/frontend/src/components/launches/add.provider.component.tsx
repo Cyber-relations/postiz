@@ -560,7 +560,7 @@ export const AddProviderComponent: FC<{
   const t = useT();
   const [connectionResult, setConnectionResult] = useState<ChannelConnectionResult | null>(null);
   useEffect(() => {
-    if (connectionResult?.outcome !== 'connected') return;
+    if (connectionResult?.outcome !== 'connected' && connectionResult?.outcome !== 'setup-pending') return;
     const task = window.setTimeout(() => modal.closeCurrent(), 0);
     return () => window.clearTimeout(task);
   }, [connectionResult, modal]);
@@ -856,7 +856,7 @@ export const AddProviderComponent: FC<{
   return (
     <div className="w-full flex flex-col gap-[20px] rounded-[4px] relative]">
       {connectionResult && <div data-toybaco-add-connection-result=""
-        role={connectionResult.outcome === 'connected' ? 'status' : 'alert'}
+        role={['connected', 'setup-pending'].includes(connectionResult.outcome) ? 'status' : 'alert'}
         className="rounded-[8px] border border-newTableBorder p-[16px] text-[14px] leading-[1.6] text-textColor">
         <p>{connectionMessage(connectionResult)}</p>
         {connectionResult.outcome === 'failed' && <button type="button" disabled={popupPending}
