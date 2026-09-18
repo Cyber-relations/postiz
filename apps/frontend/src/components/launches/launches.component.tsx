@@ -1,7 +1,7 @@
 'use client';
 
 import { AddProviderButton } from '@gitroom/frontend/components/launches/add.provider.component';
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { capitalize, groupBy, orderBy } from 'lodash';
 import { CalendarWeekProvider } from '@gitroom/frontend/components/launches/calendar.context';
@@ -360,6 +360,7 @@ export const LaunchesComponent = () => {
   const t = useT();
   const [reload, setReload] = useState(false);
   const [connectionResult, setConnectionResult] = useState<ChannelConnectionResult | null>(null);
+  const seenConnectionPopups = useRef(new WeakSet<Window>());
   const { collapsed: toybacoChannelsCollapsed, toggle: toybacoToggleChannels } = useToybacoChannelSidebar();
   const { isLoading, data: integrations, mutate } = useIntegrationList();
 
@@ -516,8 +517,17 @@ export const LaunchesComponent = () => {
       }
       const result = readConnectionResult(event.data);
       if (!result) return;
-      if (result.outcome === 'failed') toybacoWindow.__toybacoConnectPopup.close();
-      toybacoWindow.__toybacoConnectPopup = null;
+      const popup = toybacoWindow.__toybacoConnectPopup;
+      if (seenConnectionPopups.current.has(popup)) return;
+      seenConnectionPopups.current.add(popup);
+      if (result.outcome === 'failed') popup.close();
+      // Window listeners can run in registration order, including capture.
+      // This bounded task also survives an effect rebind between listeners.
+      window.setTimeout(() => {
+        if (toybacoWindow.__toybacoConnectPopup === popup) {
+          toybacoWindow.__toybacoConnectPopup = null;
+        }
+      }, 0);
       setConnectionResult(result);
       toast.show(connectionMessage(result), result.outcome === 'connected' ? 'success' : 'warning');
       if (result.outcome === 'connected') void mutate();
