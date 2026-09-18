@@ -978,7 +978,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                   <div
                     onClick={() => setShowSettings(!showSettings)}
                     className={clsx(
-                      'bg-[#612BD3] rounded-[12px] flex items-center gap-[8px] cursor-pointer p-[12px]',
+                      'bg-[#1F3A5F] rounded-[12px] flex items-center gap-[8px] cursor-pointer p-[12px]',
                       showSettings ? '!rounded-b-none' : ''
                     )}
                   >
@@ -1101,7 +1101,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
             )}
             {addEditSets && (
               <button
-                className="text-white text-[15px] font-[600] min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
+                className="text-white text-[15px] font-[600] min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#1F3A5F] ps-[20px] pe-[16px]"
                 disabled={
                   selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
                 }
@@ -1117,7 +1117,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                     selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
                   }
                   onClick={schedule('schedule')}
-                  className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
+                  className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#1F3A5F] ps-[20px] pe-[16px]"
                 >
                   {loading && (
                     <div className="absolute left-[50%] top-[50%] -translate-y-[50%] -translate-x-[50%]">
@@ -1155,7 +1155,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                     }
                     className="rounded-[8px] z-[300] disabled:cursor-not-allowed disabled:opacity-80 hidden group-hover:flex absolute bottom-[100%] -left-[12px] p-[12px] w-[206px] bg-newBgColorInner"
                   >
-                    <div className="text-white rounded-[8px] bg-[#D82D7E] h-[44px] w-full flex justify-center items-center post-now">
+                    <div className="text-white rounded-[8px] bg-[#1F3A5F] h-[44px] w-full flex justify-center items-center post-now">
                       {t('post_now', 'Post Now')}
                     </div>
                   </button>

@@ -1516,8 +1516,8 @@ html[data-toybaco-embed] [data-toybaco-composer-footer] { gap: 8px; padding: 10p
 }
 
 
-/* toybaco-embedded-dark: match the parent palette without changing standalone
-   dark/light or the SNS preview variables. The SSR attribute prevents a light
+/* toybaco-embedded-dark: match the parent palette without changing the saved
+   preference or SNS preview variables. The SSR attribute prevents a light
    first paint before the trusted parent message arrives. */
 html[data-toybaco-embed][data-toybaco-theme='dark'] {
   color-scheme: dark;
@@ -1603,3 +1603,9 @@ html[data-toybaco-embed][data-toybaco-theme='dark'] [data-toybaco-composer] [dat
 html[data-toybaco-embed][data-toybaco-theme='dark'] :is(button, [role='button'], input, textarea, select):focus-visible {
   outline-color: #8EB2D8 !important;
 }
+/* Literal product controls must remain legible after replacing the old purple. */
+.dark .bg-\[\#1F3A5F\] { background-color: #2E5580; }
+.dark .border-\[\#1F3A5F\] { border-color: #8EB2D8; }
+.dark .hover\:border-\[\#1F3A5F\]\/50:hover { border-color: rgb(142 178 216 / 0.5); }
+.dark .scrollbar-thumb-\[\#1F3A5F\] { --scrollbar-thumb: #8EB2D8; }
+.dark .toybaco-chart-accent.bg-\[\#1F3A5F\] { background-color: #8EB2D8; }

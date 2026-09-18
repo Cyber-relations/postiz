@@ -565,7 +565,7 @@ export const MediaBox: FC<{
                     className={clsx(
                       'w-full h-full rounded-[6px] border-[4px] relative',
                       !!selected.find((p) => p.id === media.id)
-                        ? 'border-[#612BD3]'
+                        ? 'border-[#1F3A5F]'
                         : 'border-transparent'
                     )}
                   >
