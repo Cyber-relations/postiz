@@ -375,7 +375,7 @@ export const ContinueIntegration: FC<{
                   initialWarnings: twoStepState.pagesWarnings,
                   allowLookup: logged,
                   checkExisting: logged,
-                  onClose: logged ? () => push('/launches') : undefined,
+                  onClose: logged ? () => push('/launches?connection=review') : undefined,
                   returnToAppUrl: props.appOrigin ? `${props.appOrigin}/app` : '/launches',
                 } : {})}
               />
