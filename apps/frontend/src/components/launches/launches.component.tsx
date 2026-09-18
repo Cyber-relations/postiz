@@ -311,7 +311,7 @@ export const MenuComponent: FC<
         {integration.inBetweenSteps && !integration.refreshNeeded && (
           <button type="button"
             aria-label={`${integration.name}の${integration.identifier === 'gmb' ? '店舗を選ぶ' : '設定を続ける'}`}
-            className="mt-1 flex min-h-[44px] w-full items-center text-left text-xs font-semibold text-primary underline underline-offset-4"
+            className="mt-1 flex min-h-[44px] w-full items-center text-left text-xs font-semibold text-textColor underline underline-offset-4"
             onPointerDown={event => event.stopPropagation()}
             onClick={event => { event.stopPropagation(); continueIntegration(integration)(); }}>
             {integration.identifier === 'gmb' ? '店舗を選ぶ' : '設定を続ける'}
