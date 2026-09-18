@@ -559,6 +559,11 @@ export const AddProviderComponent: FC<{
   const modal = useModals();
   const t = useT();
   const [connectionResult, setConnectionResult] = useState<ChannelConnectionResult | null>(null);
+  useEffect(() => {
+    if (connectionResult?.outcome !== 'connected') return;
+    const task = window.setTimeout(() => modal.closeCurrent(), 0);
+    return () => window.clearTimeout(task);
+  }, [connectionResult, modal]);
   const [popupPending, setPopupPending] = useState(false);
   const popupController = useRef<ReturnType<typeof createAddProviderPopup> | null>(null);
   const retryConnection = useRef<(() => void) | null>(null);
