@@ -240,17 +240,15 @@ function ToybacoCopilotErrorMessage({ error }: ErrorMessageProps) {
     <div data-toybaco-ai-error="" role="alert" className="rounded-[8px] border border-[var(--toybaco-hairline)] bg-[var(--toybaco-offwhite)] p-[12px] text-[14px] leading-[1.7] text-[var(--toybaco-ink)]">
       <p>文案を作成できませんでした。送信した内容と投稿欄の入力は残っています。時間をおいて、もう一度お試しください。繰り返し失敗する場合はサポートへお問い合わせください。</p>
       <div className="mt-[8px] flex flex-wrap gap-x-[16px] gap-y-[4px]">
-      <button type="button" data-toybaco-ai-retry="" className="min-h-[44px] underline" onClick={async () => {
+      <button type="button" data-toybaco-ai-retry="" className="min-h-[44px] underline" onClick={() => {
         if (isLoading || retryPending.current) return;
         retryPending.current = true;
         setDismissed(error);
-        try {
-          await runChatCompletion();
-        } catch {
+        void runChatCompletion().catch(() => {
           setDismissed(null);
-        } finally {
+        }).finally(() => {
           retryPending.current = false;
-        }
+        });
       }}>もう一度試す</button>
       <button type="button" data-toybaco-ai-return="" className="min-h-[44px] underline" onClick={(event) => {
         const popup = event.currentTarget.closest<HTMLElement>('.copilotKitPopup');
