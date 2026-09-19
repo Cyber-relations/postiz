@@ -887,6 +887,20 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         Header={ToybacoCopilotHeader}
         AssistantMessage={ToybacoCopilotAssistantMessage}
         ErrorMessage={ToybacoCopilotErrorMessage}
+        icons={{
+          sendIcon: <>
+            <span className="sr-only">AIに送信</span>
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width={24} height={24}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7" />
+            </svg>
+          </>,
+          stopIcon: <>
+            <span className="sr-only">生成を停止</span>
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" width={24} height={24}>
+              <rect x={6} y={6} width={12} height={12} rx={2} />
+            </svg>
+          </>,
+        }}
         onSubmitMessage={toybacoMarkTouched}
         onInProgress={toybacoAiProgress}
         hitEscapeToClose={false}
