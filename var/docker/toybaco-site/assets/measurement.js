@@ -110,6 +110,11 @@
     label.textContent = '計測検証：' + (active ? (staging ? '送信許可（GTMプレビュー接続が必要）' : 'ローカル通知のみ') : '送信停止');
     label.style.margin = '0 0 8px';
     panel.appendChild(label);
+    const privacy = document.createElement('a');
+    privacy.href = '/privacy/#site-measurement';
+    privacy.textContent = '解析する情報と停止方法';
+    privacy.style.cssText = 'display:block;margin:0 0 8px;color:#162b40;text-decoration:underline';
+    panel.appendChild(privacy);
     for (const [text, value] of [['解析のテストを許可', 'accepted'], ['拒否・停止', 'denied']]) {
       const button = document.createElement('button');
       button.type = 'button'; button.textContent = text;

@@ -62,7 +62,9 @@
           <div class="inquiry-field"><label for="contact-topic">ご相談の種類 <span>必須</span></label><select id="contact-topic" name="topic" required><option value="">選択してください</option><option value="service">サービス・料金について</option><option value="custom">個別設計・お見積もりについて</option><option value="setup">導入・運用支援について</option><option value="billing">お申し込み・お支払いについて</option><option value="support">ご利用中のサポート</option><option value="other">その他</option></select></div>
           <div class="inquiry-field"><label for="contact-message">お問い合わせ内容 <span>必須</span></label><textarea id="contact-message" name="message" required maxlength="5000" rows="6" placeholder="ご相談したいことや、現在お困りのことをご記入ください。"></textarea><p class="inquiry-hint" style="margin:6px 0 0">5,000文字以内。パスワードやカード番号は記入しないでください。</p></div>
           <div class="inquiry-trap" aria-hidden="true"><label for="contact-website">Website</label><input id="contact-website" name="website" tabindex="-1" autocomplete="off"></div>
-          <label class="inquiry-consent"><input type="checkbox" name="consent" required><span><a href="../privacy/" target="_blank" rel="noopener">プライバシーポリシー（別タブ）</a>に同意して送信します。</span></label>
+          <p class="inquiry-hint" id="contact-data-use">入力いただいた氏名・連絡先・相談内容は、お問い合わせへの対応に利用します。入力内容をアクセス解析のイベントへ送信することはありません。</p>
+          <p class="inquiry-hint">サイトのアクセス解析と今後の広告計測については、<a href="../privacy/#site-measurement">情報の取扱いと停止方法</a>をご確認ください。下のチェックはお問い合わせへの対応に関する同意であり、解析・広告追跡への同意ではありません。</p>
+          <label class="inquiry-consent"><input type="checkbox" name="consent" required aria-describedby="contact-data-use"><span><a href="../privacy/" target="_blank" rel="noopener">プライバシーポリシー（別タブ）</a>を確認し、入力情報がお問い合わせへの対応に利用されることに同意して送信します。</span></label>
           <button type="submit" id="contact-confirm" class="inquiry-submit" disabled>入力内容を確認する</button>
           <noscript><p class="inquiry-error" style="margin-top:16px">このフォームをご利用いただくにはJavaScriptを有効にしてください。お問い合わせ先：support@toybaco.jp</p></noscript>
         </form>
