@@ -1,6 +1,8 @@
+import { ToybacoLegacyAiGuard } from '@gitroom/backend/services/auth/permissions/toybaco-legacy-ai.guard';
 import { INSTAGRAM_COMMENT_PERMISSION_MESSAGE } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-policy';
 import {
   ForbiddenException,
+  UseGuards,
   Body,
   Controller,
   Delete,
@@ -264,6 +266,7 @@ export class PostsController {
   }
 
   @Post('/generator/draft')
+  @UseGuards(ToybacoLegacyAiGuard)
   @CheckPolicies([AuthorizationActions.Create, Sections.POSTS_PER_MONTH])
   generatePostsDraft(
     @GetOrgFromRequest() org: Organization,
@@ -283,6 +286,7 @@ export class PostsController {
   }
 
   @Post('/generator')
+  @UseGuards(ToybacoLegacyAiGuard)
   @CheckPolicies([AuthorizationActions.Create, Sections.POSTS_PER_MONTH])
   async generatePosts(
     @GetOrgFromRequest() org: Organization,

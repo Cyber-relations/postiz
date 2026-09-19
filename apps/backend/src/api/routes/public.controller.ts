@@ -1,3 +1,4 @@
+import { toybacoRejectUnscopedAgent } from '@gitroom/nestjs-libraries/toybaco/posting-legacy-policy';
 import {
   Body,
   Controller,
@@ -41,6 +42,7 @@ export class PublicController {
   ) {}
   @Post('/agent')
   async createAgent(@Body() body: { text: string; apiKey: string }) {
+    toybacoRejectUnscopedAgent();
     if (
       !body.apiKey ||
       !process.env.AGENT_API_KEY ||

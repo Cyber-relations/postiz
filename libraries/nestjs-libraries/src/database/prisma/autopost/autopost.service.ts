@@ -1,3 +1,4 @@
+import { toybacoLegacyRssAllowed, toybacoRequireLegacyRss } from '@gitroom/nestjs-libraries/toybaco/posting-legacy-policy';
 import { Injectable } from '@nestjs/common';
 import { AutopostRepository } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.repository';
 import { AutopostDto } from '@gitroom/nestjs-libraries/dtos/autopost/autopost.dto';
@@ -68,6 +69,7 @@ export class AutopostService {
   }
 
   async createAutopost(orgId: string, body: AutopostDto, id?: string) {
+    if (body.generateContent) await toybacoRequireLegacyRss(orgId);
     const data = await this._autopostsRepository.createAutopost(
       orgId,
       body,
@@ -80,6 +82,10 @@ export class AutopostService {
   }
 
   async changeActive(orgId: string, id: string, active: boolean) {
+    if (active) {
+      const current = await this._autopostsRepository.getAutopost(id);
+      if (current?.organizationId === orgId && current.generateContent) await toybacoRequireLegacyRss(orgId);
+    }
     const data = await this._autopostsRepository.changeActive(
       orgId,
       id,
@@ -198,6 +204,7 @@ export class AutopostService {
     if (process.env.TOYBACO_DISABLE_AI || !process.env.OPENAI_API_KEY) {
       throw new Error('TOYBACO_POSTING_AI_UNAVAILABLE');
     }
+    await toybacoRequireLegacyRss(state.body.organizationId);
 
     const description =
       state.load.description || (await this.loadUrl(state.load.url));
@@ -282,6 +289,7 @@ export class AutopostService {
     // Configuration pauses AI processing; keep the rule and last URL intact.
     // Return before the activity can retry or mark an item as processed.
     if (getPost.generateContent && (process.env.TOYBACO_DISABLE_AI || !process.env.OPENAI_API_KEY)) return;
+    if (getPost.generateContent && !(await toybacoLegacyRssAllowed(getPost.organizationId))) return;
 
     const load = await this.loadXML(getPost.url);
     if (!load.success || load.url === getPost.lastUrl) {

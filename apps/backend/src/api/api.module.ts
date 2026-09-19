@@ -1,3 +1,4 @@
+import { ToybacoLegacyAiGuard } from '@gitroom/backend/services/auth/permissions/toybaco-legacy-ai.guard';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AuthController } from '@gitroom/backend/api/routes/auth.controller';
 import { AuthService } from '@gitroom/backend/services/auth/auth.service';
@@ -20,6 +21,7 @@ import { OpenaiService } from '@gitroom/nestjs-libraries/openai/openai.service';
 import { ExtractContentService } from '@gitroom/nestjs-libraries/openai/extract.content.service';
 import { CodesService } from '@gitroom/nestjs-libraries/services/codes.service';
 import { CopilotController } from '@gitroom/backend/api/routes/copilot.controller';
+import { ToybacoPostDraftsController } from '@gitroom/backend/api/routes/toybaco-post-drafts.controller';
 import { PublicController } from '@gitroom/backend/api/routes/public.controller';
 import { RootController } from '@gitroom/backend/api/routes/root.controller';
 import { TrackService } from '@gitroom/nestjs-libraries/track/track.service';
@@ -58,6 +60,7 @@ const authenticatedController = [
   BillingController,
   NotificationsController,
   CopilotController,
+  ToybacoPostDraftsController,
   WebhookController,
   SignatureController,
   AutopostController,
@@ -85,6 +88,7 @@ const authenticatedController = [
         ...authenticatedController,
       ],
   providers: [
+    ToybacoLegacyAiGuard,
     AuthService,
     StripeService,
     OpenaiService,

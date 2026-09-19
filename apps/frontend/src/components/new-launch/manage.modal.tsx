@@ -44,6 +44,7 @@ import {
 } from '@gitroom/frontend/components/ui/icons';
 import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
+import { ToybacoPostingDraftProvider, ToybacoLegacyPostingAi } from '@gitroom/frontend/components/new-launch/toybaco-posting-draft';
 import { toybacoRegisterComposer } from '@gitroom/frontend/components/layout/layout.context';
 import { useShortlinkPreference } from '@gitroom/frontend/components/settings/shortlink-preference.component';
 import dayjs from 'dayjs';
@@ -870,6 +871,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   );
 
   return (
+    <ToybacoPostingDraftProvider initialOpen={props.toybacoAiIntent === true}>
     <div data-toybaco-composer="" ref={composerRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="toybaco-composer-title" onInputCapture={toybacoMarkTouched} onChangeCapture={toybacoMarkTouched} onPasteCapture={toybacoMarkTouched} onDropCapture={toybacoMarkTouched} className="w-full h-full flex-1 p-[40px] flex relative">
       <div data-toybaco-composer-panel="" className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col">
         {addEditSets && <p data-toybaco-template-guidance="" className="px-[20px] py-[12px] text-[13px] leading-[1.6]">投稿文・メディア・投稿先ごとの設定を保存し、投稿作成で呼び出せます。この操作では公開・予約されません。</p>}
@@ -877,6 +879,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           <div data-toybaco-composer-editor="" className="flex flex-col flex-1 border-e border-newBorder">
             <div data-toybaco-composer-heading="" className="bg-newBgColor h-[65px] rounded-s-[20px] !rounded-b-[0] flex items-center gap-[12px] px-[20px] text-[20px] font-[600]" style={{ display: 'grid', gridTemplateColumns: '1fr auto', height: 'auto', minHeight: 64 }}>
               <h2 id="toybaco-composer-title">{addEditSets ? (props.set ? '投稿テンプレートを編集' : '投稿テンプレートを作成') : existingData.integration ? '投稿を編集' : '投稿を作成'}</h2>
+      <ToybacoLegacyPostingAi>
       <ToybacoPostingAiIntent.Provider value={props.toybacoAiIntent === true}>
       <CopilotPopup
         className="!relative !z-[200] !inset-auto order-3 col-span-2 w-full shrink-0 [&_.poweredBy]:!hidden [&_.poweredByContainer]:!pb-0"
@@ -919,6 +922,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
         }}
       />
       </ToybacoPostingAiIntent.Provider>
+      </ToybacoLegacyPostingAi>
               <button type="button" data-toybaco-composer-close="" aria-label="投稿作成を閉じる" onClick={askClose} disabled={loading}>
                 <CloseIcon />
               </button>
@@ -1167,6 +1171,7 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
       </div>
 
     </div>
+    </ToybacoPostingDraftProvider>
   );
 };
 

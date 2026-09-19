@@ -26,6 +26,7 @@ const isRssList = (value: unknown): value is RssRecord[] => Array.isArray(value)
   try { const integrations = JSON.parse(item.integrations); return Array.isArray(integrations) && integrations.every(row => row && typeof row.id === 'string'); } catch { return false; }
 });
 export const Autopost: FC = () => {
+  const { legacyBlocked } = usePostingTextCapability();
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const fetch = useFetch();
@@ -128,7 +129,7 @@ export const Autopost: FC = () => {
             <div data-toybaco-settings-records="" role="list">
               {data.map((p: any) => (
                 <div data-toybaco-settings-record="" role="listitem" key={p.id}>
-                  <div data-toybaco-settings-record-content=""><strong>{p.title}</strong><p>{p.url}</p></div>
+                  <div data-toybaco-settings-record-content=""><strong>{p.title}</strong><p>{p.url}</p>{legacyBlocked && p.generateContent && p.active && <p role="status">AIによる取り込みは停止中です。編集で「AIで下書き本文を作成」をオフにすると、原文で取り込めます。</p>}</div>
                   <div data-toybaco-settings-record-actions="">
                     <Button secondary data-toybaco-settings-action="edit" disabled={busy || readingList || needsReview || !!error} onClick={addWebhook(p)}>{t('edit', 'Edit')}</Button>
                     <Button secondary data-toybaco-settings-action="delete" disabled={busy || readingList || needsReview || !!error} onClick={deleteHook(p)}>{t('delete', 'Delete')}</Button>
@@ -227,7 +228,7 @@ export const AddOrEditWebhook: FC<{
   const modal = useModals();
   const toast = useToaster();
   const [valid, setValid] = useState(data?.url || '');
-  const { available: aiAvailable, checking: aiChecking, error: aiError, retry: retryAi } = usePostingTextCapability();
+  const { available: aiAvailable, checking: aiChecking, error: aiError, legacyBlocked, retry: retryAi } = usePostingTextCapability();
   const [lastUrl, setLastUrl] = useState(data?.lastUrl || '');
   const form = useForm({
     resolver: yupResolver(details),
@@ -401,7 +402,7 @@ export const AddOrEditWebhook: FC<{
                 </option>
               ))}
             </Select>
-            {!aiAvailable && <div data-toybaco-settings-notice=""><p role="status">{aiChecking ? 'AIの利用状態を確認しています。' : aiError ? 'AIの利用状態を確認できません。AIを使わない下書きは作成できます。' : '現在AIを利用できません。AIを使わない下書きは作成できます。'} 既存のAI設定を変更せず残す場合は、保存せず閉じてください。</p>{aiError && <Button type="button" secondary disabled={aiChecking} onClick={retryAi}>再確認</Button>}</div>}
+            {!aiAvailable && <div data-toybaco-settings-notice=""><p role="status">{legacyBlocked ? 'AI文案は投稿作成で利用できます。RSSは原文で取り込めます。' : aiChecking ? 'AIの利用状態を確認しています。' : aiError ? 'AIの利用状態を確認できません。AIを使わない下書きは作成できます。' : '現在AIを利用できません。AIを使わない下書きは作成できます。'}{!legacyBlocked && ' 既存のAI設定を残す場合は、保存せず閉じてください。'}</p>{aiError && <Button type="button" secondary disabled={aiChecking} onClick={retryAi}>再確認</Button>}</div>}
             {!generateContent && (
               <>
                 <div className={`text-[14px] mb-[6px]`}>
