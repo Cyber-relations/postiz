@@ -60,10 +60,11 @@
     return false;
   };
   const keys = [...new Set(Object.values(schema).flat())];
-  const emit = (event, values = {}) => {
+  const emit = (event, values = {}, completion) => {
     if (!active || !Object.hasOwn(schema, event) || !schema[event].every(k => Object.hasOwn(values, k) && valid(k, values[k]))) return false;
     window.dataLayer.push({ ...Object.fromEntries(keys.map(k => [k, null])), ...context,
-      ...Object.fromEntries(schema[event].map(k => [k, values[k]])), event });
+      ...Object.fromEntries(schema[event].map(k => [k, values[k]])), event,
+      eventCallback: completion, eventTimeout: completion ? 1200 : undefined });
     return true;
   };
   const setChoice = next => {
@@ -132,39 +133,74 @@
     document.addEventListener('click', e => {
       const el = e.target.closest('a, button');
       if (!active || !el || !e.isTrusted) return;
+      const events = [];
+      const record = (event, values) => events.push([event, values]);
       const pos = position(el);
       const link = el.tagName === 'A' ? new URL(el.href, location.href) : null;
       if (el.matches('[data-open-chat]')) {
         // link_url has no true destination; proposal is empty, never a made-up URL.
-        emit('contact_click', { link_position: pos, link_text: el.textContent.trim(), link_url: '' });
-        if (path.startsWith('/partners/')) emit('partner_click', { link_position: pos, inquiry_origin: 'partners' });
+        record('contact_click', { link_position: pos, link_text: el.textContent.trim(), link_url: '' });
+        if (path.startsWith('/partners/')) record('partner_click', { link_position: pos, inquiry_origin: 'partners' });
       } else if (link && link.origin === location.origin && link.pathname === '/contact/') {
-        emit('contact_click', { link_position: pos, link_text: el.textContent.trim(),
+        record('contact_click', { link_position: pos, link_text: el.textContent.trim(),
           link_url: location.origin + '/contact/' });
-        if (path.startsWith('/partners/')) emit('partner_click', { link_position: pos, inquiry_origin: 'partners' });
+        if (path.startsWith('/partners/')) record('partner_click', { link_position: pos, inquiry_origin: 'partners' });
       }
-      if (link?.origin === location.origin && link.pathname === '/signup/') emit('signup_click', { link_position: pos });
+      if (link?.origin === location.origin && link.pathname === '/signup/') record('signup_click', { link_position: pos });
       if (el.matches('.buy-btn[data-plan]') && link) {
         const plan = el.dataset.plan, cycle = link.searchParams.get('cycle');
         if (['light','standard','pro'].includes(plan) && ['month','year'].includes(cycle)) {
-          emit('plan_select', { plan_id: plan, billing_cycle: cycle, link_position: pos });
+          record('plan_select', { plan_id: plan, billing_cycle: cycle, link_position: pos });
           if (link.hostname === 'app.staging.toybaco.jp' && link.pathname === '/toybaco/checkout')
-            emit('checkout_click', { plan_id: plan, billing_cycle: cycle });
+            record('checkout_click', { plan_id: plan, billing_cycle: cycle });
         }
       } else if (link?.hostname === 'app.staging.toybaco.jp' && ['/', '/app/login', '/app/login/'].includes(link.pathname))
-        emit('login_click', { link_position: pos });
+        record('login_click', { link_position: pos });
       if (el.matches('.bill-tgl button')) {
         const group = el.closest('.bill-tgl'), next = el.dataset.bill;
         if (initialCycles.get(group) !== next) {
-          emit('billing_cycle_change', { billing_cycle: next === 'y' ? 'year' : 'month' });
+          record('billing_cycle_change', { billing_cycle: next === 'y' ? 'year' : 'month' });
           initialCycles.set(group, next);
         }
       }
       if (el.matches('.pack-btn[data-pack]')) {
         // Bubble listener runs after the real target-container rendering listener.
-        emit('industry_select', { industry_id: el.dataset.pack });
-        emit('demo_interaction', { demo_action: 'pack_preview_change' });
+        record('industry_select', { industry_id: el.dataset.pack });
+        record('demo_interaction', { demo_action: 'pack_preview_change' });
       }
+      // Same-tab navigation must not race the last GA event with page unload.
+      // Modified clicks, downloads, chat controls and local fixtures keep native behavior.
+      const waitForTags = staging && events.length && link && !e.defaultPrevented &&
+        e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey &&
+        (!el.target || el.target === '_self') && !el.hasAttribute('download') &&
+        !el.matches('[data-open-chat]');
+      if (!waitForTags) {
+        for (const [event, values] of events) emit(event, values);
+        return;
+      }
+      e.preventDefault();
+      let remaining = events.length, dispatched = false, navigated = false;
+      const navigate = () => {
+        if (navigated) return;
+        navigated = true;
+        clearTimeout(fallback);
+        location.assign(link.href);
+      };
+      // GTM may be blocked or its preview disconnected: never trap a visitor.
+      const fallback = setTimeout(navigate, 1500);
+      for (const [event, values] of events) {
+        let completed = false;
+        const finish = containerId => {
+          // Google tags can also invoke callbacks; only our GTM container releases navigation.
+          if (containerId !== 'GTM-T2ZGF6ZP' || completed) return;
+          completed = true;
+          remaining -= 1;
+          if (dispatched && remaining === 0) navigate();
+        };
+        if (!emit(event, values, finish)) remaining -= 1;
+      }
+      dispatched = true;
+      if (remaining === 0) navigate();
     });
     document.querySelectorAll('details[data-question-id]').forEach(details => {
       let userToggle = false, wasOpen = details.open;
