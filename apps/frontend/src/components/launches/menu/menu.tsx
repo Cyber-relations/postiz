@@ -5,6 +5,7 @@ import React, {
   MouseEventHandler,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -67,6 +68,17 @@ export const Menu: FC<{
   const modal = useModals();
   const [show, setShow] = useState<false | { x: number; y: number }>(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const focusLast = useRef(false);
+  const menuOpen = !!show;
+  const focusMenuItem = useCallback((last = false) => {
+    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)');
+    if (items?.length) items[last ? items.length - 1 : 0].focus();
+  }, []);
+  useEffect(() => {
+    if (menuOpen) focusMenuItem(focusLast.current);
+  }, [menuOpen, focusMenuItem]);
   const ref = useClickOutside<HTMLDivElement>(() => {
     setShow(false);
   });
@@ -79,6 +91,7 @@ export const Menu: FC<{
       event.preventDefault();
       event.stopPropagation();
       setShow(false);
+      triggerRef.current?.focus();
     };
     document.addEventListener('keydown', onEscape);
     return () => document.removeEventListener('keydown', onEscape);
@@ -107,7 +120,7 @@ export const Menu: FC<{
   const findIntegration: any = useMemo(() => {
     return integrations.find((integration) => integration.id === id);
   }, [integrations, id]);
-  const changeShow: MouseEventHandler<HTMLDivElement> = useCallback(
+  const changeShow: MouseEventHandler<HTMLButtonElement> = useCallback(
     (e) => {
       e.stopPropagation();
       // @ts-ignore
@@ -344,10 +357,31 @@ export const Menu: FC<{
 
   return (
     <div
-      className="cursor-pointer relative select-none flex"
-      onClick={changeShow}
+      className="relative select-none flex"
       ref={ref}
     >
+      <button
+        type="button"
+        ref={triggerRef}
+        data-toybaco-channel-menu-trigger=""
+        aria-label={`${findIntegration?.name || 'チャンネル'}の操作メニュー`}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        aria-controls={menuOpen ? menuId : undefined}
+        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+        onClick={changeShow}
+        onPointerDown={() => { focusLast.current = false; }}
+        onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+          if (event.key === 'Enter' || event.key === ' ') focusLast.current = false;
+          if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+          event.preventDefault();
+          event.stopPropagation();
+          focusLast.current = event.key === 'ArrowUp';
+          if (menuOpen) focusMenuItem(focusLast.current);
+          else event.currentTarget.click();
+        }}
+      >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="24"
@@ -361,20 +395,42 @@ export const Menu: FC<{
           fill="currentColor"
         />
       </svg>
+      </button>
       <div>
         <div ref={showRef} />
       </div>
       {show && (
         <div
           data-toybaco-channel-menu=""
+          id={menuId}
+          role="menu"
+          aria-label={`${findIntegration?.name || 'チャンネル'}の操作`}
           ref={menuRef}
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+            if (event.key === 'Tab') {
+              triggerRef.current?.focus();
+              setShow(false);
+              return;
+            }
+            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)'));
+            if (!items.length) return;
+            const current = items.indexOf(document.activeElement as HTMLButtonElement);
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+              : (current + (event.key === 'ArrowUp' ? -1 : 1) + items.length) % items.length;
+            items[next].focus();
+          }}
           style={{ left: show.x, top: show.y }}
           className={`fixed p-[12px] bg-newBgColorInner shadow-menu flex flex-col gap-[16px] z-[100] rounded-[8px] border border-tableBorder text-nowrap`}
         >
           {canDisable && !findIntegration?.refreshNeeded && (
-            <div
-              className="flex gap-[12px] items-center py-[8px] px-[10px]"
+            <button
+              type="button" role="menuitem" tabIndex={-1}
+              className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
               onClick={createPost(findIntegration!)}
             >
               <div>
@@ -394,10 +450,11 @@ export const Menu: FC<{
               <div className="text-[14px]">
                 {t('create_new_post', 'Create a new post')}
               </div>
-            </div>
+            </button>
           )}
-          <div
-            className="flex gap-[12px] items-center py-[8px] px-[10px]"
+          <button
+            type="button" role="menuitem" tabIndex={-1}
+            className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
             onClick={copyChannelId(findIntegration)}
           >
             <div>
@@ -423,12 +480,13 @@ export const Menu: FC<{
               </svg>
             </div>
             <div className="text-[14px]">{t('copy_id', 'Copy Channel ID')}</div>
-          </div>
+          </button>
           {canDisable &&
             findIntegration?.refreshNeeded &&
             !findIntegration.customFields && (
-              <div
-                className="flex gap-[12px] items-center py-[8px] px-[10px]"
+              <button
+                type="button" role="menuitem" tabIndex={-1}
+                className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
                 onClick={refreshChannel(findIntegration!)}
               >
                 <div>
@@ -448,11 +506,12 @@ export const Menu: FC<{
                 <div className="text-[14px]">
                   {t('reconnect_channel', 'Reconnect channel')}
                 </div>
-              </div>
+              </button>
             )}
           {!!findIntegration?.isCustomFields && (
-            <div
-              className="flex gap-[12px] items-center py-[8px] px-[10px]"
+            <button
+              type="button" role="menuitem" tabIndex={-1}
+              className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
               onClick={updateCredentials}
             >
               <div>
@@ -472,11 +531,12 @@ export const Menu: FC<{
               <div className="text-[14px]">
                 {t('update_credentials', 'Update Credentials')}
               </div>
-            </div>
+            </button>
           )}
           {findIntegration?.additionalSettings !== '[]' && (
-            <div
-              className="flex gap-[12px] items-center py-[8px] px-[10px]"
+            <button
+              type="button" role="menuitem" tabIndex={-1}
+              className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
               onClick={additionalSettings}
             >
               <div>
@@ -496,11 +556,12 @@ export const Menu: FC<{
               <div className="text-[14px]">
                 {t('additional_settings', 'Additional Settings')}
               </div>
-            </div>
+            </button>
           )}
           {(canChangeProfilePicture || canChangeNickName) && (
-            <div
-              className="flex gap-[12px] items-center py-[8px] px-[10px]"
+            <button
+              type="button" role="menuitem" tabIndex={-1}
+              className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
               onClick={changeBotPicture}
             >
               <div>
@@ -526,10 +587,11 @@ export const Menu: FC<{
                   .filter((f) => f)
                   .join(' / ')}
               </div>
-            </div>
+            </button>
           )}
-          <div
-            className="flex gap-[12px] items-center py-[8px] px-[10px]"
+          <button
+            type="button" role="menuitem" tabIndex={-1}
+            className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
             onClick={addToCustomer}
           >
             <div>
@@ -549,9 +611,10 @@ export const Menu: FC<{
             <div className="text-[14px]">
               {t('move_add_to_group', 'Move / add to group')}
             </div>
-          </div>
-          <div
-            className="flex gap-[12px] items-center py-[8px] px-[10px]"
+          </button>
+          <button
+            type="button" role="menuitem" tabIndex={-1}
+            className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
             onClick={editTimeTable}
           >
             <div>
@@ -571,10 +634,11 @@ export const Menu: FC<{
             <div className="text-[14px]">
               {t('edit_time_slots', 'Edit Time Slots')}
             </div>
-          </div>
+          </button>
           {canEnable && (
-            <div
-              className="flex gap-[12px] items-center py-[8px] px-[10px]"
+            <button
+              type="button" role="menuitem" tabIndex={-1}
+              className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
               onClick={enableChannel}
             >
               <div>
@@ -594,12 +658,13 @@ export const Menu: FC<{
               <div className="text-[14px]">
                 {t('enable_channel', 'Enable Channel')}
               </div>
-            </div>
+            </button>
           )}
 
           {canDisable && (
-            <div
-              className="flex gap-[12px] items-center py-[8px] px-[10px]"
+            <button
+              type="button" role="menuitem" tabIndex={-1}
+              className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
               onClick={disableChannel}
             >
               <div>
@@ -619,11 +684,12 @@ export const Menu: FC<{
               <div className="text-[14px]">
                 {t('disable_channel', 'Disable Channel')}
               </div>
-            </div>
+            </button>
           )}
 
-          <div
-            className="flex gap-[12px] items-center py-[8px] px-[10px]"
+          <button
+            type="button" role="menuitem" tabIndex={-1}
+            className="flex min-h-[44px] w-full gap-[12px] items-center py-[8px] px-[10px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
             onClick={deleteChannel}
           >
             <div>
@@ -641,7 +707,7 @@ export const Menu: FC<{
               </svg>
             </div>
             <div className="text-[14px]">{t('delete', 'Delete')}</div>
-          </div>
+          </button>
         </div>
       )}
     </div>
