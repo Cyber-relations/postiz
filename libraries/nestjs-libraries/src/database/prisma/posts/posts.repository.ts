@@ -925,8 +925,9 @@ export class PostsRepository {
             },
           };
 
+    // Upcoming queue first; other views show the most recent work first.
     const orderDirection: 'asc' | 'desc' =
-      stateFilter === 'published' ? 'desc' : 'asc';
+      stateFilter === 'scheduled' ? 'asc' : 'desc';
 
     const where = {
       AND: [
@@ -939,11 +940,8 @@ export class PostsRepository {
         },
       ],
       ...stateAndDate,
-      // Published posts were already posted (publishDate in the past), so fetch
-      // all of them; everything else stays upcoming. Ordering handles the rest.
-      ...(stateFilter === 'published'
-        ? {}
-        : { publishDate: { gte: dayjs.utc().toDate() } }),
+      // State defines these lists. Past-dated drafts, failures and overdue
+      // queued posts must stay visible so the user can inspect and recover them.
       deletedAt: null as Date | null,
       parentPostId: null as string | null,
       intervalInDays: null as number | null,
