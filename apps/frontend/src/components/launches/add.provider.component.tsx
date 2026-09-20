@@ -877,7 +877,7 @@ export const AddProviderComponent: FC<{
             isMobile && 'gap-[20px] flex flex-col',
             !isMobile &&
               'grid gap-[10px] justify-items-center justify-center',
-            isMobile ? {} : onboarding ? 'grid-cols-9' : 'grid-cols-3'
+            isMobile ? {} : onboarding ? 'grid-cols-9' : 'grid-cols-2 sm:grid-cols-3'
           )}
         >
           {social
@@ -915,8 +915,8 @@ export const AddProviderComponent: FC<{
                 className={clsx(
                   isMobile
                     ? 'flex-row h-[72px] p-[16px]'
-                    : 'flex-col p-[10px] h-[100px] justify-center',
-                  'w-full text-[14px] rounded-[8px] bg-newTableHeader text-textColor relative items-center flex gap-[10px] cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-textColor'
+                    : 'flex-col p-[12px] !min-h-[112px] justify-center',
+                  'w-full text-[14px] rounded-[8px] bg-newTableHeader text-textColor relative items-center flex gap-[10px] cursor-pointer border border-newTableBorder transition-colors hover:bg-newBgLineColor focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-textColor'
                 )}
               >
                 <span>
