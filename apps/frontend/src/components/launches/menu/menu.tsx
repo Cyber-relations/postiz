@@ -408,6 +408,14 @@ export const Menu: FC<{
           aria-label={`${findIntegration?.name || 'チャンネル'}の操作`}
           ref={menuRef}
           onClick={(e) => e.stopPropagation()}
+          onClickCapture={(event) => {
+            if (event.defaultPrevented || !(event.target instanceof Element)) return;
+            const action = event.target.closest('button[role="menuitem"]:not(:disabled)');
+            // Keep the return target alive when an action removes this popup.
+            if (action && event.currentTarget.contains(action)) {
+              triggerRef.current?.focus({ preventScroll: true });
+            }
+          }}
           onKeyDown={(event) => {
             if (event.nativeEvent.isComposing || event.keyCode === 229) return;
             if (event.key === 'Tab') {
