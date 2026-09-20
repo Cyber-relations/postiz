@@ -228,6 +228,7 @@ export const Menu: FC<{
       const channelId = integration.id;
       copy(channelId);
       toast.show(t('channel_id_copied', 'Channel ID copied to clipboard'), 'success');
+      triggerRef.current?.focus();
     },
     [t]
   );
