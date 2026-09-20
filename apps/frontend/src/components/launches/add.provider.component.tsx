@@ -27,6 +27,7 @@ export const useAddProvider = (update?: () => void, invite?: boolean) => {
   const fetch = useFetch();
   const toaster = useToaster();
   return useCallback(async () => {
+    const returnFocus = document.activeElement as HTMLElement | null;
     try {
       const response = await fetch('/integrations');
       if (!response.ok) {
@@ -39,6 +40,8 @@ export const useAddProvider = (update?: () => void, invite?: boolean) => {
       const data = await response.json();
       modal.openModal({
         title: 'チャンネルを追加',
+        toybacoSettingsDialog: true,
+        toybacoReturnFocus: returnFocus || undefined,
         withCloseButton: true,
         children: (
           <AddProviderComponent invite={!!invite} update={update} {...data} />
@@ -64,6 +67,7 @@ export const AddProviderButton: FC<{
     <div className="flex group-[.sidebar]:block gap-[8px]">
       <button
         data-toybaco-add-channel=""
+        type="button"
         className="flex-1 group-[.sidebar]:w-[100%] group-[.sidebar]:flex-none text-btnText bg-btnSimple h-[44px] pt-[12px] pb-[14px] ps-[16px] pe-[20px] justify-center items-center flex rounded-[8px] gap-[8px]"
         onClick={add}
       >
@@ -89,6 +93,8 @@ export const AddProviderButton: FC<{
         </div>
       </button>
       <button
+        type="button"
+        aria-label="チャンネル追加の招待リンクを作成"
         onClick={invite}
         data-tooltip-id="tooltip"
         data-tooltip-content={t(
@@ -888,8 +894,10 @@ export const AddProviderComponent: FC<{
               );
             })
             .map((item) => (
-              <div
+              <button
+                type="button"
                 key={item.identifier}
+                data-toybaco-provider={item.identifier}
                 onClick={getSocialLink(
                   props.invite,
                   item.identifier,
@@ -908,14 +916,16 @@ export const AddProviderComponent: FC<{
                   isMobile
                     ? 'flex-row h-[72px] p-[16px]'
                     : 'flex-col p-[10px] h-[100px] justify-center',
-                  'w-full text-[14px] rounded-[8px] bg-newTableHeader text-textColor relative items-center flex gap-[10px] cursor-pointer'
+                  'w-full text-[14px] rounded-[8px] bg-newTableHeader text-textColor relative items-center flex gap-[10px] cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-textColor'
                 )}
               >
-                <div>
+                <span>
                   {item.identifier === 'youtube' ? (
-                    <img src={`/icons/platforms/youtube.svg`} />
+                    <img alt="" aria-hidden="true" src={`/icons/platforms/youtube.svg`} />
                   ) : (
                     <img
+                      alt=""
+                      aria-hidden="true"
                       className={clsx(
                         'w-[32px] h-[32px]',
                         item.identifier !== 'google_my_business' &&
@@ -924,8 +934,8 @@ export const AddProviderComponent: FC<{
                       src={`/icons/platforms/${item.identifier}.png`}
                     />
                   )}
-                </div>
-                <div
+                </span>
+                <span
                   className={clsx(
                     isMobile ? '' : 'whitespace-pre-wrap',
                     'text-center'
@@ -961,8 +971,8 @@ export const AddProviderComponent: FC<{
                       />
                     </svg>
                   )}
-                </div>
-              </div>
+                </span>
+              </button>
             ))}
         </div>
       </div>
