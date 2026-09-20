@@ -68,6 +68,9 @@ export const AddProviderButton: FC<{
       <button
         data-toybaco-add-channel=""
         type="button"
+        aria-label={t('add_channel', 'チャンネルを追加')}
+        aria-haspopup="dialog"
+        title={t('add_channel', 'チャンネルを追加')}
         className="flex-1 group-[.sidebar]:w-[100%] group-[.sidebar]:flex-none text-btnText bg-btnSimple h-[44px] pt-[12px] pb-[14px] ps-[16px] pe-[20px] justify-center items-center flex rounded-[8px] gap-[8px]"
         onClick={add}
       >
