@@ -47,6 +47,46 @@ const validToken = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.trim() === value;
 const fingerprint = (token: string): string =>
   createHash('sha256').update(token, 'utf8').digest('hex');
+
+// Never include provider values, identifiers, URLs, error text or credentials.
+// This is diagnostic evidence only; it must not grant or normalize permissions.
+export function instagramAuthDiagnostic(
+  stage: string,
+  response: unknown,
+  status: unknown,
+  expectedAppScopedId?: string
+) {
+  const knownStages = ['short_token_exchange', 'short_token_validation',
+    'long_token_exchange', 'long_token_validation', 'identity_lookup',
+    'identity_validation', 'permission_snapshot'];
+  const kind = (value: unknown) => value === undefined ? 'missing' :
+    value === null ? 'null' : Array.isArray(value) ? 'array' :
+    typeof value === 'string' ? 'string' : typeof value === 'number' ? 'number' :
+    typeof value === 'boolean' ? 'boolean' : 'object';
+  const top = record(response) ? response : {};
+  const envelope = 'data' in top ?
+    (Array.isArray(top.data) && top.data.length === 1 && record(top.data[0]) ? 'single_data' : 'invalid_data') :
+    (record(response) ? 'object' : 'invalid');
+  const entry = envelope === 'single_data' ? (top.data as Record<string, unknown>[])[0] : top;
+  const permissions = typeof entry.permissions === 'string' ? entry.permissions.split(',') :
+    Array.isArray(entry.permissions) ? entry.permissions : [];
+  const providerError = record(top.error) ? top.error : top;
+  const code = providerError.code ?? providerError.error_code;
+  return {
+    event: 'toybaco_instagram_auth_failure',
+    stage: knownStages.includes(stage) ? stage : 'unknown',
+    httpStatus: Number.isInteger(status) && Number(status) >= 100 && Number(status) <= 599 ? Number(status) : null,
+    envelope,
+    providerError: hasError(top) || hasError(entry),
+    providerErrorCode: Number.isSafeInteger(code) && Number(code) >= 0 && Number(code) <= 1000000 ? Number(code) : null,
+    tokenPresent: validToken(entry.access_token),
+    userIdType: kind(entry.user_id),
+    idType: kind(entry.id),
+    permissionsType: kind(entry.permissions),
+    requiredScopesPresent: REQUIRED_INSTAGRAM_SCOPES.map(scope => permissions.includes(scope)),
+    appScopedIdentityMatches: expectedAppScopedId === undefined ? null : entry.id === expectedAppScopedId,
+  };
+}
 const timestamp = (value: unknown): value is string =>
   typeof value === 'string' &&
   Number.isFinite(Date.parse(value)) &&
