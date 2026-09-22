@@ -18,7 +18,7 @@ import { META_GRAPH_API_VERSION } from '@gitroom/nestjs-libraries/integrations/s
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 
-import { REQUIRED_INSTAGRAM_SCOPES, parseInstagramOAuthResponse, createInstagramPermissionSnapshot, instagramAuthDiagnostic } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-permissions';
+import { REQUIRED_INSTAGRAM_SCOPES, parseInstagramResponseText, parseInstagramOAuthResponse, createInstagramPermissionSnapshot, instagramAuthDiagnostic } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-permissions';
 
 const instagramProvider = new InstagramProvider();
 
@@ -93,11 +93,11 @@ export class InstagramStandaloneProvider
       name,
       username,
       profile_picture_url = '',
-    } = await (
+    } = parseInstagramResponseText(await (
       await fetch(
         `https://graph.instagram.com/${META_GRAPH_API_VERSION}/me?fields=id,user_id,username,name,profile_picture_url&access_token=${access_token}`
       )
-    ).json();
+    ).text());
 
     if (typeof user_id !== 'string' || !/^[0-9]+$/.test(user_id)) {
       throw new Error('Instagram identity response is invalid');
@@ -163,7 +163,7 @@ export class InstagramStandaloneProvider
         body: formData,
       });
       diagnosticStatus = shortResponse.status;
-      const getAccessToken = await shortResponse.json();
+      const getAccessToken = parseInstagramResponseText(await shortResponse.text());
       diagnosticResponse = getAccessToken;
       diagnosticStage = 'short_token_validation';
 
@@ -193,7 +193,7 @@ export class InstagramStandaloneProvider
           `https://graph.instagram.com/${META_GRAPH_API_VERSION}/me?fields=id,user_id,username,name,profile_picture_url&access_token=${access_token}`
       );
       diagnosticStatus = identityResponse.status;
-      const identity = await identityResponse.json();
+      const identity = parseInstagramResponseText(await identityResponse.text());
       diagnosticResponse = identity;
       diagnosticStage = 'identity_validation';
       expectedAppScopedId = oauth.appScopedUserId;

@@ -48,6 +48,25 @@ const validToken = (value: unknown): value is string =>
 const fingerprint = (token: string): string =>
   createHash('sha256').update(token, 'utf8').digest('hex');
 
+// The production API also emits numeric IDs. Recover their original JSON
+// digits using the pinned Node 22 reviver context; String(number) can round
+// account IDs and must never be used to establish identity.
+export function parseInstagramResponseText(text: string) {
+  try {
+    return JSON.parse(text, (key: string, value: unknown, context?: { source?: string }) => {
+      if ((key === 'id' || key === 'user_id') && typeof value === 'number') {
+        if (typeof context?.source !== 'string' || !/^[0-9]+$/.test(context.source)) {
+          throw invalidResponse();
+        }
+        return context.source;
+      }
+      return value;
+    });
+  } catch {
+    throw invalidResponse();
+  }
+}
+
 // Never include provider values, identifiers, URLs, error text or credentials.
 // This is diagnostic evidence only; it must not grant or normalize permissions.
 export function instagramAuthDiagnostic(
@@ -93,8 +112,8 @@ const timestamp = (value: unknown): value is string =>
   new Date(value).toISOString() === value;
 
 function scopes(value: unknown): string[] {
-  // Meta documents comma-separated permissions. Arrays remain supported only
-  // for compatibility with the provider's previous checkScopes input contract.
+  // Meta documents comma-separated permissions; production also returns arrays.
+  // Both representations undergo the same required-scope validation.
   const values = typeof value === 'string' ? value.split(',') : value;
   if (
     !Array.isArray(values) ||
