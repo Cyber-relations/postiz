@@ -1376,6 +1376,12 @@ html[data-toybaco-embed] [data-toybaco-composer] [data-toybaco-save-error] { wid
   html[data-toybaco-embed] [data-toybaco-composer-editor] { min-height: 460px; height: 60dvh; border-right: 0; }
   html[data-toybaco-embed] [data-toybaco-composer-preview] { width: 100%; min-width: 0; height: 400px; border-top: 1px solid var(--toybaco-hairline); }
   html[data-toybaco-embed] [data-toybaco-composer-footer] { max-height: 40dvh; overflow-y: auto; }
+  html[data-toybaco-embed] [data-toybaco-composer-footer] > .flex-1 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); flex: 1 0 100%; min-width: 0; }
+  html[data-toybaco-embed] [data-toybaco-composer-footer] > .flex-1 > div { min-width: 0; height: auto; min-height: 44px; }
+  html[data-toybaco-embed] [data-toybaco-composer-footer] > .flex-1 > div > button { width: 100%; min-width: 0; height: auto; min-height: 44px; padding: 8px 12px; line-height: 1.4; text-align: start; }
+  html[data-toybaco-embed] [data-toybaco-composer-footer] > .flex-1 > div > button > span:first-child,
+  html[data-toybaco-embed] [data-toybaco-composer-footer] > .flex-1 > div > button > span:last-child { flex-shrink: 0; }
+  html[data-toybaco-embed] [data-toybaco-composer-footer] > .flex-1 > div > button > span:nth-child(2) { flex: 1; min-width: 0; flex-wrap: wrap; overflow-wrap: anywhere; }
   html[data-toybaco-embed] [data-toybaco-composer-actions] > button,
   html[data-toybaco-embed] [data-toybaco-composer-actions] > .group { flex: 1 1 auto; }
   html[data-toybaco-embed] [data-toybaco-composer-actions] > .group > button { width: 100%; min-width: 0; }

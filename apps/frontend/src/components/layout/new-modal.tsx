@@ -332,7 +332,7 @@ export const Component: FC<{
                     <button
                       className="outline-none absolute end-[20px] top-[20px] mantine-UnstyledButton-root mantine-ActionIcon-root hover:bg-tableBorder cursor-pointer mantine-Modal-close mantine-1dcetaa"
                       type="button"
-                      aria-label={modal.toybacoTagDialog || modal.toybacoMediaPicker || modal.toybacoMediaPreview || modal.toybacoSettingsDialog ? '閉じる' : undefined}
+                      aria-label="閉じる"
                       onClick={closeModalFunction}
                     >
                       <svg
