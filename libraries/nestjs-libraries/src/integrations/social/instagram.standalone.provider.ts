@@ -18,7 +18,7 @@ import { META_GRAPH_API_VERSION } from '@gitroom/nestjs-libraries/integrations/s
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 
-import { REQUIRED_INSTAGRAM_SCOPES, parseInstagramOAuthResponse, createInstagramPermissionSnapshot } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-permissions';
+import { REQUIRED_INSTAGRAM_SCOPES, parseInstagramOAuthResponse, createInstagramPermissionSnapshot, instagramAuthDiagnostic } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-permissions';
 
 const instagramProvider = new InstagramProvider();
 
@@ -139,70 +139,96 @@ export class InstagramStandaloneProvider
     codeVerifier: string;
     refresh: string;
   }) {
-    const formData = new FormData();
-    formData.append('client_id', process.env.INSTAGRAM_APP_ID!);
-    formData.append('client_secret', process.env.INSTAGRAM_APP_SECRET!);
-    formData.append('grant_type', 'authorization_code');
-    formData.append(
-      'redirect_uri',
-      `${
-        process?.env.FRONTEND_URL?.indexOf('https') == -1
-          ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
-          : `${process?.env.FRONTEND_URL}`
-      }/integrations/social/instagram-standalone`
-    );
-    formData.append('code', params.code);
+    let diagnosticStage = 'short_token_exchange';
+    let diagnosticResponse: unknown;
+    let diagnosticStatus: unknown;
+    let expectedAppScopedId: string | undefined;
+    try {
+      const formData = new FormData();
+      formData.append('client_id', process.env.INSTAGRAM_APP_ID!);
+      formData.append('client_secret', process.env.INSTAGRAM_APP_SECRET!);
+      formData.append('grant_type', 'authorization_code');
+      formData.append(
+        'redirect_uri',
+        `${
+          process?.env.FRONTEND_URL?.indexOf('https') == -1
+            ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
+            : `${process?.env.FRONTEND_URL}`
+        }/integrations/social/instagram-standalone`
+      );
+      formData.append('code', params.code);
 
-    const getAccessToken = await (
-      await fetch('https://api.instagram.com/oauth/access_token', {
+      const shortResponse = await fetch('https://api.instagram.com/oauth/access_token', {
         method: 'POST',
         body: formData,
-      })
-    ).json();
+      });
+      diagnosticStatus = shortResponse.status;
+      const getAccessToken = await shortResponse.json();
+      diagnosticResponse = getAccessToken;
+      diagnosticStage = 'short_token_validation';
 
-    const oauth = parseInstagramOAuthResponse(getAccessToken);
-    const { access_token } = await (
-      await fetch(
-        'https://graph.instagram.com/access_token' +
-          '?grant_type=ig_exchange_token' +
-          `&client_id=${process.env.INSTAGRAM_APP_ID}` +
-          `&client_secret=${process.env.INSTAGRAM_APP_SECRET}` +
-          `&access_token=${oauth.accessToken}`
-      )
-    ).json();
+      const oauth = parseInstagramOAuthResponse(getAccessToken);
+      diagnosticStage = 'long_token_exchange';
+      diagnosticResponse = undefined;
+      diagnosticStatus = undefined;
+      const longResponse = await fetch(
+          'https://graph.instagram.com/access_token' +
+            '?grant_type=ig_exchange_token' +
+            `&client_id=${process.env.INSTAGRAM_APP_ID}` +
+            `&client_secret=${process.env.INSTAGRAM_APP_SECRET}` +
+            `&access_token=${oauth.accessToken}`
+      );
+      diagnosticStatus = longResponse.status;
+      diagnosticResponse = await longResponse.json();
+      diagnosticStage = 'long_token_validation';
+      const { access_token } = diagnosticResponse as { access_token?: string };
 
-    if (typeof access_token !== 'string' || !access_token.trim()) {
-      throw new Error('Instagram token response is invalid');
+      if (typeof access_token !== 'string' || !access_token.trim()) {
+        throw new Error('Instagram token response is invalid');
+      }
+      diagnosticStage = 'identity_lookup';
+      diagnosticResponse = undefined;
+      diagnosticStatus = undefined;
+      const identityResponse = await fetch(
+          `https://graph.instagram.com/${META_GRAPH_API_VERSION}/me?fields=id,user_id,username,name,profile_picture_url&access_token=${access_token}`
+      );
+      diagnosticStatus = identityResponse.status;
+      const identity = await identityResponse.json();
+      diagnosticResponse = identity;
+      diagnosticStage = 'identity_validation';
+      expectedAppScopedId = oauth.appScopedUserId;
+      const { id: appScopedUserId, user_id, name, username, profile_picture_url } = identity;
+
+      // OAuth user_id is app-scoped; /me.user_id is the professional account.
+      if (typeof user_id !== 'string' || !/^[0-9]+$/.test(user_id) ||
+          typeof appScopedUserId !== 'string' || appScopedUserId !== oauth.appScopedUserId) {
+        throw new Error('Instagram authorization identity mismatch');
+      }
+      diagnosticStage = 'permission_snapshot';
+      const toybacoInstagramPermissionSnapshot = createInstagramPermissionSnapshot({
+        appId: process.env.INSTAGRAM_APP_ID!,
+        internalId: String(user_id),
+        appScopedUserId: oauth.appScopedUserId,
+        token: access_token,
+        permissions: oauth.permissions,
+      });
+      return {
+        id: String(user_id),
+        toybacoInstagramAppScopedUserId: oauth.appScopedUserId,
+        toybacoInstagramPermissionSnapshot,
+        name,
+        accessToken: access_token,
+        refreshToken: access_token,
+        expiresIn: dayjs().add(58, 'days').unix() - dayjs().unix(),
+        picture: profile_picture_url,
+        username,
+      };
+    } catch (error) {
+      console.warn(JSON.stringify(instagramAuthDiagnostic(
+        diagnosticStage, diagnosticResponse, diagnosticStatus, expectedAppScopedId
+      )));
+      throw error;
     }
-    const { id: appScopedUserId, user_id, name, username, profile_picture_url } = await (
-      await fetch(
-        `https://graph.instagram.com/${META_GRAPH_API_VERSION}/me?fields=id,user_id,username,name,profile_picture_url&access_token=${access_token}`
-      )
-    ).json();
-
-    // OAuth user_id is app-scoped; /me.user_id is the professional account.
-    if (typeof user_id !== 'string' || !/^[0-9]+$/.test(user_id) ||
-        typeof appScopedUserId !== 'string' || appScopedUserId !== oauth.appScopedUserId) {
-      throw new Error('Instagram authorization identity mismatch');
-    }
-    const toybacoInstagramPermissionSnapshot = createInstagramPermissionSnapshot({
-      appId: process.env.INSTAGRAM_APP_ID!,
-      internalId: String(user_id),
-      appScopedUserId: oauth.appScopedUserId,
-      token: access_token,
-      permissions: oauth.permissions,
-    });
-    return {
-      id: String(user_id),
-      toybacoInstagramAppScopedUserId: oauth.appScopedUserId,
-      toybacoInstagramPermissionSnapshot,
-      name,
-      accessToken: access_token,
-      refreshToken: access_token,
-      expiresIn: dayjs().add(58, 'days').unix() - dayjs().unix(),
-      picture: profile_picture_url,
-      username,
-    };
   }
 
   async post(
