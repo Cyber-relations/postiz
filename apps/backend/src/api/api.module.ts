@@ -1,3 +1,5 @@
+import { ToybacoPostingPreparationController } from '@gitroom/backend/api/routes/toybaco-posting-preparation.controller';
+import { ToybacoPostingRetentionController } from '@gitroom/backend/api/routes/toybaco-posting-retention.controller';
 import { ToybacoLegacyAiGuard } from '@gitroom/backend/services/auth/permissions/toybaco-legacy-ai.guard';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AuthController } from '@gitroom/backend/api/routes/auth.controller';
@@ -78,6 +80,8 @@ const authenticatedController = [
     ? [RootController, OAuthController]
     : [
         RootController,
+        ToybacoPostingRetentionController,
+        ToybacoPostingPreparationController,
         StripeController,
         AuthController,
         PublicController,
