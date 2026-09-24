@@ -40,7 +40,6 @@ import {
   ChevronDownIcon,
   CloseIcon,
   TrashIcon,
-  DropdownArrowSmallIcon,
 } from '@gitroom/frontend/components/ui/icons';
 import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
@@ -1142,8 +1141,10 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
               </button>
             )}
             {!addEditSets && (dummy || toybacoCanPublish) && (
-              <div className="group cursor-pointer relative">
+              <>
                 <button
+                  type="button"
+                  data-toybaco-schedule=""
                   disabled={
                     selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
                   }
@@ -1171,27 +1172,22 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                       ? '承認して予約'
                       : t('update', 'Update')}
                   </div>
-                  {!dummy && (
-                    <div className="flex justify-center items-center h-[20px] w-[20px] pt-[4px] arrow-change">
-                      <DropdownArrowSmallIcon className="group-hover:rotate-180 text-white" />
-                    </div>
-                  )}
                 </button>
 
                 {!dummy && (
                   <button
+                    type="button"
+                    data-toybaco-post-now=""
                     onClick={schedule('now')}
                     disabled={
                       selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
                     }
-                    className="rounded-[8px] z-[300] disabled:cursor-not-allowed disabled:opacity-80 hidden group-hover:flex absolute bottom-[100%] -left-[12px] p-[12px] w-[206px] bg-newBgColorInner"
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-[8px] border border-newBorder bg-newBgColorInner px-[16px] text-[15px] font-[600] text-textColor hover:bg-newBgLineColor disabled:cursor-not-allowed disabled:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-textColor"
                   >
-                    <div className="text-white rounded-[8px] bg-[#1F3A5F] h-[44px] w-full flex justify-center items-center post-now">
-                      {t('post_now', 'Post Now')}
-                    </div>
+                    {t('post_now', 'Post Now')}
                   </button>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>
