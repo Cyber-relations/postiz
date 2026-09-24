@@ -1931,7 +1931,9 @@ export class PostsRepository {
                 state:
                   state === 'draft' ? ('DRAFT' as const) : ('QUEUE' as const),
                 error:
-                  state === 'draft'
+                  // Only the root starts a workflow. Replies are claimed by that
+                  // workflow after its root is published, from QUEUE/error=null.
+                  state === 'draft' || posts.length > 0
                     ? null
                     : toybacoWorkflowMarker('ENSURE'),
               }),
