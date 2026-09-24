@@ -5,15 +5,15 @@
 <script src="/assets/measurement.js?v=20260924" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>お申し込み — カード決済で数分開通 | トイバコ</title>
-<!-- toybaco-plans:description:start --><meta name="description" content="問い合わせ・SNS予約投稿・AI応答をひとつに。トイバコは月¥9,800から。機能と利用人数・AI応答枠はプランにより異なります。"><!-- toybaco-plans:description:end -->
+<title>お申し込み — 無料プランから始める | トイバコ</title>
+<!-- toybaco-plans:description:start --><meta name="description" content="1店舗ごとの定額料金。全プランでスタッフ数は無制限です。 1店舗ごとの新料金、スタッフ数無制限。無料プラン¥0 / ライト¥7,980 / スタンダード¥19,800 / プロ¥34,800（月・税別）。"><!-- toybaco-plans:description:end -->
 <link rel="canonical" href="https://staging.toybaco.jp/signup/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="トイバコ">
-<meta property="og:title" content="お申し込み — カード決済で数分開通 | トイバコ">
-<!-- toybaco-plans:og_description:start --><meta property="og:description" content="問い合わせ・SNS予約投稿・AI応答をひとつに。トイバコは月¥9,800から。機能と利用人数・AI応答枠はプランにより異なります。"><!-- toybaco-plans:og_description:end -->
+<meta property="og:title" content="お申し込み — 無料プランから始める | トイバコ">
+<!-- toybaco-plans:og_description:start --><meta property="og:description" content="1店舗ごとの定額料金。全プランでスタッフ数は無制限です。 1店舗ごとの新料金、スタッフ数無制限。無料プラン¥0 / ライト¥7,980 / スタンダード¥19,800 / プロ¥34,800（月・税別）。"><!-- toybaco-plans:og_description:end -->
 <meta property="og:url" content="https://staging.toybaco.jp/signup/">
-<meta property="og:image" content="https://staging.toybaco.jp/assets/og.png?v=ivory-20260914">
+<meta property="og:image" content="https://staging.toybaco.jp/assets/og-growth.png?v=2026-09-18.1">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="../assets/favicon.png?v=ivory-20260914">
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"トイバコ","url":"https://staging.toybaco.jp/","publisher":{"@type":"Organization","name":"株式会社サイバーリレーションズ","url":"https://cyber-relations.jp/","logo":"https://staging.toybaco.jp/assets/toybaco-app-icon-ivory.png"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"トップ","item":"https://staging.toybaco.jp/"},{"@type":"ListItem","position":2,"name":"お申し込み","item":"https://staging.toybaco.jp/signup/"}]}]}</script>
@@ -69,63 +69,11 @@
 .bank-box p{font-size:.88rem; line-height:2; margin-bottom:12px}
 </style>
 
-<!-- toybaco-plans:runtime:start --><script id="toybaco-sales-data" type="application/json">[{"plan_id":"light","version":"2026-09-06.1","name":"ライト","product_name":"トイバコ ライト","amount":9800,"agents":3},{"plan_id":"standard","version":"2026-09-06.1","name":"スタンダード","product_name":"トイバコ スタンダード","amount":29800,"agents":null},{"plan_id":"pro","version":"2026-09-06.1","name":"プロ","product_name":"トイバコ プロ","amount":44800,"agents":null}]</script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const plans = JSON.parse(document.getElementById('toybaco-sales-data').textContent);
-  const yen = n => '¥' + n.toLocaleString('ja-JP');
-  const range = document.getElementById('calcRange');
-  if (range) {
-    const update = () => {
-      const n = Number(range.value), seat = n * 8300;
-      const eligible = plans.filter(p => p.agents === null || p.agents >= n).sort((a, b) => a.amount - b.amount);
-      const plan = eligible[0];
-      range.style.setProperty('--fill', (((n - 2) / 28) * 100).toFixed(1) + '%');
-      document.getElementById('calcN').textContent = n;
-      document.getElementById('valSeat').textContent = '月 約' + yen(seat);
-      document.getElementById('lblToy').textContent = plan ? plan.product_name : 'この人数に対応する販売プランはありません';
-      document.getElementById('valToy').textContent = plan ? '月 ' + yen(plan.amount) : 'ご相談ください';
-      document.getElementById('barSeat').style.setProperty('--w', (seat / 249000 * 100).toFixed(1) + '%');
-      document.getElementById('barToy').style.setProperty('--w', plan ? Math.min(100, plan.amount / 249000 * 100).toFixed(1) + '%' : '0%');
-      document.getElementById('calcDiff').textContent = plan ? yen((seat - plan.amount) * 12) : '—';
-    };
-    range.addEventListener('input', update);
-    update();
-  }
-  const buttons = document.querySelectorAll('.bill-tgl button');
-  const priced = document.querySelectorAll('.plans2 [data-m]');
-  const buys = document.querySelectorAll('.plans2 .buy-btn');
-  const setCycle = yearly => {
-    buttons.forEach(b => { const selected = b.dataset.bill === (yearly ? 'y' : 'm'); b.classList.toggle('on', selected); b.setAttribute('aria-pressed', String(selected)); });
-    document.body.classList.toggle('bill-y', yearly);
-    priced.forEach(el => { el.textContent = yearly ? el.dataset.y : el.dataset.m; });
-    buys.forEach(a => {
-      const href = yearly ? a.dataset.ly : a.dataset.lm;
-      if (href) { a.href = href; a.removeAttribute('aria-disabled'); }
-      else { a.removeAttribute('href'); a.setAttribute('aria-disabled', 'true'); }
-    });
-  };
-  buttons.forEach(b => b.addEventListener('click', () => setCycle(b.dataset.bill === 'y')));
-  const params = new URLSearchParams(location.search);
-  setCycle(params.get('cycle') === 'year' || params.get('bill') === 'y');
-  const selected = params.get('plan') || location.hash.replace(/^#/, '');
-  const card = Array.from(document.querySelectorAll('#sgPlans .plan2')).find(el => el.dataset.plan === selected);
-  if (card) {
-    card.classList.add('picked');
-    if (params.get('version') && params.get('version') !== card.dataset.version) {
-      const notice = document.getElementById('plan-version-notice');
-      notice.hidden = false;
-      notice.textContent = '料金・プラン内容が更新されています。現在表示している条件をご確認のうえ、お申し込みください。';
-    }
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const buy = card.querySelector('.buy-btn');
-    if (buy) buy.focus({ preventScroll: true });
-  }
-});
-</script><!-- toybaco-plans:runtime:end -->
+
+<link rel="stylesheet" href="/assets/lp-candidate.css?v=2026-09-18.1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 </head>
-<body>
+<body><!-- toybaco-lp-pricing:2026-09-18.1 -->
 <script>window.__p='../';</script>
 
 <div class="ribbon"></div>
@@ -145,138 +93,69 @@ document.addEventListener('DOMContentLoaded', () => {
   <button class="nav-toggle" id="navToggle" aria-label="メニューを開く" aria-expanded="false"><i></i><i></i><i></i></button>
 </header>
 
-<main>
-<section class="phero">
-  <div class="wrap2">
-    <p class="crumbs"><a href="../index.html">トップ</a><span class="sep">/</span>お申し込み</p>
-    <span class="eyebrow2"><span class="dots"><i></i><i></i><i></i><i></i></span>お申し込み</span>
-    <h1>24時間いつでも、<br>申し込みは3分<span class="maru">。</span></h1>
-    <p class="lead">カード決済で、深夜でも休日でも。決済が完了すると<strong>数分でアカウント開通のメール</strong>が届き、業種の初期設定済みで始まります。</p>
-  </div>
-</section>
+<main><section class="lp-hero"><div class="lp-wrap"><p class="lp-kicker">お申し込み</p><h1>お店に合うプランを、<br>ご相談ください。</h1><p>ご希望のプランを選び、導入についてご相談ください。選択したプランと支払周期を相談フォームへ引き継ぎます。</p><p class="lp-note">1店舗ごとの定額料金。全プランでスタッフ数は無制限です。</p></div></section><section class="lp-section"><div class="lp-wrap"><h2>プランと支払周期を選ぶ</h2><p id="lp-selected-plan"></p><p id="lp-version-notice" role="status" hidden></p><div class="lp-billing" role="group" aria-label="料金の表示周期"><button type="button" data-lp-cycle="month" aria-pressed="true">月払い</button><button type="button" data-lp-cycle="year" aria-pressed="false">年払い · 10%割引</button></div><div class="lp-plans">
+<article class="lp-plan" data-plan="free" id="plan-free">
 
-<!-- 流れ4ステップ -->
-<section class="sec tint">
-  <div class="wrap2 center">
-    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>4つのステップ</span>
-    <h2 class="reveal">お申し込みから開通まで、4ステップ<span class="maru">。</span></h2>
-    <div class="sg-steps" style="margin-top:40px">
-      <div class="sgs reveal" style="--d:0s">
-        <h3>プランを選ぶ</h3>
-        <p>迷ったら右下のチャットへ。お店の状況に合わせてご提案します。</p>
-      </div>
-      <div class="sgs reveal" style="--d:.06s">
-        <h3>カードで決済</h3>
-        <p>安全な決済ページへ。業種と、接続代行の希望もここで選びます。</p>
-      </div>
-      <div class="sgs reveal" style="--d:.12s">
-        <h3>数分で開通</h3>
-        <p>アカウントが自動発行され、パスワード設定のメールが届きます。業種の初期設定も適用済み。</p>
-      </div>
-      <div class="sgs reveal" style="--d:.18s">
-        <h3>接続して開始</h3>
-        <p>接続代行を選んだ方はおまかせ。セルフの方には手順をご案内。最短当日から使えます。</p>
-      </div>
-    </div>
-  </div>
-</section>
+          <h3>無料プラン<small></small></h3><p class="lp-for">少ない窓口・SNSで、小さく始めたいお店に。</p>
+          <p class="lp-price" data-lp-month="¥0" data-lp-year="¥0">¥0</p>
+          <p class="lp-price-unit" data-lp-month="1店舗 / 無料" data-lp-year="1店舗 / 無料">1店舗 / 無料</p>
+          <p class="lp-tax">カード登録不要</p><p class="lp-annual">無料プランは支払周期を選びません。</p>
+          <ul><li>スタッフ数 無制限</li><li>受信箱 2接続 / 投稿先 1接続</li>
+          <li>投稿先ごとに同時予約 5件</li><li>AI生成 月20回</li>
+          <li>返信案・投稿文を、人が確認して送信</li><li>通常の自動返信は対象外</li>
+          <li>保存容量 1GB</li></ul>
+          <a class="btn btn-ghost" data-lp-plan-link="free" href="/contact/?topic=service&amp;plan=free&amp;version=2026-09-18.1">このプランを相談する</a></article>
+<article class="lp-plan" data-plan="light" id="plan-light">
 
-<!-- プラン選択 -->
-<section class="sec">
-  <div class="wrap2 center">
-    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>プランを選ぶ</span>
-    <h2 class="reveal">プランを選ぶ<span class="maru">。</span></h2>
-    <p class="sub2 reveal" style="--d:.08s">すべて店舗ごとの定額・税別表記です。</p>
-    <div class="bill-tgl reveal" style="--d:.1s" role="group" aria-label="お支払いサイクルの選択">
-      <button type="button" class="on" data-bill="m" aria-pressed="true">月払い</button>
-      <button type="button" data-bill="y" aria-pressed="false">年払い<em><!-- toybaco-plans:discount:start -->10%オフ<!-- toybaco-plans:discount:end --></em></button>
-    </div>
-    <!-- toybaco-plans:cards:start --><div class="plans2" id="sgPlans">
-      <div class="plan2 reveal" style="--d:0.00s" data-plan="light" data-version="2026-09-06.1" id="plan-light">
-        <h3>ライト</h3>
-        <p class="pfor">問い合わせ管理だけを小さく始めたいお店に。LINE・メール・Webチャット/3名まで。SNS投稿機能はありません</p>
-        <p class="pprice"><b data-m="¥9,800" data-y="¥8,820">¥9,800</b><span> /月(税別)</span></p>
-        <p class="tax"><span data-m="毎月 ¥10,780(税込)" data-y="年一括 ¥116,424(税込)">毎月 ¥10,780(税込)</span></p>
-        <ul>
-          <li>問い合わせ一元管理(LINE・メール・Web チャット)</li>
-          <li>利用は3名まで</li>
-          <li class="no">SNS 投稿機能はありません</li>
-          <li class="no">AI 応答は含まれません</li>
-          <li>1店舗分</li>
-        </ul>
-        <a class="btn btn-ghost buy-btn" data-plan="light" data-lm="https://app.staging.toybaco.jp/toybaco/checkout?plan=light&amp;cycle=month&amp;version=2026-09-06.1" data-ly="https://app.staging.toybaco.jp/toybaco/checkout?plan=light&amp;cycle=year&amp;version=2026-09-06.1" href="https://app.staging.toybaco.jp/toybaco/checkout?plan=light&amp;cycle=month&amp;version=2026-09-06.1">カードで申し込む</a>
-      </div>
-      <div class="plan2 reveal" style="--d:0.06s" data-plan="standard" data-version="2026-09-06.1" id="plan-standard">
-        <h3>スタンダード</h3>
-        <p class="pfor">Instagram・SNS投稿まで全部使いたいお店に。人数無制限</p>
-        <p class="pprice"><b data-m="¥29,800" data-y="¥26,820">¥29,800</b><span> /月(税別)</span></p>
-        <p class="tax"><span data-m="毎月 ¥32,780(税込)" data-y="年一括 ¥354,024(税込)">毎月 ¥32,780(税込)</span></p>
-        <ul>
-          <li>問い合わせ一元管理(LINE・メール・Web チャット・Instagram DM)</li>
-          <li>利用人数 無制限</li>
-          <li>SNS 予約投稿・承認フロー</li>
-          <li class="no">AI 応答は含まれません</li>
-          <li>1店舗分</li>
-        </ul>
-        <a class="btn btn-ghost buy-btn" data-plan="standard" data-lm="https://app.staging.toybaco.jp/toybaco/checkout?plan=standard&amp;cycle=month&amp;version=2026-09-06.1" data-ly="https://app.staging.toybaco.jp/toybaco/checkout?plan=standard&amp;cycle=year&amp;version=2026-09-06.1" href="https://app.staging.toybaco.jp/toybaco/checkout?plan=standard&amp;cycle=month&amp;version=2026-09-06.1">カードで申し込む</a>
-      </div>
-      <div class="plan2 hot reveal" style="--d:0.12s" data-plan="pro" data-version="2026-09-06.1" id="plan-pro">
-        <span class="rec">AI 応答つき</span>
-        <h3>プロ</h3>
-        <p class="pfor">AI応答(月500件)で夜間・繁忙時間まで自動化したいお店に</p>
-        <p class="pprice"><b data-m="¥44,800" data-y="¥40,320">¥44,800</b><span> /月(税別)</span></p>
-        <p class="tax"><span data-m="毎月 ¥49,280(税込)" data-y="年一括 ¥532,224(税込)">毎月 ¥49,280(税込)</span></p>
-        <ul>
-          <li>問い合わせ一元管理(LINE・メール・Web チャット・Instagram DM)</li>
-          <li>利用人数 無制限</li>
-          <li>SNS 予約投稿・承認フロー</li>
-          <li class="ai">AI 応答エージェント(月500件)</li>
-          <li>1店舗分</li>
-        </ul>
-        <a class="btn btn-coral buy-btn" data-plan="pro" data-lm="https://app.staging.toybaco.jp/toybaco/checkout?plan=pro&amp;cycle=month&amp;version=2026-09-06.1" data-ly="https://app.staging.toybaco.jp/toybaco/checkout?plan=pro&amp;cycle=year&amp;version=2026-09-06.1" href="https://app.staging.toybaco.jp/toybaco/checkout?plan=pro&amp;cycle=month&amp;version=2026-09-06.1">カードで申し込む</a>
-      </div>
-    </div><!-- toybaco-plans:cards:end -->
-    <p id="plan-version-notice" class="note2" role="status" hidden></p>
-    <p class="note2 reveal"><!-- toybaco-plans:change_policy:start -->同じ支払周期の上位プランへの変更は、差額を日割りで請求し、決済成功後すぐに反映します。下位プランへの変更と月払い・年払いの切替は、現在の契約期間の終了時に反映し、期間途中の追加請求・返金は行いません。<!-- toybaco-plans:change_policy:end --><br><!-- toybaco-plans:change_scope:start -->変更可能なプラン・料金・適用日は「ご契約内容」でご確認ください。旧契約や追加オプションを含む契約の変更は、お問い合わせください。<!-- toybaco-plans:change_scope:end --></p>
-    <p class="note2 reveal" style="--d:.24s">接続代行・追加店舗の提供条件と料金は、決済画面または事前のお見積もりでご確認ください。<br>機能の違いは<a href="../pricing/">料金ページ</a>を、専用環境・業務カスタマイズ・AIエージェントの最適化をご希望の場合は<a href="../enterprise/">個別設計プラン</a>をご覧ください。</p>
+          <h3>ライト<small>Light</small></h3><p class="lp-for">複数の窓口・SNSを、人が確認しながら運用。</p>
+          <p class="lp-price" data-lp-month="¥7,980" data-lp-year="¥7,182">¥7,980</p>
+          <p class="lp-price-unit" data-lp-month="1店舗 / 月（税別）" data-lp-year="1店舗 / 月額換算（税別）">1店舗 / 月（税別）</p>
+          <p class="lp-tax">月払い総額 ¥8,778（税込）</p><p class="lp-annual">年一括 ¥86,184（税別）<br>年総額 ¥94,802（税込）</p>
+          <ul><li>スタッフ数 無制限</li><li>受信箱 4接続 / 投稿先 3接続</li>
+          <li>投稿先ごとに同時予約 30件</li><li>AI生成 月100回</li>
+          <li>返信案・投稿文を、人が確認して送信</li><li>通常の自動返信は対象外</li>
+          <li>保存容量 10GB</li></ul>
+          <a class="btn btn-ghost" data-lp-plan-link="light" href="/contact/?topic=service&amp;plan=light&amp;version=2026-09-18.1&amp;cycle=month">このプランを相談する</a></article>
+<article class="lp-plan" data-plan="standard" id="plan-standard">
+          <span class="lp-recommend">自動返信を始めるなら</span>
+          <h3>スタンダード<small>Standard</small></h3><p class="lp-for">接客中・営業時間外の一次対応をAIに任せたいお店に。</p>
+          <p class="lp-price" data-lp-month="¥19,800" data-lp-year="¥17,820">¥19,800</p>
+          <p class="lp-price-unit" data-lp-month="1店舗 / 月（税別）" data-lp-year="1店舗 / 月額換算（税別）">1店舗 / 月（税別）</p>
+          <p class="lp-tax">月払い総額 ¥21,780（税込）</p><p class="lp-annual">年一括 ¥213,840（税別）<br>年総額 ¥235,224（税込）</p>
+          <ul><li>スタッフ数 無制限</li><li>受信箱 4接続 / 投稿先 6接続</li>
+          <li>投稿先ごとに同時予約 300件</li><li>AI生成 月500回</li>
+          <li>返信案・投稿文を、人が確認して送信</li><li>AI自動返信を含む</li>
+          <li>保存容量 50GB</li></ul>
+          <a class="btn btn-coral" data-lp-plan-link="standard" href="/contact/?topic=service&amp;plan=standard&amp;version=2026-09-18.1&amp;cycle=month">このプランを相談する</a></article>
+<article class="lp-plan" data-plan="pro" id="plan-pro">
 
-    <div class="bank-box reveal" style="--d:.28s">
-      <p><b>銀行振込(請求書払い)をご希望の方へ</b><br>チャットまたはフォームで「請求書払い希望」とお知らせください。1営業日以内に請求書(支払期限10日)をお送りします。</p>
-      <div class="contact-actions">
+          <h3>プロ<small>Pro</small></h3><p class="lp-for">Standardと同じ機能で、AIをより多く使うお店に。</p>
+          <p class="lp-price" data-lp-month="¥34,800" data-lp-year="¥31,320">¥34,800</p>
+          <p class="lp-price-unit" data-lp-month="1店舗 / 月（税別）" data-lp-year="1店舗 / 月額換算（税別）">1店舗 / 月（税別）</p>
+          <p class="lp-tax">月払い総額 ¥38,280（税込）</p><p class="lp-annual">年一括 ¥375,840（税別）<br>年総額 ¥413,424（税込）</p>
+          <ul><li>スタッフ数 無制限</li><li>受信箱 4接続 / 投稿先 6接続</li>
+          <li>投稿先ごとに同時予約 300件</li><li>AI生成 月2,000回</li>
+          <li>返信案・投稿文を、人が確認して送信</li><li>AI自動返信を含む</li>
+          <li>保存容量 100GB</li></ul>
+          <a class="btn btn-ghost" data-lp-plan-link="pro" href="/contact/?topic=service&amp;plan=pro&amp;version=2026-09-18.1&amp;cycle=month">このプランを相談する</a></article>
+</div><p class="lp-note">表示は1店舗あたり。スタッフの追加で料金は増えません。有料年払いは10%割引・1年分の一括前払いです。年総額と月額換算を併記しています。</p>
+<section class="custom-plan" id="consultation" aria-label="個別設計プラン">
+      <div class="custom-plan__intro">
+        <p class="custom-plan__label">個別設計プラン</p>
+        <h3>業務に合わせて、<br>必要な機能と支援を。</h3>
+        <p class="custom-plan__description">専用環境、業務カスタマイズ、AIエージェントの最適化。導入・運用支援まで、ご要望に応じて設計します。</p>
+        <a class="custom-plan__detail" href="/enterprise/">プランの内容を見る <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="custom-plan__inquiry">
+        <p class="custom-plan__price">個別お見積もり</p>
+        <p class="custom-plan__note">1店舗からご相談いただけます。<br>内容が固まっていない段階でも、お気軽にご相談ください。</p>
+        <div class="contact-actions">
           <a class="contact-button" href="#toybaco-staging-chat-preview" data-open-chat><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 3v-3H3V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>チャットで相談</a>
-          <a class="contact-button" href="../contact/?topic=billing" data-contact-form><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>フォームで相談</a>
+          <a class="contact-button" href="/contact/?topic=custom" data-contact-form><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>フォームで相談</a>
         </div>
-    </div>
-  </div>
-</section>
-
-<!-- 申し込み前FAQ -->
-<section class="sec tint">
-  <div class="wrap2 center">
-    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>申し込みの前に</span>
-    <h2 class="reveal">お申し込み前のよくある質問<span class="maru">。</span></h2>
-    <div class="faq2 reveal" style="--d:.1s">
-      <details data-question-id="signup_faq_01">
-        <summary><span class="q">Q</span>決済したあと、何をすればいいですか?<span class="arw">▾</span></summary>
-        <div class="a">なにもしなくて大丈夫です。数分で、決済時のメールアドレスへパスワード設定のメールが届きます。チャネルの接続はご案内に沿って進めます(接続代行も選べます)。メールが届かない場合は迷惑メールフォルダをご確認のうえ、右下のチャットへどうぞ。</div>
-      </details>
-      <details data-question-id="signup_faq_02">
-        <summary><span class="q">Q</span>請求書や領収書はもらえますか?<span class="arw">▾</span></summary>
-        <div class="a">はい。決済ごとにインボイス(適格請求書)対応の領収書メールが自動で届きます。カードの変更や請求履歴の確認は、開通後の管理画面からいつでも行えます。</div>
-      </details>
-      <details data-question-id="signup_faq_03">
-        <summary><span class="q">Q</span>解約したいときは?<span class="arw">▾</span></summary>
-        <div class="a"><!-- toybaco-plans:cancellation:start -->解約はいつでもお申し込みいただけます。次回の更新を停止し、現在の契約期間の終了までご利用いただけます。期間途中の解約による日割り返金はありません。<!-- toybaco-plans:cancellation:end --></div>
-      </details>
-      <details data-question-id="signup_faq_04">
-        <summary><span class="q">Q</span>どのプランがいいか迷っています。<span class="arw">▾</span></summary>
-        <div class="a">チャットまたはフォームで、いまお使いのチャネルと対応人数を教えてください。ぴったりのプランをその場でご提案します(無料)。</div>
-      </details>
-    </div>
-  </div>
-</section>
-
-</main>
+        <p class="contact-address">担当者からメールでご返信します。</p>
+      </div>
+    </section></div></section><section class="lp-section" id="start-options"><div class="lp-wrap"><h2>ご利用開始の流れ</h2><div class="lp-steps"><div class="lp-panel"><b>01</b><h3>メールを確認</h3><p>メール確認で無料プランを開始。カード登録は不要です。</p></div><div class="lp-panel"><b>02</b><h3>窓口・投稿先を接続</h3><p>媒体と利用目的を選び、必要な権限を確認します。管理者の作業が必要な場合は引き継ぎます。</p></div><div class="lp-panel"><b>03</b><h3>同じ店舗で続ける</h3><p>AIの案を人が確認して返信・投稿。必要になったらデータを保ったまま有料へ移行できます。</p></div></div></div></section><section class="lp-section"><div class="lp-wrap"><h2>ご利用中のお客様へ</h2><p>既存のご契約は契約時の条件を維持します。旧契約を自動で新料金に変更することはありません。</p><p>現在のご契約の変更は、アプリの「ご契約内容」からお手続きください。</p><div class="lp-actions"><a class="btn btn-coral" href="https://app.staging.toybaco.jp">ログイン・契約内容の確認</a><a class="btn btn-ghost" href="/contact/">相談する</a></div></div></section></main>
 
 <footer class="site2">
   <div class="fgrid">
@@ -326,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- 相談チャット: Chatwoot(トイバコの Web チャットそのもの) -->
 
 <script src="../assets/sub.js?v=20260901a"></script>
-
+<script id="lp-candidate-data" type="application/json">{"version":"2026-09-18.1","preview":false,"plans":[{"plan_id":"free","version":"2026-09-18.1","name":"無料プラン","free":true,"amount":0,"annual":null,"limits":{"agents":null,"stores":1,"inboxes":2,"posting_accounts":1,"scheduled_posts_per_account":5,"ai_generations":20,"storage_bytes":1000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":false,"pack":false},{"plan_id":"light","version":"2026-09-18.1","name":"ライト","free":false,"amount":7980,"annual":86184,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":3,"scheduled_posts_per_account":30,"ai_generations":100,"storage_bytes":10000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":false,"pack":false},{"plan_id":"standard","version":"2026-09-18.1","name":"スタンダード","free":false,"amount":19800,"annual":213840,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":6,"scheduled_posts_per_account":300,"ai_generations":500,"storage_bytes":50000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":true,"pack":true},{"plan_id":"pro","version":"2026-09-18.1","name":"プロ","free":false,"amount":34800,"annual":375840,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":6,"scheduled_posts_per_account":300,"ai_generations":2000,"storage_bytes":100000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":true,"pack":true}]}</script><script src="/assets/lp-candidate.js?v=2026-09-18.1"></script>
 <!-- toybaco_staging_site_v1: staging consultation is a preview only -->
 <button type="button" onclick="document.getElementById('toybaco-staging-chat-preview').showModal()" style="position:fixed;right:16px;bottom:16px;z-index:999;padding:12px 16px;border:0;border-radius:24px;background:#1F3A5F;color:#fff;font:inherit;font-size:13px;cursor:pointer">相談チャット（確認用）</button>
 <dialog id="toybaco-staging-chat-preview" aria-labelledby="toybaco-staging-chat-title" style="margin:auto;width:min(calc(100% - 2rem),28rem);padding:24px;border:1px solid #D0D8E1;border-radius:18px;color:#1F3A5F;background:#fff">
