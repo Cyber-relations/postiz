@@ -1682,6 +1682,20 @@ export class PostsService {
     return this._postRepository.changeState(id, state, err, body);
   }
 
+  // No controller or recurring job calls this until the Free transition is complete.
+  async preparePostingRelease(orgId: string, request: any) {
+    return this._postRepository.preparePostingRelease(orgId, request);
+  }
+
+  async holdPostingForRetention(orgId: string, request: any) {
+    const receipt = await this._postRepository.holdPostingForRetention(orgId, request);
+    const workflows = await this._postRepository.retentionCancellationOutbox(orgId, receipt.transitionId);
+    await toybacoDispatchCommittedWorkflows(this._postRepository, orgId, workflows,
+      (workflow: any) => this.startWorkflow(workflow.platform, workflow.postId, orgId, 'DRAFT', workflow.marker));
+    return { transitionId: receipt.transitionId, receiptHash: receipt.receiptHash,
+      keptPosts: receipt.keepPostIds.length, heldPosts: receipt.heldPostIds.length };
+  }
+
   async changePostStatus(
     orgId: string,
     id: string,

@@ -1,3 +1,4 @@
+import { toybacoPreparePostingRelease, toybacoApplyPostingRetention, toybacoRetentionCurrent, toybacoRetentionHistory, toybacoRetentionLock, toybacoRetentionPublish, toybacoRetentionWrite } from './posting-retention';
 import {
   PrismaRepository,
   PrismaTransaction,
@@ -1005,6 +1006,7 @@ export class PostsRepository {
 
   async deletePost(orgId: string, group: string) {
     return this._transaction.model.$transaction(async (database: any) => {
+      await toybacoRetentionLock(database, orgId);
       const posts = (await database.$queryRawUnsafe(
         'SELECT "id", "parentPostId", "state"::text AS "state", "error" FROM "Post" WHERE "organizationId" = $1 AND "group" = $2 AND "deletedAt" IS NULL FOR UPDATE',
         orgId,
@@ -1146,6 +1148,9 @@ export class PostsRepository {
 
   async changeState(id: string, state: State, err?: any, body?: any) {
     return this._transaction.model.$transaction(async (database: any) => {
+      const owner = await database.post.findUnique({ where: { id }, select: { organizationId: true } });
+      if (!owner) throw new ForbiddenException('投稿が見つかりません。');
+      await toybacoRetentionWrite(database, owner.organizationId, state !== 'QUEUE');
       const rows = (await database.$queryRawUnsafe(
         'SELECT "id", "organizationId", "group", "parentPostId", "state"::text AS "state", "deletedAt", "error" FROM "Post" WHERE "id" = $1 FOR UPDATE',
         id
@@ -1164,6 +1169,7 @@ export class PostsRepository {
       });
       if (
         rows.length !== 1 ||
+        rows[0].organizationId !== owner.organizationId ||
         !current ||
         toybacoMarkerIsClaimed(current.error) ||
         !toybacoStoredMarkerIsSafe(rows[0].state, current.error, id) ||
@@ -1256,6 +1262,7 @@ export class PostsRepository {
   ) {
     try {
       return await this._transaction.model.$transaction(async (database: any) => {
+        await toybacoRetentionWrite(database, orgId, expectedState === 'DRAFT');
         const rows = (await database.$queryRawUnsafe(
           TOYBACO_LOCK_POST_SQL,
           id,
@@ -1429,6 +1436,8 @@ export class PostsRepository {
     const parsed = toybacoParseWorkflowMarker(expectedMarker);
     if (!parsed) throw new ForbiddenException('workflow tokenが不正です。');
     return this._transaction.model.$transaction(async (database: any) => {
+      if (parsed.operation === 'CANCEL') await toybacoRetentionLock(database, orgId);
+      else await toybacoRetentionPublish(database, orgId, postId);
       await database.$queryRawUnsafe(TOYBACO_LOCK_POST_SQL, postId, orgId);
       const post = await database.post.findFirst({
         where: {
@@ -1488,6 +1497,7 @@ export class PostsRepository {
       throw new ForbiddenException('expected publish tokenが不正です。');
     }
     return this._transaction.model.$transaction(async (database: any) => {
+      await toybacoRetentionPublish(database, orgId, postId);
       await database.$queryRawUnsafe(TOYBACO_LOCK_POST_SQL, postId, orgId);
       const claimed = toybacoProviderStepMarker(
         parsed.generation,
@@ -1524,6 +1534,7 @@ export class PostsRepository {
       throw new ForbiddenException('expected publish tokenが不正です。');
     }
     return this._transaction.model.$transaction(async (database: any) => {
+      await toybacoRetentionPublish(database, orgId, rootPostId);
       await database.$queryRawUnsafe(TOYBACO_LOCK_POST_SQL, rootPostId, orgId);
       const mainClaim = toybacoProviderStepMarker(
         parsed.generation,
@@ -1750,6 +1761,7 @@ export class PostsRepository {
       throw new ForbiddenException('expected repeat tokenが不正です。');
     }
     return this._transaction.model.$transaction(async (database: any) => {
+      await toybacoRetentionWrite(database, orgId, false);
       await database.$queryRawUnsafe(TOYBACO_LOCK_POST_SQL, postId, orgId);
       const currentTerminal =
         `TOYBACO_TERMINAL_V2|${parsed.generation}|${parsed.token}|PUBLISHED|`;
@@ -1781,6 +1793,71 @@ export class PostsRepository {
     });
   }
 
+  // Internal primitive only. The billing transition bridge is not exposed yet.
+  async preparePostingRelease(orgId: string, request: any) {
+    if (process.env.TOYBACO_POSTING_RELEASE_ENABLED !== 'true') throw new ForbiddenException('接続の再開準備は現在利用できません。');
+    return this._transaction.model.$transaction((database: any) => toybacoPreparePostingRelease(database, orgId, request),
+      { isolationLevel: 'ReadCommitted', timeout: 10000 });
+  }
+
+  async holdPostingForRetention(orgId: string, request: any) {
+    return this._transaction.model.$transaction(async (database: any) =>
+      toybacoApplyPostingRetention(database, orgId, request,
+        async (db: any, organizationId: string, root: any) => {
+          const group = await toybacoLockMutableGroup(db, organizationId, root.group);
+          const parents = group.filter((row: any) => row.parentPostId === null);
+          if (parents.length !== 1 || parents[0].id !== root.id ||
+              group.some((row: any) => row.parentPostId !== null && row.state === 'QUEUE' && row.error !== null)) {
+            throw new ForbiddenException('投稿グループの構成を確認できません。');
+          }
+          return group;
+        },
+        async (db: any, organizationId: string, root: any, group: any[]) => {
+          const marker = toybacoNextWorkflowMarker('CANCEL', root.id, root.error, root.state);
+          const changed = await db.post.updateMany({
+            where: { id: root.id, organizationId, parentPostId: null, deletedAt: null, state: 'QUEUE', error: root.error },
+            data: { state: 'DRAFT', error: marker },
+          });
+          if (changed.count !== 1) throw new ForbiddenException('予約の保留状態を確認できません。');
+          // Comments share the root's workflow. Preserve their text/parent links,
+          // but remove their queued state so held drafts consume no queue quota.
+          for (const child of group.filter(row => row.parentPostId !== null && row.state === 'QUEUE')) {
+            const held = await db.post.updateMany({
+              where: { id: child.id, organizationId, group: root.group, parentPostId: child.parentPostId, deletedAt: null, state: 'QUEUE', error: null },
+              data: { state: 'DRAFT' },
+            });
+            if (held.count !== 1) throw new ForbiddenException('コメントの保留状態を確認できません。');
+          }
+        })
+    );
+  }
+
+  async retentionCancellationOutbox(orgId: string, transitionId: string) {
+    return this._transaction.model.$transaction(async (database: any) => {
+      await toybacoRetentionLock(database, orgId);
+      const receipt = await toybacoRetentionCurrent(database, orgId);
+      const historical = await toybacoRetentionHistory(database, orgId, transitionId);
+      if (!receipt || !historical) throw new ForbiddenException('契約変更を確認できません。');
+      if (receipt.transitionId !== transitionId) return []; // History replay never dispatches old cancellations.
+      const posts = await database.post.findMany({
+        where: { organizationId: orgId, id: { in: receipt.heldPostIds }, parentPostId: null, deletedAt: null },
+        select: { id: true, state: true, error: true, integration: { select: { providerIdentifier: true } } },
+        orderBy: { id: 'asc' },
+      });
+      const workflows: any[] = [];
+      for (const post of posts) {
+        if (post.state !== 'DRAFT') throw new ForbiddenException('保留した予約の再確認が必要です。');
+        if (post.error === null) continue; // Already acknowledged, or edited as a draft.
+        const marker = toybacoParseWorkflowMarker(post.error);
+        if (!marker || marker.operation !== 'CANCEL' || !toybacoStoredMarkerIsSafe(post.state, post.error, post.id)) {
+          throw new ForbiddenException('保留した予約の停止記録を確認できません。');
+        }
+        workflows.push({ postId: post.id, marker: post.error, platform: post.integration.providerIdentifier.split('-')[0].toLowerCase() });
+      }
+      return workflows;
+    });
+  }
+
   runPostTransaction(operation: any) {
     return toybacoRunPostTransaction(this._transaction.model, operation);
   }
@@ -1802,6 +1879,7 @@ export class PostsRepository {
     toybacoDatabase?: any
   ) {
     const execute = async (database: any) => {
+      await toybacoRetentionWrite(database, orgId, state === 'draft' || (state === 'update' && toybacoDraftOnly));
       const postModel = database.post;
       const tagsModel = database.tags;
       const tagsPostsModel = database.tagsPosts;

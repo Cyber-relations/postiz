@@ -45,6 +45,9 @@ model Organization {
   oauthApp            OAuthApp[]
   oauthAuthorizations OAuthAuthorization[]
   toybacoPostSaveRequests ToybacoPostSaveRequest[]
+  toybacoPostingRetention ToybacoPostingRetention?
+  toybacoPostingRetentionHistory ToybacoPostingRetentionHistory[]
+  toybacoPostingPreparation ToybacoPostingPreparation[]
 
   @@index([apiKey])
   @@index([streakSince])
@@ -840,4 +843,58 @@ model ToybacoPostSaveRequest {
 
   @@id([organizationId, actorId, requestId])
   @@index([actorId])
+}
+
+// Persistent stop receipt. CANCEL acknowledgements must not remove this fence.
+model ToybacoPostingRetention {
+  organizationId String @id
+  transitionId String
+  policyHash String
+  receiptHash String
+  policy Json
+  keepIntegrationIds Json
+  keepPostIds Json
+  heldPostIds Json
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// Immutable stop outcomes; the current row may advance, never erase this history.
+model ToybacoPostingRetentionHistory {
+  organizationId String
+  transitionId String
+  generation Int
+  receiptHash String
+  receipt Json
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, transitionId])
+  @@unique([organizationId, generation])
+}
+
+// Immutable non-executable preparations; no current release pointer.
+model ToybacoPostingPreparation {
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestId String
+  payloadHash String
+  request Json
+  receiptHash String
+  receipt Json
+  createdAt DateTime @default(now())
+
+  @@id([organizationId, requestId])
+}
+
+// Persistent identity generations survive deletion; they grant no execution permission.
+model ToybacoPostingIdentityEpoch {
+  kind String
+  entityId String
+  generation BigInt @default(1)
+  epoch String @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@id([kind, entityId])
 }
