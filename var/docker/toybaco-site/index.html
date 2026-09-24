@@ -1805,7 +1805,7 @@ footer.site2::before{content:""; position:absolute; top:0; left:0; right:0; heig
 <section class="lp-section" id="compare"><div class="lp-wrap"><h2>必要な機能から選ぶ</h2><div id="lp-selector" class="lp-selector"><label>受信箱の接続数<input type="number" min="0" step="1" value="2" data-limit="inboxes"></label><label>投稿アカウント数<input type="number" min="0" step="1" value="1" data-limit="posting_accounts"></label><label>1投稿先の同時予約件数<input type="number" min="0" step="1" value="5" data-limit="scheduled_posts_per_account"></label><label>1か月のAI生成回数<input type="number" min="0" step="1" value="20" data-limit="ai_generations"></label><label class="lp-check"><input type="checkbox" id="lp-auto-reply">AI自動返信が必要</label></div><p id="lp-result" class="lp-result" role="status" aria-live="polite"></p><p class="lp-note">スタッフ数は全プラン無制限です。上の条件を通常枠で満たす最小プランを表示します。追加パック・媒体ごとの提供可否・承認条件はこの判定に含みません。他社サービスとの機能差や契約条件を揃えた価格比較ではありません。</p></div></section>
 
 <!-- ============ 料金 ============ -->
-<section class="lp-section" id="pricing"><div class="lp-wrap"><h2>無料プランから。お店に合う4つのプラン。</h2><div class="lp-billing" role="group" aria-label="料金の表示周期"><button type="button" data-lp-cycle="month" aria-pressed="true">月払い</button><button type="button" data-lp-cycle="year" aria-pressed="false">年払い · 10%割引</button></div><div class="lp-plans">
+<section class="lp-section" id="pricing"><div class="lp-wrap"><h2>4つの定額プランと、個別設計プラン。</h2><div class="lp-billing" role="group" aria-label="料金の表示周期"><button type="button" data-lp-cycle="month" aria-pressed="true">月払い</button><button type="button" data-lp-cycle="year" aria-pressed="false">年払い · 10%割引</button></div><div class="lp-plans">
 <article class="lp-plan" data-plan="free" id="plan-free">
 
           <h3>無料プラン<small></small></h3><p class="lp-for">少ない窓口・SNSで、小さく始めたいお店に。</p>
@@ -1850,7 +1850,24 @@ footer.site2::before{content:""; position:absolute; top:0; left:0; right:0; heig
           <li>返信案・投稿文を、人が確認して送信</li><li>AI自動返信を含む</li>
           <li>保存容量 100GB</li></ul>
           <a class="btn btn-ghost" data-lp-plan-link="pro" href="/signup/?plan=pro&amp;version=2026-09-18.1&amp;cycle=month">このプランで始める</a></article>
-</div><p class="lp-note">表示は1店舗あたり。スタッフの追加で料金は増えません。有料年払いは10%割引・1年分の一括前払いです。年総額と月額換算を併記しています。</p></div></section>
+</div><p class="lp-note">表示は1店舗あたり。スタッフの追加で料金は増えません。有料年払いは10%割引・1年分の一括前払いです。年総額と月額換算を併記しています。</p>
+<section class="custom-plan" id="consultation" aria-label="個別設計プラン">
+      <div class="custom-plan__intro">
+        <p class="custom-plan__label">個別設計プラン</p>
+        <h3>業務に合わせて、<br>必要な機能と支援を。</h3>
+        <p class="custom-plan__description">専用環境、業務カスタマイズ、AIエージェントの最適化。導入・運用支援まで、ご要望に応じて設計します。</p>
+        <a class="custom-plan__detail" href="/enterprise/">プランの内容を見る <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="custom-plan__inquiry">
+        <p class="custom-plan__price">個別お見積もり</p>
+        <p class="custom-plan__note">1店舗からご相談いただけます。<br>内容が固まっていない段階でも、お気軽にご相談ください。</p>
+        <div class="contact-actions">
+          <a class="contact-button" href="#toybaco-staging-chat-preview" data-open-chat><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 3v-3H3V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>チャットで相談</a>
+          <a class="contact-button" href="/contact/?topic=custom" data-contact-form><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>フォームで相談</a>
+        </div>
+        <p class="contact-address">担当者からメールでご返信します。</p>
+      </div>
+    </section></div></section>
 
 <!-- ============ 運営会社 ============ -->
 <section class="sec" id="company">
