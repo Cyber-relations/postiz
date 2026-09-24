@@ -58,7 +58,7 @@
     inquiry_type: ['service', 'custom', 'setup', 'billing', 'support', 'other'],
     error_type: ['validation', 'api', 'network', 'system'],
     error_field: ['name', 'company', 'email', 'topic', 'message', 'consent', 'form'],
-    plan_id: ['light', 'standard', 'pro'], billing_cycle: ['month', 'year'],
+    plan_id: ['free', 'light', 'standard', 'pro'], billing_cycle: ['month', 'year'],
     demo_action: ['pack_preview_change'], inquiry_origin: ['partners'],
     staff_count_band: ['2_3', '4_5', '6_10', '11_20', '21_30'],
     pricing_location: ['home_pricing', 'pricing_page']
@@ -68,15 +68,18 @@
     if (codes[key]) return codes[key].includes(value);
     if (key === 'question_id') return /^[a-z0-9_]+_faq_[0-9]{2}$/.test(value);
     if (key === 'industry_id') return ['beauty', 'food', 'estate', 'retail-ec', 'clinic', 'school', 'auto', 'reform', 'hotel', 'bridal-photo', 'pet', 'pro'].includes(value);
-    if (key === 'link_text') return ["お問い合わせ", "お問い合わせフォーム", "チャットからどうぞ", "チャットでご相談ください", "チャットで伝える", "チャットで相談", "チャットで相談する", "チャットで質問する", "フォームで相談", "フォームで相談する"].includes(value);
+    if (key === 'link_text') return ["このプランを相談する", "お問い合わせ", "お問い合わせフォーム", "チャットからどうぞ", "チャットでご相談ください", "チャットで伝える", "チャットで相談", "チャットで相談する", "チャットで質問する", "フォームで相談", "フォームで相談する"].includes(value);
     if (key === 'link_url') return value === '' || value === location.origin + '/contact/';
     return false;
   };
   const keys = [...new Set(Object.values(schema).flat())];
   const emit = (event, values = {}, completion) => {
-    if (!active || !Object.hasOwn(schema, event) || !schema[event].every(k => Object.hasOwn(values, k) && valid(k, values[k]))) return false;
+    if (!active || !Object.hasOwn(schema, event)) return false;
+    // Free has no billing cycle; the requirements selector has no staff-count input.
+    const fields = schema[event].filter(k => !(event === 'plan_select' && values.plan_id === 'free' && k === 'billing_cycle') && !(event === 'pricing_calculator_use' && !Object.hasOwn(values, 'staff_count_band') && k === 'staff_count_band'));
+    if (!fields.every(k => Object.hasOwn(values, k) && valid(k, values[k]))) return false;
     window.dataLayer.push({ ...Object.fromEntries(keys.map(k => [k, null])), ...context,
-      ...Object.fromEntries(schema[event].map(k => [k, values[k]])), event,
+      ...Object.fromEntries(fields.map(k => [k, values[k]])), event,
       eventCallback: completion, eventTimeout: completion ? 1200 : undefined });
     return true;
   };
@@ -108,7 +111,7 @@
   };
   window.toybacoMeasurement = Object.freeze({ context, emit, setChoice, get active() { return active; } });
   const position = el => el.closest('header, nav.menu') ? 'header'
-    : el.closest('footer') ? 'footer' : el.closest('#pricing, .plans2, #staffCalc') ? 'pricing'
+    : el.closest('footer') ? 'footer' : el.closest('#pricing, .plans2, #staffCalc, .lp-plans, #lp-selector') ? 'pricing'
     : path.startsWith('/guide/') ? 'article' : el.closest('.acts, .contact-options, #cta') ? 'main_cta' : 'other';
   document.addEventListener('click', e => {
     const el = e.target.closest('a[href^="mailto:"]');
@@ -183,8 +186,12 @@
     }
     document.body.appendChild(panel);
     const initialCycles = new WeakMap();
+    const nextCycles = new WeakMap();
+    document.querySelectorAll('.lp-billing').forEach(g => nextCycles.set(g, g.querySelector('[aria-pressed=true]')?.dataset.lpCycle || 'month'));
     document.querySelectorAll('.bill-tgl').forEach(g => initialCycles.set(g, g.querySelector('.on')?.dataset.bill || 'm'));
     document.addEventListener('click', e => {
+      const current = e.target.closest('[data-lp-cycle]');
+      if (current) { const group = current.closest('.lp-billing'); nextCycles.set(group, group.querySelector('[aria-pressed=true]')?.dataset.lpCycle); }
       const button = e.target.closest('.bill-tgl button');
       if (button) { const group = button.closest('.bill-tgl'); initialCycles.set(group, group.querySelector('.on')?.dataset.bill); }
     }, true);
@@ -204,16 +211,21 @@
           link_url: location.origin + '/contact/' });
         if (path.startsWith('/partners/')) record('partner_click', { link_position: pos, inquiry_origin: 'partners' });
       }
-      if (link?.origin === location.origin && link.pathname === '/signup/') record('signup_click', { link_position: pos });
-      if (el.matches('.buy-btn[data-plan]') && link) {
-        const plan = el.dataset.plan, cycle = link.searchParams.get('cycle');
-        if (['light','standard','pro'].includes(plan) && ['month','year'].includes(cycle)) {
+      if ((link?.origin === location.origin && link.pathname === '/signup/') || (link?.hostname === (production ? 'app.toybaco.jp' : 'app.staging.toybaco.jp') && link.pathname === '/toybaco/free/signup')) record('signup_click', { link_position: pos });
+      if ((el.matches('.buy-btn[data-plan]') || el.matches('[data-lp-plan-link]')) && link) {
+        const plan = el.dataset.lpPlanLink || el.dataset.plan, cycle = link.searchParams.get('cycle');
+        if (plan === 'free' || (['light','standard','pro'].includes(plan) && ['month','year'].includes(cycle))) {
           record('plan_select', { plan_id: plan, billing_cycle: cycle, link_position: pos });
-          if (link.hostname === (production ? 'app.toybaco.jp' : 'app.staging.toybaco.jp') && link.pathname === '/toybaco/checkout')
+          if (plan !== 'free' && link.hostname === (production ? 'app.toybaco.jp' : 'app.staging.toybaco.jp') && link.pathname === '/toybaco/checkout')
             record('checkout_click', { plan_id: plan, billing_cycle: cycle });
         }
       } else if (link?.hostname === (production ? 'app.toybaco.jp' : 'app.staging.toybaco.jp') && ['/', '/app/login', '/app/login/'].includes(link.pathname))
         record('login_click', { link_position: pos });
+      if (el.matches('[data-lp-cycle]')) {
+        const group = el.closest('.lp-billing'), next = el.dataset.lpCycle;
+        if (nextCycles.get(group) !== next) record('billing_cycle_change', { billing_cycle: next });
+        nextCycles.set(group, next);
+      }
       if (el.matches('.bill-tgl button')) {
         const group = el.closest('.bill-tgl'), next = el.dataset.bill;
         if (initialCycles.get(group) !== next) {
@@ -268,6 +280,10 @@
         userToggle = false; wasOpen = details.open;
       });
     });
+    const requirements = document.getElementById('lp-selector');
+    requirements?.addEventListener('change', e => {
+      if (e.isTrusted && e.target.validity?.valid) emit('pricing_calculator_use');
+    });
     const slider = document.getElementById('calcRange');
     let lastValue = slider?.value;
     slider?.addEventListener('change', e => {
@@ -280,7 +296,7 @@
     if (path === '/pricing/' || path === '/pricing/index.html')
       emit('pricing_view', { pricing_location: 'pricing_page' });
     if (path === '/' || path === '/index.html') {
-      const marker = document.querySelector('#pricing .price-h .mk');
+      const marker = document.querySelector('#pricing .price-h .mk, #pricing.lp-section h2');
       let visible = false, timer = null, done = false;
       const reset = () => { clearTimeout(timer); timer = null; };
       const update = () => {

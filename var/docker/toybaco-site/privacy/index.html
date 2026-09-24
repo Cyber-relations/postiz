@@ -10,9 +10,10 @@
 <link rel="icon" href="/assets/favicon-32x32.png?v=ivory-20260914" sizes="32x32">
 <link rel="stylesheet" href="/assets/fonts/fonts.css">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/assets/lp-candidate.css?v=2026-09-18.1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 </head>
-<body>
+<body><!-- toybaco-lp-pricing:2026-09-18.1 -->
 
 <header class="site">
   <div class="ribbon"></div>
@@ -97,7 +98,7 @@
     <li><strong>販売・広告利用</strong>: Google から取得した情報を第三者へ販売することはありません。広告配信、与信判断、その他の目的への転用も行いません。本サービスの運用に必要な外部サービスでの処理については第5項をご覧ください</li>
     <li><strong>人による閲覧</strong>: 当社従業員が内容を閲覧するのは、契約者からのお問い合わせ対応、障害の調査、法令にもとづく対応に必要な場合に限られます</li>
     <li><strong>保管</strong>: 本サービス側では国内(AWS 東京リージョン)のサーバーに保管し、暗号化して保持します。通信の中継・配信等には第5項の外部サービスも利用します</li>
-    <li><strong>連携の解除と削除</strong>: 契約者は本サービスの画面からいつでも連携を解除できます。解除するとアクセストークンは速やかに削除されます。ご契約終了時も同様に削除します。Google アカウント側からの解除は <a href="https://myaccount.google.com/permissions" rel="noopener">Google アカウントの「サードパーティ製アプリとの連携」</a> からも行えます</li>
+    <li><strong>連携の解除と削除</strong>: 契約者は本サービスの画面からいつでも連携を解除できます。解除するとアクセストークンは速やかに削除されます。有料契約から無料プランへの移行だけで、連携解除や店舗削除を行うものではありません。Google アカウント側からの解除は <a href="https://myaccount.google.com/permissions" rel="noopener">Google アカウントの「サードパーティ製アプリとの連携」</a> からも行えます</li>
   </ul>
   <p>本サービスが Google API から受け取った情報の利用および他アプリへの移転は、<a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API サービスのユーザーデータに関するポリシー</a>(限定使用の要件を含む)に準拠します。</p>
 
@@ -127,7 +128,7 @@
   <p>当社は、個人情報への不正アクセス、漏えい、滅失または毀損を防止するため、通信の暗号化、アクセス権限の管理、ログの記録その他必要かつ適切な安全管理措置を講じます。</p>
 
   <h2>7. 保存期間</h2>
-  <p>個人情報は、利用目的の達成に必要な期間に限り保存します。契約終了後は、契約者の希望に応じてデータをエクスポートして提供したうえで、合理的な期間内に削除します。</p>
+  <p>個人情報は、利用目的の達成に必要な期間に限り保存します。有料契約から無料プランへの移行と、店舗・個人情報の削除を区別します。店舗を継続利用する間のデータは利用目的に沿って取り扱い、削除請求は下記の窓口で受け付けます。新しい保存期間・削除取消等の具体的条件は提供前に別途ご案内します。</p>
 
   <h2 id="data-deletion">8. 開示・訂正・削除等の請求</h2>
   <p>本人からの個人情報の開示、訂正、削除、利用停止等のご請求には、法令に従い速やかに対応します。本サイトのチャット窓口よりご連絡ください。エンドユーザーの個人情報については、契約者(お客様が問い合わせをした事業者)にご連絡いただくことで、より速やかな対応が可能です。</p>
@@ -168,7 +169,7 @@ function openChat() {
 }
 </script>
 
-
+<script id="lp-candidate-data" type="application/json">{"version":"2026-09-18.1","preview":false,"plans":[{"plan_id":"free","version":"2026-09-18.1","name":"無料プラン","free":true,"amount":0,"annual":null,"limits":{"agents":null,"stores":1,"inboxes":2,"posting_accounts":1,"scheduled_posts_per_account":5,"ai_generations":20,"storage_bytes":1000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":false,"pack":false},{"plan_id":"light","version":"2026-09-18.1","name":"ライト","free":false,"amount":7980,"annual":86184,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":3,"scheduled_posts_per_account":30,"ai_generations":100,"storage_bytes":10000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":false,"pack":false},{"plan_id":"standard","version":"2026-09-18.1","name":"スタンダード","free":false,"amount":19800,"annual":213840,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":6,"scheduled_posts_per_account":300,"ai_generations":500,"storage_bytes":50000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":true,"pack":true},{"plan_id":"pro","version":"2026-09-18.1","name":"プロ","free":false,"amount":34800,"annual":375840,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":6,"scheduled_posts_per_account":300,"ai_generations":2000,"storage_bytes":100000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":true,"pack":true}]}</script><script src="/assets/lp-candidate.js?v=2026-09-18.1"></script>
 <!-- toybaco_staging_site_v1: staging consultation is a preview only -->
 <button type="button" onclick="document.getElementById('toybaco-staging-chat-preview').showModal()" style="position:fixed;right:16px;bottom:16px;z-index:999;padding:12px 16px;border:0;border-radius:24px;background:#1F3A5F;color:#fff;font:inherit;font-size:13px;cursor:pointer">相談チャット（確認用）</button>
 <dialog id="toybaco-staging-chat-preview" aria-labelledby="toybaco-staging-chat-title" style="margin:auto;width:min(calc(100% - 2rem),28rem);padding:24px;border:1px solid #D0D8E1;border-radius:18px;color:#1F3A5F;background:#fff">
