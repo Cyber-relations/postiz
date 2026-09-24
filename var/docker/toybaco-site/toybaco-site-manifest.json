@@ -2,6 +2,7 @@
   "app_origin": "https://app.staging.toybaco.jp",
   "consultation": "disabled-preview",
   "input_sha256": {
+    "site/.well-known/microsoft-identity-association.json": "5f815b31f05552e6ff63978ddaa859907b8513497b43fb7f0f9fc333ab7d417c",
     "site/404.html": "a89611992ca4ad949d19eaac17758d01c1b8673e788ba031a59cadc2b416bea8",
     "site/ai/index.html": "bce2ee3518981a2f16e5b1ac3d059a6d2682cf6e43ce001061e1d0f215c68e1f",
     "site/assets/apple-touch-icon.png": "5e9a094054b59b0c0c2022b0f15453cb1ae12b32dcfa0e57a58d545248d17901",
@@ -1077,7 +1078,7 @@
     "site/partners/index.html": "7da9780c0c4d2fe14da0138054fba6baddab826a6a1c08a3f71c54b5a4bc3b70",
     "site/posting/index.html": "851aad7043b18ded06afc1a1db8e39dfb436b8f561f31ea359cac698598fc575",
     "site/pricing/index.html": "8a88ba253db66f6eff9c282444c998ff99bda29ae14897b4a57c932c2b6ee986",
-    "site/privacy/index.html": "0ffacf188db313f43680672aa4dfa4fe376c9c5cff4569cce0eeb9f9f855a8af",
+    "site/privacy/index.html": "f133062645096b6a34341093f6ab836e60eeb03bd086e4d49198cfc2adf9b2a3",
     "site/robots.txt": "33ed606db059e761ea32ff3c6faba6781b0c83794a532127b0f3da9b003d9848",
     "site/security/index.html": "96573e066436d37dbaf7b1a39500b910ddd1552bd27dd00b0b6c3c00f13872dc",
     "site/signup/index.html": "65922496ef66bf60ed1b343d74b3410bfe5cdf9a46e408dc27eb5e26b0fbea9f",
@@ -1090,6 +1091,7 @@
     "site/welcome/index.html": "178f99ae7a95865f33c2c7b6d487c1ca8b7f734b1c75385428a23d340617be04"
   },
   "output_sha256": {
+    ".well-known/microsoft-identity-association.json": "5f815b31f05552e6ff63978ddaa859907b8513497b43fb7f0f9fc333ab7d417c",
     "404.html": "0954938c2b7173468996689f0860c4565bde157cac98a238fb7dd799d7e749eb",
     "ai/index.html": "0d02adbb066e6887ca96b2be27a5247813d45697f1f933787fe2a357dd8ddb26",
     "assets/apple-touch-icon.png": "5e9a094054b59b0c0c2022b0f15453cb1ae12b32dcfa0e57a58d545248d17901",
@@ -2165,7 +2167,7 @@
     "partners/index.html": "312105d848459a4ffd28311521b84601be1f346858f8a03eb6bd4ecee8e0b06d",
     "posting/index.html": "d87cdec530901b11a5ea0b52899252461672e43e7e2a1762c17e95c17eb14939",
     "pricing/index.html": "aa64b2a1e93dee18724902a2965f516a92499deed1e19c69f805bef501c55662",
-    "privacy/index.html": "b8adcd5cf94e687752c2a50d0675bff4738752ee556c815a0bf51dbd251f4048",
+    "privacy/index.html": "96490f08c89cd20e2a140e35dc7d1160d93108e58892bec6d9cc6f0992f6633d",
     "robots.txt": "331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1",
     "security/index.html": "cc99b271fc1a788490b930b8cece48a2ca8163bfa31d67287224bd9a213a2ca2",
     "signup/index.html": "c239c61948462664346ffa5e64228c91f00ce126787eff60aca6bd1a8deb5ad5",
@@ -2177,8 +2179,8 @@
     "tokushoho/index.html": "836b4ccd06bd1bd8c217b5f8600555b2440d68875161f6c6592e4fc39958ef71",
     "welcome/index.html": "a5947634415f25fb8b97a3a3ef1d71cdf4f225ee363bbc0c1ec966ded40b0adf"
   },
-  "renderer_sha256": "1bc11c036aab8802bea31ae63e28cc9a959f467e0196b8af474c4df3c31fbb59",
-  "roster_sha256": "5991cf189cbc660a3a96360883c92241a0f2ad60229253c09f7144661731319e",
+  "renderer_sha256": "d1edc151aa7fdf24d628bf0bd018a305ff8b5316b9220f3178173d80d17c221a",
+  "roster_sha256": "a100da389eae3686b24d0adcb86e82dfac9c85f944323ddae13f8dce124e9c7d",
   "schema_version": 1,
   "site_origin": "https://staging.toybaco.jp"
 }
