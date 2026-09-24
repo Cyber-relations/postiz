@@ -898,3 +898,106 @@ model ToybacoPostingIdentityEpoch {
 
   @@id([kind, entityId])
 }
+
+// Immutable signed authority. Rows do not grant execution without current pointer and dual admission.
+model ToybacoPostingAuthority {
+  organizationId String
+  authorityId String
+  authorityHash String
+  payload Json
+  createdAt DateTime @default(now())
+  @@id([organizationId, authorityId])
+}
+
+model ToybacoPostingAuthorityCurrent {
+  organizationId String @id
+  authorityId String
+  generation BigInt
+  epoch String @db.Uuid
+  state String
+}
+
+model ToybacoPostingSchedule {
+  organizationId String
+  rootId String
+  rootGeneration String
+  authorityId String
+  payload Json
+  scheduleHash String
+  createdAt DateTime @default(now())
+  @@id([organizationId, rootId, rootGeneration])
+}
+
+model ToybacoPostingStep {
+  organizationId String
+  operationId String
+  rootId String
+  rootGeneration String
+  step String
+  sequence Int
+  stepPostId String
+  authorityId String
+  request Json
+  requestHash String
+  state String
+  expectedMarker String?
+  claimedMarker String
+  outcome String?
+  evidenceHash String?
+  pendingEvidenceHash String?
+  pendingDataHash String?
+  railsAcknowledged Boolean @default(false)
+  startedAt DateTime?
+  terminalAt DateTime?
+  createdAt DateTime @default(now())
+  @@id([organizationId, operationId])
+  @@index([organizationId, state])
+  @@index([organizationId, rootId, rootGeneration])
+}
+
+// Permanent minimum compatibility receipt. No organization FK or customer data.
+model ToybacoDurableCapability {
+  capability String @id
+  acceptedAt DateTime @default(now())
+}
+
+// Paid upgrade handoff and immutable original-schedule continuation. No organization FK.
+model ToybacoPostingPaidUpgrade {
+  organizationId String
+  operationId String
+  request Json
+  requestHash String
+  receipt Json
+  receiptHash String
+  state String
+  application Json?
+  applicationHash String?
+  resolvedAt DateTime?
+  createdAt DateTime @default(now())
+  @@id([organizationId, operationId])
+}
+
+model ToybacoPostingScheduleContinuation {
+  organizationId String
+  rootId String
+  rootGeneration String
+  targetAuthorityId String
+  payload Json
+  continuationHash String
+  createdAt DateTime @default(now())
+  @@id([organizationId, rootId, rootGeneration, targetAuthorityId])
+}
+
+// Ordinary renewal continuation; retained history never grants execution by itself.
+model ToybacoPostingRenewal {
+  organizationId String
+  operationId String
+  request Json
+  requestHash String
+  receipt Json
+  receiptHash String
+  state String
+  resolvedAt DateTime?
+  createdAt DateTime @default(now())
+  @@id([organizationId, operationId])
+}

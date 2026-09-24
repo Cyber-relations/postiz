@@ -1,3 +1,6 @@
+import { ToybacoPostingRenewalController } from '@gitroom/backend/api/routes/toybaco-posting-renewal.controller';
+import { ToybacoPostingPaidUpgradeController } from '@gitroom/backend/api/routes/toybaco-posting-paid-upgrade.controller';
+import { ToybacoPostingAuthorityController } from '@gitroom/backend/api/routes/toybaco-posting-authority.controller';
 import { ToybacoPostingPreparationController } from '@gitroom/backend/api/routes/toybaco-posting-preparation.controller';
 import { ToybacoPostingRetentionController } from '@gitroom/backend/api/routes/toybaco-posting-retention.controller';
 import { ToybacoLegacyAiGuard } from '@gitroom/backend/services/auth/permissions/toybaco-legacy-ai.guard';
@@ -82,6 +85,9 @@ const authenticatedController = [
         RootController,
         ToybacoPostingRetentionController,
         ToybacoPostingPreparationController,
+        ToybacoPostingAuthorityController,
+        ToybacoPostingRenewalController,
+        ToybacoPostingPaidUpgradeController,
         StripeController,
         AuthController,
         PublicController,

@@ -1,3 +1,4 @@
+import { withPostingProviderExecution } from '@gitroom/nestjs-libraries/toybaco/provider-execution-context';
 import { instagramCommentPublicationError, INSTAGRAM_COMMENT_PERMISSION_CODE, INSTAGRAM_COMMENT_PERMISSION_MESSAGE } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-policy';
 import { Injectable } from '@nestjs/common';
 import {
@@ -290,23 +291,28 @@ export class PostActivity {
       expectedPublishMarker,
       'COMMENT'
     );
-    if (integration.providerIdentifier === 'instagram-standalone') {
+    try {
+    {
       const fresh = await this._integrationService.getIntegrationById(integration.organizationId, integration.id);
       if (!fresh || fresh.internalId !== integration.internalId ||
           fresh.providerIdentifier !== integration.providerIdentifier || fresh.disabled || fresh.deletedAt) {
         throw new BadBody('instagram-standalone', '{}', '{}', 'Instagramの接続が変更されています。接続と公開済み投稿を確認してください。');
       }
       integration = fresh;
-      if (instagramCommentPublicationError(integration, 2)) {
+      if (integration.providerIdentifier==='instagram-standalone' && instagramCommentPublicationError(integration, 2)) {
         throw new BadBody('instagram-standalone', '{}', '{}', INSTAGRAM_COMMENT_PERMISSION_CODE);
       }
     }
-    return this.toybacoPostCommentV110Body(
-      postId,
-      lastPostId,
-      integration,
-      posts
+    const outcome = await withPostingProviderExecution(
+      await this._postService.hasAuthorityExecution(integration.organizationId,rootPostId,expectedPublishMarker),
+      () => this.toybacoPostCommentV110Body(postId,lastPostId,integration,posts)
     );
+    await this._postService.authorityProviderResult(integration.organizationId,rootPostId,posts[0].id,expectedPublishMarker,'COMMENT',outcome);
+    return outcome;
+    } catch(error) {
+      await this._postService.authorityProviderUncertain(integration.organizationId,rootPostId,posts[0].id,expectedPublishMarker,'COMMENT').catch(()=>undefined);
+      throw error;
+    }
   }
 
   private async toybacoPostCommentV110Body(
@@ -431,6 +437,7 @@ export class PostActivity {
         expectedState
       );
     } catch (error) {
+      if(await this._postService.hasAuthorityExecution(integration.organizationId,rootPostId,expectedPublishMarker))throw error;
       // Google localPosts.create is one remote write. Only its explicit
       // HTTP 401 proves rejection before creation; an unknown outcome must
       // retain the one-way claim and must never cause another provider call.
@@ -609,8 +616,10 @@ export class PostActivity {
 
     setHeartbeatDetails(`${integration.providerIdentifier}: publish`);
     // V110はactivity入口でclaimし、その後にDB payloadを再取得済み。
-    const postNow =
-      allowPending && getIntegration.postPending
+    let postNow;
+    try { postNow = await withPostingProviderExecution(
+      await this._postService.hasAuthorityExecution(integration.organizationId,posts[0].id,expectedPublishMarker),
+      async () => allowPending && getIntegration.postPending
         ? await getIntegration.postPending(
             integration.internalId,
             integration.token,
@@ -622,13 +631,31 @@ export class PostActivity {
             integration.token,
             mappedPosts,
             integration
-          );
+          )
+    );
+
+    } catch(error) {
+      await this._postService.authorityProviderUncertain(integration.organizationId,posts[0].id,posts[0].id,expectedPublishMarker,'MAIN').catch(()=>undefined);
+      throw error;
+    }
 
     // トイバコの顧客層には連投を促すゲーミフィケーションが合わないため、
     // 22時間後に既定で届く streak メールは workflow を起動する手前で止める。
     // workflow 自体は Temporal の再生互換を守るため変更・削除しない。
 
+    await this._postService.authorityProviderResult(integration.organizationId,posts[0].id,posts[0].id,expectedPublishMarker,'MAIN',postNow);
     return postNow;
+  }
+
+  @ActivityMethod()
+  async toybacoCheckPostStatusV111(integration: Integration, pendingData: any, rootPostId: string, expectedPublishMarker: string) {
+    await this._postService.authorityPendingStatus(integration.organizationId,rootPostId,expectedPublishMarker,pendingData);
+    const fresh=await this._integrationService.getIntegrationById(integration.organizationId,integration.id);
+    if(!fresh||fresh.internalId!==integration.internalId||fresh.providerIdentifier!==integration.providerIdentifier||fresh.disabled||fresh.deletedAt)throw new Error('投稿先の現在状態を確認してください。');
+    const result=await this.checkPostStatus(fresh,pendingData);
+    const continuation=result.status!=='completed'?await this._postService.authorityPendingStatus(integration.organizationId,rootPostId,expectedPublishMarker,pendingData,result.pendingData):null;
+    if(result.status==='completed')await this._postService.authorityProviderResult(integration.organizationId,rootPostId,rootPostId,expectedPublishMarker,'MAIN',result);
+    return {...result,toybacoContinuation:continuation};
   }
 
   @ActivityMethod()
@@ -660,6 +687,7 @@ export class PostActivity {
     rootPostId: string,
     expectedPublishMarker: string
   ) {
+    await this._postService.authorityPendingStatus(integration.organizationId,rootPostId,expectedPublishMarker,pendingData);
     await this._postService.claimProviderStep(
       integration.organizationId,
       rootPostId,
@@ -667,14 +695,61 @@ export class PostActivity {
       expectedPublishMarker,
       'FINALIZE'
     );
+    try {
+    const fresh = await this._integrationService.getIntegrationById(integration.organizationId,integration.id);
+    if (!fresh || fresh.internalId!==integration.internalId || fresh.providerIdentifier!==integration.providerIdentifier || fresh.disabled || fresh.deletedAt) throw new Error('投稿先が変わりました。');
+    integration=fresh;
     const getIntegration = this._integrationManager.getSocialIntegration(
       integration.providerIdentifier
     );
-    return withHeartbeat(() =>
-      this.handleDisconnect(integration, () =>
-        getIntegration.finalizePost(integration.token, pendingData, integration)
-      )
+    const result = await withPostingProviderExecution(
+      await this._postService.hasAuthorityExecution(integration.organizationId,rootPostId,expectedPublishMarker),
+      () => withHeartbeat(() => this.handleDisconnect(integration, () =>
+        getIntegration.finalizePost(integration.token,pendingData,integration)))
     );
+    await this._postService.authorityProviderResult(integration.organizationId,rootPostId,rootPostId,expectedPublishMarker,'FINALIZE',result);
+    return result;
+    } catch(error) {
+      await this._postService.authorityProviderUncertain(integration.organizationId,rootPostId,rootPostId,expectedPublishMarker,'FINALIZE').catch(()=>undefined);
+      throw error;
+    }
+  }
+
+  @ActivityMethod()
+  async toybacoFinalizePostV111(
+    integration: Integration,
+    pendingData: any,
+    rootPostId: string,
+    expectedPublishMarker: string,
+    continuation:any
+  ) {
+    await this._postService.authorityPendingStatus(integration.organizationId,rootPostId,expectedPublishMarker,pendingData);
+    await this._postService.claimProviderStep(
+      integration.organizationId,
+      rootPostId,
+      rootPostId,
+      expectedPublishMarker,
+      'FINALIZE',
+      continuation??undefined
+    );
+    try {
+    const fresh = await this._integrationService.getIntegrationById(integration.organizationId,integration.id);
+    if (!fresh || fresh.internalId!==integration.internalId || fresh.providerIdentifier!==integration.providerIdentifier || fresh.disabled || fresh.deletedAt) throw new Error('投稿先が変わりました。');
+    integration=fresh;
+    const getIntegration = this._integrationManager.getSocialIntegration(
+      integration.providerIdentifier
+    );
+    const result = await withPostingProviderExecution(
+      await this._postService.hasAuthorityExecution(integration.organizationId,rootPostId,expectedPublishMarker),
+      () => withHeartbeat(() => this.handleDisconnect(integration, () =>
+        getIntegration.finalizePost(integration.token,pendingData,integration)))
+    );
+    await this._postService.authorityProviderResult(integration.organizationId,rootPostId,rootPostId,expectedPublishMarker,'FINALIZE',result,continuation?.sequence??0);
+    return {...result,toybacoContinuation:null};
+    } catch(error) {
+      await this._postService.authorityProviderUncertain(integration.organizationId,rootPostId,rootPostId,expectedPublishMarker,'FINALIZE',continuation?.sequence??0).catch(()=>undefined);
+      throw error;
+    }
   }
 
   @ActivityMethod()

@@ -48,6 +48,18 @@ export class PostsController {
     private _shortLinkService: ShortLinkService
   ) {}
 
+  @Get('/toybaco-authority-recovery')
+  async editorRecovery(@GetOrgFromRequest() org:Organization,@GetUserFromRequest() user:User,@Res({passthrough:true}) response:Response) {
+    response.setHeader('Cache-Control','no-store');
+    return this._postsService.editorRecovery(org.id,user.id);
+  }
+
+  @Get('/toybaco-authority')
+  async editorAuthority(@GetOrgFromRequest() org:Organization,@GetUserFromRequest() user:User,@Res({passthrough:true}) response:Response) {
+    response.setHeader('Cache-Control','no-store');
+    return this._postsService.editorAuthority(org.id,user.id);
+  }
+
   @Get('/:id/statistics')
   async getStatistics(
     @GetOrgFromRequest() org: Organization,

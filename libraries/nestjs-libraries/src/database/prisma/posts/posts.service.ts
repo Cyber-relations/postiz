@@ -1,3 +1,5 @@
+import { bindPostingSchedule, postingHash } from './posting-authority';
+import { callPostingExecution } from '../../../toybaco/posting-authority-protocol';
 import { instagramCommentPublicationError, INSTAGRAM_COMMENT_PERMISSION_CODE, INSTAGRAM_COMMENT_PERMISSION_MESSAGE } from '@gitroom/nestjs-libraries/toybaco/instagram-comment-policy';
 import { createHash } from 'node:crypto';
 import {
@@ -144,6 +146,7 @@ export type ToybacoPostSaveContext = {
   actorId: string;
   requestId: string;
   payloadHash: string;
+  authorityId?: string;
 };
 
 function toybacoCanonicalSavePayload(value: any): any {
@@ -173,15 +176,19 @@ export function toybacoPreparePostSaveRequest(
       message: '画面を再読み込みしてから投稿を保存してください。',
     });
   }
-  const { toybacoRequestId, ...body } = rawBody;
+  const { toybacoRequestId, toybacoAuthorityId, ...body } = rawBody;
+  if (toybacoAuthorityId !== undefined && (typeof toybacoAuthorityId !== 'string' || !/^[0-9a-f]{64}$/.test(toybacoAuthorityId) || body.type !== 'schedule')) {
+    throw new BadRequestException('再開する投稿と新しい日時を確認してください。');
+  }
   return {
     body,
     context: {
       organizationId,
       actorId,
+      ...(toybacoAuthorityId ? {authorityId:toybacoAuthorityId} : {}),
       requestId: toybacoRequestId.toLowerCase(),
       payloadHash: createHash('sha256')
-        .update(JSON.stringify(toybacoCanonicalSavePayload(body)))
+        .update(JSON.stringify(toybacoCanonicalSavePayload({...body,...(toybacoAuthorityId ? {toybacoAuthorityId} : {})})))
         .digest('hex'),
     },
   };
@@ -227,6 +234,13 @@ export async function toybacoRunCreatePostServiceTransaction(
     const committed: any[] = [];
     for (const post of preparedPosts) {
       committed.push(await writeOne(database, post));
+    }
+    if (saveContext?.authorityId) {
+      const ids = committed.flatMap((item: any) => item.postList).map((item: any) => item.postId);
+      const roots = await database.post.findMany({where:{organizationId:saveContext.organizationId,id:{in:ids},parentPostId:null,deletedAt:null}});
+      if (roots.length !== ids.length) throw new ForbiddenException('投稿対象を確認できません。');
+      await bindPostingSchedule(database, saveContext.organizationId, saveContext.actorId, saveContext, roots, saveContext.authorityId);
+      for (const item of committed) if (item.workflow) item.workflow.marker=roots.find((row:any)=>row.id===item.workflow.postId).error;
     }
     if (saveContext) {
       await database.toybacoPostSaveRequest.update({
@@ -375,12 +389,14 @@ export class PostsService {
     );
   }
 
-  claimProviderPost(
+  async claimProviderPost(
     orgId: string,
     postId: string,
     expectedPublishMarker: string,
     expectedState: State
   ) {
+    const admitted = await this.admitAuthorityStep(orgId,postId,postId,expectedPublishMarker,'MAIN');
+    if (admitted) return admitted;
     return this._postRepository.claimProviderPost(
       orgId,
       postId,
@@ -389,13 +405,16 @@ export class PostsService {
     );
   }
 
-  claimProviderStep(
+  async claimProviderStep(
     orgId: string,
     rootPostId: string,
     stepPostId: string,
     expectedPublishMarker: string,
-    step: 'FINALIZE' | 'COMMENT'
+    step: 'FINALIZE' | 'COMMENT',
+    continuation?:any
   ) {
+    const admitted = await this.admitAuthorityStep(orgId,rootPostId,stepPostId,expectedPublishMarker,step,continuation);
+    if (admitted) return admitted;
     return this._postRepository.claimProviderStep(
       orgId,
       rootPostId,
@@ -732,7 +751,7 @@ export class PostsService {
     return minifyPostsList({ ...list, posts: list.posts.map(toybacoPostReadFeedback) });
   }
 
-  async updateMedia(id: string, imagesList: any[], convertToJPEG = false) {
+  async updateMedia(id: string, imagesList: any[], convertToJPEG = false, persist = true) {
     try {
       let imageUpdateNeeded = false;
       const getImageList = await Promise.all(
@@ -831,7 +850,7 @@ export class PostsService {
           })
       );
 
-      if (imageUpdateNeeded) {
+      if (imageUpdateNeeded && persist && !await this._postRepository.authorityPayloadFrozen(id)) {
         await this._postRepository.updateImages(
           id,
           JSON.stringify(getImageList)
@@ -1158,7 +1177,7 @@ export class PostsService {
         'QUEUE以外の投稿ワークフローは開始できません。'
       );
     }
-    await rawClient.workflow.signalWithStart('postWorkflowV110', {
+    await rawClient.workflow.signalWithStart(parsed.authority?'postWorkflowV111':'postWorkflowV110', {
       workflowId: `post_${postId}_g${generation}_t${parsed.token}`,
       taskQueue: 'main',
       signal: 'poke',
@@ -1463,7 +1482,8 @@ export class PostsService {
           keepGroup,
           toybacoDraftOnly,
           !!body.republish,
-          toybacoDatabase
+          toybacoDatabase,
+          toybacoSaveContext?.authorityId ? {authorityId:toybacoSaveContext.authorityId,actorId:toybacoSaveContext.actorId} : undefined
         );
         return {
           postList: posts?.length
@@ -1683,6 +1703,73 @@ export class PostsService {
   }
 
   // No controller or recurring job calls this until the Free transition is complete.
+  async editorRecovery(org:string,actor:string) {
+    const accountId=await this._postRepository.editorRecovery(org,actor);
+    const pairs:Record<string,string>={'https://post.toybaco.jp':'https://app.toybaco.jp','https://post.staging.toybaco.jp':'https://app.staging.toybaco.jp'};
+    const origin=pairs[process.env.FRONTEND_URL||''];
+    if(!accountId||!origin||process.env.POSTIZ_OAUTH_USERINFO_URL!==origin+'/toybaco/oidc/userinfo')return {url:null};
+    return {url:origin+'/toybaco/growth/posting-release?account_id='+accountId};
+  }
+
+  editorAuthority(org:string,actor:string) { return this._postRepository.editorAuthority(org,actor); }
+
+  postingRenewal(input:any) { return this._postRepository.postingRenewal(input); }
+  postingPaidUpgrade(operation:string,handoff:any,application:any) { return this._postRepository.postingPaidUpgrade(operation,handoff,application); }
+  postingAuthority(operation: string, authority: any) { return this._postRepository.postingAuthority(operation, authority); }
+
+  private async admitAuthorityStep(org: string, root: string, child: string, marker: string, step: string, continuation?:any) {
+    const reserved = await this._postRepository.reserveAuthorityStep(org,root,child,marker,step,continuation);
+    if (!reserved) return null;
+    if (reserved.state !== 'reserved') throw new ForbiddenException('この投稿処理は開始済みです。結果を確認してください。');
+    const rails = await callPostingExecution('start', reserved.request);
+    const started = await this._postRepository.startAuthorityStep(reserved.request,rails);
+    if (!started.execute) throw new ForbiddenException('この投稿処理は開始済みです。結果を確認してください。');
+    return started.row.claimedMarker;
+  }
+
+  async hasAuthorityExecution(org:string,root:string,marker:string) { return !!await this._postRepository.authorityExecution(org,root,root,marker,'MAIN'); }
+
+  async authorityPendingStatus(org:string,root:string,marker:string,pendingData:any,nextData?:any) {
+    const saved=await this._postRepository.authorityPendingExecution(org,root,marker);
+    if(!saved) { if(await this.hasAuthorityExecution(org,root,marker))throw new ForbiddenException('投稿の継続状態を確認してください。');return null; }
+    return this._postRepository.pendingAuthorityStatus(saved.request,postingHash(pendingData),nextData===undefined?undefined:postingHash(nextData));
+  }
+
+  async authorityProviderResult(org: string, root: string, child: string, marker: string, step: string, providerResult: any, sequence=0) {
+    const execution = await this._postRepository.authorityExecution(org,root,child,marker,step,sequence);
+    if (!execution) return;
+    const values = Array.isArray(providerResult) ? providerResult : [providerResult];
+    // Only the verified provider adapter's structured result is admissible. Unknown response stays fenced.
+    if (!values.length || values.some((value:any)=>!value || (value.status==='pending' && (!value.pendingData || typeof value.pendingData!=='object')) || !['pending','published','completed','success','posted'].includes(value.status) || (value.status!=='pending' && (typeof value.postId!=='string'||!value.postId))) || (values.some((value:any)=>value.status==='pending') && values.length!==1)) {
+      await this._postRepository.recordAuthorityResult(execution.request,'uncertain',postingHash({operationId:execution.operationId,kind:'unrecognized-provider-result'}));
+      await this.recoverAuthorityResult(execution.request);
+      throw new ForbiddenException('投稿結果を確認してください。自動で再送しません。');
+    }
+    const outcome=values[0].status==='pending'?'pending':'published';
+    const evidenceHash=postingHash(outcome==='pending'?{operationId:execution.operationId,outcome,pendingDataHash:postingHash(values[0].pendingData)}:{organizationId:org,rootId:root,rootGeneration:execution.request.rootGeneration,stepPostId:child,outcome,postIds:values.map((value:any)=>value.postId)});
+    await this._postRepository.recordAuthorityResult(execution.request,outcome,evidenceHash,outcome==='pending'?postingHash(values[0].pendingData):undefined);
+    await this.recoverAuthorityResult(execution.request);
+  }
+
+  async authorityProviderUncertain(org:string,root:string,child:string,marker:string,step:string,sequence=0) {
+    const execution=await this._postRepository.authorityExecution(org,root,child,marker,step,sequence);
+    if(!execution||!['started','uncertain'].includes(execution.state))return;
+    await this._postRepository.recordAuthorityResult(execution.request,'uncertain',postingHash({operationId:execution.operationId,kind:'provider-response-unknown'}));
+    await this.recoverAuthorityResult(execution.request);
+  }
+
+  // Explicit internal recovery uses stored state and never re-enters provider dispatch.
+  async recoverAuthorityResult(request:any) {
+    const saved=await this._postRepository.postingResultDelivery(request);
+    const rails=await callPostingExecution('result',saved.execution,{outcome:saved.outcome,evidenceHash:saved.evidenceHash});
+    return this._postRepository.acknowledgePostingResult(saved.execution,rails);
+  }
+
+  async abortAuthorityBeforeDispatch(request:any) {
+    await this._postRepository.abortAuthorityStep(request);
+    return this.recoverAuthorityResult(request);
+  }
+
   async preparePostingRelease(orgId: string, request: any) {
     return this._postRepository.preparePostingRelease(orgId, request);
   }

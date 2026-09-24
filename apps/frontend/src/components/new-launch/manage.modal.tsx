@@ -321,6 +321,12 @@ async function toybacoCheckedPostRequest(
   }
 }
 
+function toybacoAuthorityRefreshAfterFailure(code:string, outcome:{current:boolean}):boolean {
+  const definitelyRejected=['TOYBACO_POST_NOT_ALLOWED','TOYBACO_POST_REJECTED','TOYBACO_POST_SAVE_RELOAD_REQUIRED'].includes(code);
+  if(!definitelyRejected)outcome.current=true;
+  return definitelyRejected&&!outcome.current;
+}
+
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
   const uncheckedFetch = useFetch();
@@ -332,6 +338,44 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const toybacoCanPublish = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
   const toybacoSaving = useRef(false);
   const toybacoSaveRequestId = useRef('');
+  const toybacoSaveOutcomeUnknown = useRef(false);
+  const toybacoAuthorityFetch = useRef(uncheckedFetch);
+  const toybacoAuthorityId = useRef<string | null>(null);
+  const [toybacoAuthorityRecovery,setToybacoAuthorityRecovery] = useState<string|null>(null);
+  const [toybacoAuthorityRefreshAllowed,setToybacoAuthorityRefreshAllowed] = useState(true);
+  const [toybacoAuthorityState,setToybacoAuthorityState] = useState<'loading'|'ready'|'error'>('loading');
+  useEffect(() => {
+    let live=true;
+    const abort=new AbortController();
+    void toybacoCheckedPostRequest(toybacoAuthorityFetch.current,'/posts/toybaco-authority-recovery',{method:'GET',cache:'no-store'})
+      .then(response=>response.json()).then(value=>{
+        if(live&&value&&Object.keys(value).join('|')==='url'&&typeof value.url==='string'&&/^https:\/\/app(?:\.staging)?\.toybaco\.jp\/toybaco\/growth\/posting-release\?account_id=[1-9][0-9]*$/.test(value.url))setToybacoAuthorityRecovery(value.url);
+      }).catch(()=>undefined);
+    void toybacoCheckedPostRequest(toybacoAuthorityFetch.current,'/posts/toybaco-authority',{method:'GET',signal:abort.signal,cache:'no-store'})
+      .then(response=>response.json()).then(value=>{
+        if(!live)return;
+        if(!value||Object.keys(value).join('|')!=='authorityId'||(value.authorityId!==null&&(typeof value.authorityId!=='string'||! /^[0-9a-f]{64}$/.test(value.authorityId))))throw new Error('invalid authority');
+        toybacoAuthorityId.current=value.authorityId;
+        setToybacoAuthorityState('ready');
+      }).catch(()=>{if(live)setToybacoAuthorityState('error');});
+    return ()=>{live=false;abort.abort();};
+  },[]);
+  const toybacoRefreshAuthority = useCallback(async()=>{
+    if(toybacoSaving.current||!toybacoAuthorityRefreshAllowed||toybacoAuthorityState==='loading')return;
+    setToybacoAuthorityState('loading');
+    try {
+      const response=await toybacoCheckedPostRequest(uncheckedFetch,'/posts/toybaco-authority',{method:'GET',cache:'no-store'});
+      const value=await response.json();
+      if(!value||Object.keys(value).join('|')!=='authorityId'||typeof value.authorityId!=='string'||! /^[0-9a-f]{64}$/.test(value.authorityId))throw new Error('invalid authority');
+      if(value.authorityId!==toybacoAuthorityId.current)toybacoSaveRequestId.current='';
+      toybacoAuthorityId.current=value.authorityId;
+      setToybacoAuthorityState('ready');
+      setToybacoSaveError('再確認した投稿先を読み込みました。本文・日時・全投稿先を確認してから予約してください。');
+    }catch{
+      setToybacoAuthorityState('error');
+      setToybacoSaveError('投稿先の再確認が完了していません。入力内容は残しています。別タブの案内を確認してください。');
+    }
+  },[uncheckedFetch,toybacoAuthorityRefreshAllowed,toybacoAuthorityState]);
   const toybacoComposerGroup = useRef(makeId(10));
   const [toybacoSavedResult, setToybacoSavedResult] = useState(false);
   const [toybacoSaveError, setToybacoSaveError] = useState('');
@@ -567,6 +611,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       if (toybacoSaving.current) return;
       if (toybacoConnectionError) return;
       if (toybacoSavedResult) return;
+      if (!dummy && !addEditSets && type !== 'draft' && toybacoAuthorityState !== 'ready') {
+        setToybacoSaveError(toybacoAuthorityState === 'loading' ? '投稿先の状態を確認しています。少し待ってから予約してください。' : '投稿先の再開状態を確認できません。入力内容は残しています。投稿先を再確認し、投稿先と日時を確認してください。');
+        return;
+      }
       if (!toybacoCanEditDraft || (!dummy && !addEditSets && type !== 'draft' && !toybacoCanPublish)) {
         setToybacoSaveError('予約・公開済みの投稿の変更と公開は管理者が行います。');
         return;
@@ -833,6 +881,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               method: 'POST',
               body: JSON.stringify({
                 ...data,
+                ...(type === 'schedule' && toybacoAuthorityId.current ? {toybacoAuthorityId:toybacoAuthorityId.current} : {}),
                 // A timeout or rejection keeps this save identity. Only a new
                 // composer starts a new logical save operation.
                 toybacoRequestId: toybacoSaveRequestId.current ||= crypto.randomUUID(),
@@ -859,6 +908,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       }
       } catch (error) {
         const code = error instanceof Error ? error.message : '';
+        setToybacoAuthorityRefreshAllowed(toybacoAuthorityRefreshAfterFailure(code,toybacoSaveOutcomeUnknown));
         const saved = code === 'TOYBACO_POST_SAVE_ALREADY_COMMITTED' || code === 'TOYBACO_POST_SAVE_REQUEST_CHANGED';
         if (saved) {
           setToybacoSavedResult(true);
@@ -869,9 +919,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           : code === 'TOYBACO_POST_SAVE_REQUEST_CHANGED'
           ? '前の操作の投稿は保存済みです。今回の変更は保存していません。入力内容は残しています。カレンダーから保存済みの投稿を開いて変更してください。'
           : code === 'TOYBACO_POST_SAVE_RELOAD_REQUIRED'
-          ? 'この保存は受け付けていません。入力内容を控えてから、この画面を閉じて再読み込みしてください。'
+          ? 'この保存は受け付けていません。入力内容は残しています。投稿先を再確認してから予約してください。'
           : code === 'TOYBACO_POST_NOT_ALLOWED'
-          ? '保存する権限を確認できません。入力内容は残しています。管理者に確認してください。'
+          ? '保存する権限や投稿先の状態が変わりました。入力内容は残しています。投稿先を再確認してください。'
           : code === 'TOYBACO_POST_REJECTED'
           ? '保存できませんでした。入力内容は残しています。投稿先・本文・日時を確認してください。'
           : '保存結果を確認できません。入力内容は残しています。重複を避けるため、カレンダーを確認してから再操作してください。');
@@ -879,7 +929,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         toybacoFinishSaving();
       }
     },
-    [ref, repeater, tags, date, addEditSets, dummy, shortlinkPreferenceData, fetch, selectedIntegrations, existingData, mutate, modal, customClose, toaster, t, toybacoCanPublish, toybacoCanEditDraft, toybacoFinishSaving, toybacoConnectionError, toybacoSavedResult]
+    [ref, repeater, tags, date, addEditSets, dummy, shortlinkPreferenceData, fetch, selectedIntegrations, existingData, mutate, modal, customClose, toaster, t, toybacoCanPublish, toybacoCanEditDraft, toybacoFinishSaving, toybacoConnectionError, toybacoSavedResult, toybacoAuthorityState]
   );
 
   return (
@@ -1057,8 +1107,17 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
             </div>
           </div>
         </div>
-        <div data-toybaco-composer-footer="" aria-busy={loading} style={toybacoConnectionError ? { height: 'auto', flexWrap: 'wrap', maxHeight: '40dvh', overflowY: 'auto' } : undefined} className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
+        <div data-toybaco-composer-footer="" aria-busy={loading} style={(toybacoConnectionError||toybacoSaveError||toybacoAuthorityState==='error') ? { height: 'auto', flexWrap: 'wrap', maxHeight: '40dvh', overflowY: 'auto' } : undefined} className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
           {toybacoSaveError && !toybacoConnectionError && <p data-toybaco-save-error="" role="alert">{toybacoSaveError}{toybacoSavedResult && <button type="button" className="block mt-[8px] underline" onClick={() => { void askClose(); }}>カレンダーで保存済み投稿を確認</button>}</p>}
+          {!toybacoConnectionError&&(toybacoAuthorityState==='error'||toybacoSaveError)&&!toybacoSavedResult&&(
+            <div data-toybaco-authority-recovery="" style={{flexBasis:'100%',padding:'8px 16px'}}>
+              <p>入力中の本文・日時・投稿先はこの画面に残ります。</p>
+              {toybacoAuthorityRefreshAllowed ? <div className="flex flex-wrap gap-[12px]">
+                {toybacoAuthorityRecovery&&<a href={toybacoAuthorityRecovery} target="_blank" rel="noopener noreferrer" className="underline">別タブで投稿先を再確認</a>}
+                <button type="button" onClick={toybacoRefreshAuthority} disabled={loading||toybacoAuthorityState==='loading'} className="underline">{toybacoAuthorityState==='loading'?'投稿先を確認中…':'再確認した投稿先を読み直す'}</button>
+              </div>:<p>保存結果が不明なため投稿先は更新していません。同じ操作の結果を確認してから進めてください。</p>}
+            </div>
+          )}
           {toybacoConnectionError && (
             <div data-toybaco-session-recovery="" style={{ flexBasis: '100%', minWidth: 0, padding: '8px 16px' }}>
               <p role="alert">{toybacoConnectionError}</p>

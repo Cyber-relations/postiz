@@ -1,3 +1,4 @@
+import { postingProviderExecution } from '@gitroom/nestjs-libraries/toybaco/provider-execution-context';
 import {
   AnalyticsData,
   AuthTokenDetails,
@@ -667,6 +668,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
       // automatic retries, which could create a second post after acceptance.
       response = await fetch(url, {
         method: 'POST',
+        ...(postingProviderExecution() ? { redirect: 'manual' as const } : {}),
         signal: AbortSignal.timeout(30000),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',

@@ -1,3 +1,4 @@
+import { postingRenewal, postingPaidUpgrade, postingEditorAuthority, postingEditorRecovery, postingAuthority, reservePostingStep, startPostingStep, recordPostingResult, currentAuthority, authoritySchedule, postingResultDelivery, acknowledgePostingResult, abortPostingStep, pendingPostingStatus } from './posting-authority';
 import { toybacoPreparePostingRelease, toybacoApplyPostingRetention, toybacoRetentionCurrent, toybacoRetentionHistory, toybacoRetentionLock, toybacoRetentionPublish, toybacoRetentionWrite } from './posting-retention';
 import {
   PrismaRepository,
@@ -1437,7 +1438,7 @@ export class PostsRepository {
     if (!parsed) throw new ForbiddenException('workflow tokenが不正です。');
     return this._transaction.model.$transaction(async (database: any) => {
       if (parsed.operation === 'CANCEL') await toybacoRetentionLock(database, orgId);
-      else await toybacoRetentionPublish(database, orgId, postId);
+      else if(!await authoritySchedule(database,orgId,postId,parsed.generation+':'+parsed.token)) await toybacoRetentionPublish(database, orgId, postId);
       await database.$queryRawUnsafe(TOYBACO_LOCK_POST_SQL, postId, orgId);
       const post = await database.post.findFirst({
         where: {
@@ -1450,7 +1451,8 @@ export class PostsRepository {
         select: { id: true },
       });
       if (!post) throw new ForbiddenException('stale workflow claimを拒否しました。');
-      return parsed;
+      const authority=await database.toybacoPostingSchedule.findUnique({where:{organizationId_rootId_rootGeneration:{organizationId:orgId,rootId:postId,rootGeneration:parsed.generation+':'+parsed.token}}});
+      return {...parsed,authority:!!authority};
     });
   }
 
@@ -1794,6 +1796,55 @@ export class PostsRepository {
   }
 
   // Internal primitive only. The billing transition bridge is not exposed yet.
+  editorRecovery(org:string,actor:string) { return this._transaction.model.$transaction((db:any)=>postingEditorRecovery(db,org,actor)); }
+
+  editorAuthority(org:string,actor:string) { return this._transaction.model.$transaction((db:any)=>postingEditorAuthority(db,org,actor)); }
+
+  postingRenewal(input:any) { return this._transaction.model.$transaction((db:any)=>postingRenewal(db,input)); }
+  postingPaidUpgrade(operation:string,handoff:any,application:any) { return this._transaction.model.$transaction((db:any)=>postingPaidUpgrade(db,operation,handoff,application)); }
+  postingAuthority(operation: string, authority: any) {
+    return this._transaction.model.$transaction((db: any) => postingAuthority(db, operation, authority));
+  }
+
+  async authorityPayloadFrozen(id:string) {
+    const post=await this._post.model.post.findUnique({where:{id},select:{organizationId:true}});
+    return !!post && await (this._post.model as any).toybacoPostingStep.count({where:{organizationId:post.organizationId,state:{in:['reserved','started','pending','uncertain']}}})>0;
+  }
+
+  pendingAuthorityStatus(request:any,hash:string,nextHash?:string) { return this._transaction.model.$transaction((db:any)=>pendingPostingStatus(db,request,hash,nextHash)); }
+
+  postingResultDelivery(request:any) { return this._transaction.model.$transaction((db:any)=>postingResultDelivery(db,request)); }
+  acknowledgePostingResult(request:any,rails:any) { return this._transaction.model.$transaction((db:any)=>acknowledgePostingResult(db,request,rails)); }
+  abortAuthorityStep(request:any) { return this._transaction.model.$transaction((db:any)=>abortPostingStep(db,request)); }
+
+  async reserveAuthorityStep(org: string, root: string, child: string, marker: string, step: string, continuation?:any) {
+    const parts = /^TOYBACO_PUBLISH_V2\|([0-9]{13})\|([0-9a-f-]{36})\|READY$/.exec(marker);
+    const exists = parts && await (this._post.model as any).toybacoPostingSchedule.findUnique({ where: {
+      organizationId_rootId_rootGeneration: {organizationId: org, rootId: root, rootGeneration: parts[1]+':'+parts[2]} } });
+    if (!exists) return null;
+    return this._transaction.model.$transaction((db: any) => reservePostingStep(db, org, root, child, marker, step, continuation));
+  }
+
+  startAuthorityStep(request: any, rails: any) {
+    return this._transaction.model.$transaction((db: any) => startPostingStep(db, request, rails));
+  }
+
+  recordAuthorityResult(request: any, outcome: string, evidenceHash: string, pendingDataHash?:string) {
+    return this._transaction.model.$transaction((db: any) => recordPostingResult(db, request, outcome, evidenceHash, pendingDataHash));
+  }
+
+  async authorityExecution(org: string, root: string, child: string, marker: string, step: string, sequence=0) {
+    const parts = /^TOYBACO_PUBLISH_V2\|([0-9]{13})\|([0-9a-f-]{36})\|READY$/.exec(marker);
+    if (!parts) return null;
+    return (this._post.model as any).toybacoPostingStep.findFirst({ where: {organizationId:org, rootId:root,
+      rootGeneration:parts[1]+':'+parts[2], stepPostId:child, step, sequence} });
+  }
+
+  async authorityPendingExecution(org:string,root:string,marker:string) {
+    const parts=/^TOYBACO_PUBLISH_V2\|([0-9]{13})\|([0-9a-f-]{36})\|READY$/.exec(marker);if(!parts)return null;
+    return (this._post.model as any).toybacoPostingStep.findFirst({where:{organizationId:org,rootId:root,rootGeneration:parts[1]+':'+parts[2],OR:[{step:'MAIN',state:'pending'},{step:'FINALIZE',state:'completed',outcome:'pending'}]},orderBy:{sequence:'desc'}});
+  }
+
   async preparePostingRelease(orgId: string, request: any) {
     if (process.env.TOYBACO_POSTING_RELEASE_ENABLED !== 'true') throw new ForbiddenException('接続の再開準備は現在利用できません。');
     return this._transaction.model.$transaction((database: any) => toybacoPreparePostingRelease(database, orgId, request),
@@ -1876,10 +1927,17 @@ export class PostsRepository {
     keepGroup = false,
     toybacoDraftOnly = false,
     toybacoAllowRepublish = false,
-    toybacoDatabase?: any
+    toybacoDatabase?: any,
+    toybacoAuthority?: { authorityId: string; actorId: string }
   ) {
     const execute = async (database: any) => {
-      await toybacoRetentionWrite(database, orgId, state === 'draft' || (state === 'update' && toybacoDraftOnly));
+      if (toybacoAuthority && state === 'schedule') {
+        const current = await currentAuthority(database, orgId, toybacoAuthority.authorityId);
+        const person = await database.user.findFirst({where:{id:toybacoAuthority.actorId,providerName:'GENERIC',providerId:'cw:'+current.preparation.ownerId,activated:true,deletedAt:null}});
+        if (!person || !current.preparation.keepIntegrationIds.includes(body.integration.id)) throw new ForbiddenException('再開対象を確認してください。');
+      } else {
+        await toybacoRetentionWrite(database, orgId, state === 'draft' || (state === 'update' && toybacoDraftOnly));
+      }
       const postModel = database.post;
       const tagsModel = database.tags;
       const tagsPostsModel = database.tagsPosts;
