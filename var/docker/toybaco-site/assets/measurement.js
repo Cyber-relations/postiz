@@ -1,13 +1,22 @@
-/* Staging measurement only. Production remains inactive pending separate approval. */
+/* Consent-gated site analytics. No advertising tags or personal form values. */
 (() => {
   'use strict';
   if (window.toybacoMeasurement) return;
   const staging = location.origin === 'https://staging.toybaco.jp';
   const local = location.origin === 'http://127.0.0.1:8786';
-  if (!staging && !local) return;
-  const choiceKey = 'toybaco.measurement.staging.choice';
-  let choice = 'unset';
-  try { choice = sessionStorage.getItem(choiceKey) || 'unset'; } catch (_) { /* Fail closed. */ }
+  // Host-only comparison is intentionally not rewritten by the staging renderer.
+  const production = location.protocol === 'https:' && location.hostname === 'toybaco.jp';
+  if (!staging && !local && !production) return;
+  const choiceKey = production ? 'toybaco.measurement.production.choice.v1' : 'toybaco.measurement.staging.choice';
+  const choiceLifetime = 180 * 24 * 60 * 60 * 1000;
+  const readChoice = () => {
+    try {
+      if (!production) return sessionStorage.getItem(choiceKey) || 'unset';
+      const saved = JSON.parse(localStorage.getItem(choiceKey) || 'null');
+      return saved && saved.expires > Date.now() && ['accepted', 'denied'].includes(saved.choice) ? saved.choice : 'unset';
+    } catch (_) { return 'unset'; }
+  };
+  let choice = readChoice();
   let active = choice === 'accepted';
   const knownPaths = new Set(["/", "/404.html", "/ai/", "/compare/", "/contact/", "/enterprise/", "/faq/", "/features/", "/guide/", "/guide/after-hours-reply/", "/guide/ai-reception-cost/", "/guide/auto-auto-reply/", "/guide/auto-inbox/", "/guide/auto-sns/", "/guide/beauty-auto-reply/", "/guide/beauty-inbox/", "/guide/beauty-sns/", "/guide/bridal-photo-auto-reply/", "/guide/bridal-photo-inbox/", "/guide/bridal-photo-sns/", "/guide/clinic-auto-reply/", "/guide/clinic-inbox/", "/guide/clinic-sns/", "/guide/estate-auto-reply/", "/guide/estate-inbox/", "/guide/estate-sns/", "/guide/food-auto-reply/", "/guide/food-inbox/", "/guide/food-sns/", "/guide/google-map-post/", "/guide/hotel-auto-reply/", "/guide/hotel-inbox/", "/guide/hotel-sns/", "/guide/inbox-unify/", "/guide/instagram-dm-pc/", "/guide/instagram-schedule/", "/guide/line-multi-user/", "/guide/multi-store-sns/", "/guide/no-missed-reply/", "/guide/pet-auto-reply/", "/guide/pet-inbox/", "/guide/pet-sns/", "/guide/pro-auto-reply/", "/guide/pro-inbox/", "/guide/pro-sns/", "/guide/reform-auto-reply/", "/guide/reform-inbox/", "/guide/reform-sns/", "/guide/retail-ec-auto-reply/", "/guide/retail-ec-inbox/", "/guide/retail-ec-sns/", "/guide/school-auto-reply/", "/guide/school-inbox/", "/guide/school-sns/", "/guide/sns-bulk-post/", "/guide/what-is-ai-agent/", "/guide/what-is-approval-flow/", "/guide/what-is-gbp/", "/guide/what-is-scheduled-post/", "/guide/what-is-team-inbox/", "/guide/what-is-unified-inbox/", "/industries/", "/industries/auto/", "/industries/beauty/", "/industries/bridal-photo/", "/industries/clinic/", "/industries/estate/", "/industries/food/", "/industries/hotel/", "/industries/pet/", "/industries/pro/", "/industries/reform/", "/industries/retail-ec/", "/industries/school/", "/news/", "/partners/", "/posting/", "/pricing/", "/privacy/", "/security/", "/signup/", "/start/", "/terms/", "/tokushoho/", "/welcome/"]);
   const rawPath = location.pathname.replace(/index\.html$/, '');
@@ -24,8 +33,12 @@
   })();
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ ...context, page_location: location.origin + path,
-    page_referrer: safeReferrer, page_title: '[staging] ' + path,
-    measurement_test_mode: 'staging', test_run: 'toybaco_staging_20260918' });
+    page_referrer: safeReferrer, page_title: production ? document.title : '[staging] ' + path,
+    measurement_test_mode: production ? 'production' : 'staging',
+    measurement_consent: active ? 'accepted' : 'denied',
+    measurement_cookie_prefix: production ? 'tb_site' : 'tb_staging',
+    measurement_debug: production ? undefined : true,
+    test_run: production ? undefined : 'toybaco_staging_20260924' });
   const schema = {
     contact_click: ['link_position', 'link_text', 'link_url'],
     contact_form_start: ['form_id', 'form_type'],
@@ -68,17 +81,28 @@
     return true;
   };
   const setChoice = next => {
+    if (!['accepted', 'denied'].includes(next)) return false;
     active = false;
-    try { sessionStorage.setItem(choiceKey, next); } catch (_) { return false; }
+    window['ga-disable-G-YR5P1YSG3G'] = true;
+    let stored = true;
+    try {
+      if (production) localStorage.setItem(choiceKey, JSON.stringify({ choice: next, expires: Date.now() + choiceLifetime }));
+      else sessionStorage.setItem(choiceKey, next);
+    } catch (_) {
+      if (next === 'accepted') return false;
+      stored = false;
+      // A refused write must never prevent an in-memory opt-out.
+    }
     if (next !== 'accepted') {
       window['ga-disable-G-YR5P1YSG3G'] = true;
       for (const cookie of document.cookie.split(';')) {
         const name = cookie.trim().split('=')[0];
-        if (!/^tb_staging(?:_|$)/.test(name)) continue;
-        for (const domain of ['', '; Domain=staging.toybaco.jp', '; Domain=.staging.toybaco.jp'])
+        if (!(production ? /^tb_site(?:_|$)/ : /^tb_staging(?:_|$)/).test(name)) continue;
+        for (const domain of ['', '; Domain=' + location.hostname, '; Domain=.' + location.hostname])
           document.cookie = name + '=; Max-Age=0; Path=/' + domain + '; SameSite=Lax';
       }
     }
+    if (!stored) return false;
     location.reload();
     return true;
   };
@@ -91,11 +115,19 @@
     if (!active || !e.isTrusted || !el || el.matches('[data-open-chat]')) return;
     window.dataLayer.push({ ...Object.fromEntries(keys.map(k => [k, null])), ...context, link_position: position(el) });
   }, true);
-  if (active && staging) {
-    // Consent defaults precede GTM. No direct GA4 tag, ad tag, or manual page_view/scroll.
-    const consent = function() { window.dataLayer.push(arguments); };
-    consent('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied',
-      ad_user_data: 'denied', ad_personalization: 'denied' });
+  // Defaults are present even if a preview extension loads GTM before consent.
+  const consent = function() { window.dataLayer.push(arguments); };
+  consent('consent', 'default', { analytics_storage: active ? 'granted' : 'denied', ad_storage: 'denied',
+    ad_user_data: 'denied', ad_personalization: 'denied' });
+  if (production) window.addEventListener('storage', e => {
+    if (e.key !== choiceKey && e.key !== null) return;
+    if (readChoice() === choice) return;
+    active = false;
+    window['ga-disable-G-YR5P1YSG3G'] = true;
+    location.reload();
+  });
+  if (active && (staging || production)) {
+    // No direct GA4 tag, ad tag, or manual page_view/scroll.
     window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
     const script = document.createElement('script');
     script.async = true;
@@ -105,23 +137,49 @@
   document.addEventListener('DOMContentLoaded', () => {
     const panel = document.createElement('aside');
     panel.id = 'measurement-staging-controls';
-    panel.setAttribute('aria-label', '計測の検証設定');
-    panel.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:10001;max-width:calc(100vw - 24px);padding:12px;background:#fff;color:#162b40;border:1px solid #162b40;border-radius:8px;font:14px sans-serif;box-sizing:border-box';
+    panel.setAttribute('aria-label', production ? 'Cookie設定' : '計測の検証設定');
+    panel.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:10001;width:390px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto;padding:18px;background:#fff;color:#162b40;border:1px solid #ccd4de;border-radius:12px;font:14px/1.65 sans-serif;box-shadow:0 4px 24px #162b4020;box-sizing:border-box';
+    const toggle = document.createElement('button');
+    toggle.type = 'button'; toggle.textContent = 'Cookie設定';
+    toggle.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:10000;padding:8px 14px;background:#fff;color:#162b40;border:1px solid #ccd4de;border-radius:8px;font:13px sans-serif;cursor:pointer';
     const label = document.createElement('p');
-    label.textContent = '計測検証：' + (active ? (staging ? '送信許可（GTMプレビュー接続が必要）' : 'ローカル通知のみ') : '送信停止');
-    label.style.margin = '0 0 8px';
+    label.textContent = production ? (choice === 'unset' ? 'アクセス解析へのご協力' : 'アクセス解析：' + (active ? '許可' : '停止'))
+      : '計測検証：' + (active ? (staging ? '送信許可' : 'ローカル通知のみ') : '送信停止');
+    label.style.cssText = 'margin:0 0 8px;font-weight:bold';
     panel.appendChild(label);
+    if (production) {
+      const description = document.createElement('p');
+      description.textContent = 'サイトの改善のため、許可された場合にのみGoogle アナリティクスで閲覧や操作を計測します。お問い合わせの入力内容は送りません。拒否してもサービスをご利用いただけます。広告目的の追跡は行いません。';
+      description.style.margin = '0 0 10px'; panel.appendChild(description);
+    }
     const privacy = document.createElement('a');
     privacy.href = '/privacy/#site-measurement';
     privacy.textContent = '解析する情報と停止方法';
-    privacy.style.cssText = 'display:block;margin:0 0 8px;color:#162b40;text-decoration:underline';
+    privacy.style.cssText = 'display:block;margin:0 0 12px;color:#162b40;text-decoration:underline';
     panel.appendChild(privacy);
-    for (const [text, value] of [['解析のテストを許可', 'accepted'], ['拒否・停止', 'denied']]) {
+    const choices = production ? [['アクセス解析を許可', 'accepted'], ['拒否・停止', 'denied']]
+      : [['解析のテストを許可', 'accepted'], ['拒否・停止', 'denied']];
+    for (const [text, value] of choices) {
       const button = document.createElement('button');
       button.type = 'button'; button.textContent = text;
-      button.style.cssText = 'margin-right:8px;padding:6px;cursor:pointer';
-      button.addEventListener('click', () => setChoice(value));
+      button.style.cssText = 'margin:0 8px 8px 0;min-height:44px;padding:9px 12px;background:#fff;color:#162b40;border:1px solid #162b40;border-radius:6px;font:inherit;cursor:pointer';
+      button.addEventListener('click', () => {
+        if (!setChoice(value)) label.textContent = '設定を保存できませんでした。解析は停止しています。';
+      });
       panel.appendChild(button);
+    }
+    if (production) {
+      panel.hidden = choice !== 'unset';
+      toggle.hidden = !panel.hidden;
+      toggle.setAttribute('aria-controls', panel.id);
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.addEventListener('click', () => { panel.hidden = false; toggle.hidden = true; toggle.setAttribute('aria-expanded', 'true'); panel.querySelector('button')?.focus(); });
+      const close = document.createElement('button');
+      close.type = 'button'; close.textContent = '閉じる';
+      close.style.cssText = 'display:block;margin:4px 0 0;padding:6px;background:transparent;color:#162b40;border:0;text-decoration:underline;cursor:pointer;font:inherit';
+      close.addEventListener('click', () => { panel.hidden = true; toggle.hidden = false; toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); });
+      panel.appendChild(close);
+      document.body.appendChild(toggle);
     }
     document.body.appendChild(panel);
     const initialCycles = new WeakMap();
@@ -151,10 +209,10 @@
         const plan = el.dataset.plan, cycle = link.searchParams.get('cycle');
         if (['light','standard','pro'].includes(plan) && ['month','year'].includes(cycle)) {
           record('plan_select', { plan_id: plan, billing_cycle: cycle, link_position: pos });
-          if (link.hostname === 'app.staging.toybaco.jp' && link.pathname === '/toybaco/checkout')
+          if (link.hostname === (production ? 'app.toybaco.jp' : 'app.staging.toybaco.jp') && link.pathname === '/toybaco/checkout')
             record('checkout_click', { plan_id: plan, billing_cycle: cycle });
         }
-      } else if (link?.hostname === 'app.staging.toybaco.jp' && ['/', '/app/login', '/app/login/'].includes(link.pathname))
+      } else if (link?.hostname === (production ? 'app.toybaco.jp' : 'app.staging.toybaco.jp') && ['/', '/app/login', '/app/login/'].includes(link.pathname))
         record('login_click', { link_position: pos });
       if (el.matches('.bill-tgl button')) {
         const group = el.closest('.bill-tgl'), next = el.dataset.bill;
@@ -170,7 +228,7 @@
       }
       // Same-tab navigation must not race the last GA event with page unload.
       // Modified clicks, downloads, chat controls and local fixtures keep native behavior.
-      const waitForTags = staging && events.length && link && !e.defaultPrevented &&
+      const waitForTags = (staging || production) && events.length && link && !e.defaultPrevented &&
         e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey &&
         (!el.target || el.target === '_self') && !el.hasAttribute('download') &&
         !el.matches('[data-open-chat]');
