@@ -1,3 +1,4 @@
+import { postingProviderExecution } from '@gitroom/nestjs-libraries/toybaco/provider-execution-context';
 import {
   AnalyticsData,
   AuthTokenDetails,
@@ -876,7 +877,7 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
       try {
         feedResult = await publishFeed(!!presetId);
       } catch (err) {
-        if (!presetId || !isPresetRejection(err)) {
+        if (postingProviderExecution() || !presetId || !isPresetRejection(err)) {
           throw err;
         }
         // Surface the (recovered) rejection in the logs, since the fallback

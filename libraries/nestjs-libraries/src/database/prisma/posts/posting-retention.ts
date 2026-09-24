@@ -272,7 +272,46 @@ function preparationReceipt(row: any, request: any, now: number) {
   return receipt;
 }
 
-async function preparationSnapshot(database: any, request: any) {
+export async function toybacoPostPayloadHash(db:any,org:string,rootId:string) {
+  const rows=await db.$queryRawUnsafe(`SELECT p.id,p."integrationId",p."parentPostId",p.content,p.image,p.settings,p.delay,p.title,p.description,p."publishDate"::text,p."intervalInDays",p."createdAt"::text,p."approvedSubmitForOrder"::text FROM "Post" p JOIN "Post" r ON r.id=$2 AND r."organizationId"=p."organizationId" AND r."integrationId"=p."integrationId" AND r."group"=p."group" WHERE p."organizationId"=$1 AND p."deletedAt" IS NULL ORDER BY p.id LIMIT 10001 FOR UPDATE OF p NOWAIT`,org,rootId);
+  if(!rows.length||rows.length>10000||rows.filter((row:any)=>row.parentPostId===null).length!==1||!rows.some((row:any)=>row.id===rootId&&row.parentPostId===null))throw new ForbiddenException('投稿本文の再確認が必要です。');
+  const ids=new Set(rows.map((row:any)=>row.id));if(rows.some((row:any)=>row.parentPostId!==null&&!ids.has(row.parentPostId)))throw new ForbiddenException('投稿本文の再確認が必要です。');
+  return toybacoPreparationHash(rows);
+}
+
+
+// Known roots remain inventory only. Replacing their authority still requires explicit cancellation/completion.
+export async function toybacoKnownAuthorityRoots(database:any,request:any,posts:any[]) {
+  const known=new Set<string>();
+  const pointer=await database.toybacoPostingAuthorityCurrent.findUnique({where:{organizationId:request.organizationId}});
+  if(!pointer || pointer.state!=='ready')return known;
+  const authority=await database.toybacoPostingAuthority.findUnique({where:{organizationId_authorityId:{organizationId:request.organizationId,authorityId:pointer.authorityId}}});
+  if(!authority||toybacoPreparationHash(authority.payload)!==authority.authorityHash||authority.payload.authorityId!==pointer.authorityId||authority.payload.organizationId!==request.organizationId)throw new ForbiddenException('再開権限を確認できません。');
+  const prepared=await database.toybacoPostingPreparation.findUnique({where:{organizationId_requestId:{organizationId:request.organizationId,requestId:authority.payload.preparationRequestId}}});
+  if(!prepared||prepared.receiptHash!==authority.payload.preparationReceiptHash)throw new ForbiddenException('再開準備を確認できません。');
+  preparationReceipt(prepared,prepared.request,Date.now());
+  if(['ownerId','actorId','principalHash','contractHash','holdTransitionId','holdReceiptHash','holdGeneration','identityHash'].some(key=>prepared.request[key]!==request[key]))return known;
+  await toybacoValidatePostingPreparation(database,prepared.request,false);
+  const user=await database.userOrganization.findUnique({where:{id:prepared.request.ownerMembershipId},select:{userId:true}});
+  if(!user)throw new ForbiddenException('本人の所属を確認できません。');
+  for(const post of posts) {
+    if(post.state!=='QUEUE')continue;
+    const marker=/^TOYBACO_WORKFLOW_V2\|(?:ENSURE|REPLACE)\|([0-9]{13})\|([0-9a-f-]{36})\|[^|]*\|[^|]*\|[^|]*$/.exec(post.error||'') || /^TOYBACO_PUBLISH_V2\|([0-9]{13})\|([0-9a-f-]{36})\|READY$/.exec(post.error||'');
+    if(!marker)continue;
+    const rootGeneration=marker[1]+':'+marker[2];
+    const row=await database.toybacoPostingSchedule.findUnique({where:{organizationId_rootId_rootGeneration:{organizationId:request.organizationId,rootId:post.id,rootGeneration}}});
+    if(!row)continue;
+    const value=row.payload;
+    await toybacoScheduleAuthorityChain(database,row,authority);
+    if(toybacoPreparationHash(value)!==row.scheduleHash||value.rootId!==post.id||value.organizationId!==request.organizationId||value.rootGeneration!==rootGeneration||value.integrationId!==post.integration_id||value.publishAt!==Number(post.publish_at_us)/1000||!prepared.request.keepIntegrationIds.includes(value.integrationId)||value.postPayloadHash!==await toybacoPostPayloadHash(database,request.organizationId,post.id))throw new ForbiddenException('保存済み予約の整合性を確認できません。');
+    const saved=await database.toybacoPostSaveRequest.findUnique({where:{organizationId_actorId_requestId:{organizationId:request.organizationId,actorId:user.userId,requestId:value.saveRequestId}}});
+    if(!saved||saved.payloadHash!==value.savePayloadHash||!Array.isArray(saved.postsJson)||!saved.postsJson.some((item:any)=>item.postId===post.id))throw new ForbiddenException('予約の保存記録を確認できません。');
+    known.add(post.id);
+  }
+  return known;
+}
+
+export async function toybacoValidatePostingPreparation(database: any, request: any, includeInventory = true) {
   const orgId = request.organizationId;
   const current = await toybacoRetentionCurrent(database, orgId);
   const history = current && await toybacoRetentionHistory(database, orgId, current.transitionId);
@@ -303,6 +342,7 @@ async function preparationSnapshot(database: any, request: any) {
     ...targets.map((row: any) => ({ kind: 'Integration', entityId: row.id })),
   ]);
   if (identity.identityHash !== request.identityHash) throw new ForbiddenException('本人や接続先が変わりました。準備をやり直してください。');
+  if (!includeInventory) return;
   const posts = await database.$queryRawUnsafe(`SELECT p.id, p."integrationId" AS integration_id,
     (EXTRACT(EPOCH FROM p."publishDate") * 1000000)::bigint::text AS publish_at_us, p.state::text AS state, p.error
     FROM "Post" p JOIN "Integration" i ON i.id = p."integrationId" AND i."organizationId" = p."organizationId"
@@ -313,10 +353,11 @@ async function preparationSnapshot(database: any, request: any) {
   if (targets.length > LIMIT || posts.length > LIMIT || request.keepIntegrationIds.some((id: string) => !available.has(id))) {
     throw new ForbiddenException('接続や予約の一覧を確認できません。');
   }
+  const released=await toybacoKnownAuthorityRoots(database,request,posts);
   const inventory = posts.map((row: any) => {
-    const stopped = held.has(row.id), time = Number(row.publish_at_us);
+    const stopped = held.has(row.id) && !released.has(row.id), time = Number(row.publish_at_us);
     if (!Number.isSafeInteger(time) || (stopped ? row.state !== 'DRAFT' || row.error !== null :
-      row.state !== 'QUEUE' || !kept.has(row.id) || !current.keepIntegrationIds.includes(row.integration_id))) {
+      row.state !== 'QUEUE' || (!released.has(row.id) && (!kept.has(row.id) || !current.keepIntegrationIds.includes(row.integration_id))))) {
       throw new ForbiddenException('予約の停止完了を確認できません。');
     }
     return { id: row.id, integration_id: row.integration_id, publish_at_us: time, held: stopped };
@@ -336,7 +377,7 @@ export async function toybacoPreparePostingRelease(database: any, orgId: string,
   const existing = await database.toybacoPostingPreparation.findUnique({ where });
   const now = Date.now();
   if (existing) return preparationReceipt(existing, request, now); // History only, never reactivates a pointer.
-  await preparationSnapshot(database, request);
+  await toybacoValidatePostingPreparation(database, request);
   const payloadHash = toybacoPreparationHash(request);
   const outcome = { version: 2, organizationId: orgId, requestId: request.requestId, payloadHash,
     preparedAt: now, state: 'prepared', execute: false };
@@ -375,4 +416,39 @@ export async function toybacoPostingIdentityEpochs(database: any, subjects: unkn
   }
   const identities = rows.map((row: any) => ({ kind: row.kind, entityId: row.entityId, generation: row.generation, epoch: row.epoch }));
   return { version: 1, identities, identityHash: toybacoPreparationHash(identities), execute: false };
+}
+
+// Resolve only immutable paid-upgrade edges; original schedule and operation identity never change.
+export async function toybacoScheduleAuthorityChain(database:any,schedule:any,authority:any) {
+  const fail=()=>new ForbiddenException('予約の継続権限を確認できません。');
+  if(!schedule || toybacoPreparationHash(schedule.payload)!==schedule.scheduleHash || schedule.payload.organizationId!==schedule.organizationId || schedule.payload.rootId!==schedule.rootId || schedule.payload.rootGeneration!==schedule.rootGeneration || schedule.payload.authorityId!==schedule.authorityId)throw fail();
+  let current=authority;const chain=[];const visited=new Set();
+  while(current.authorityId!==schedule.authorityId){
+    if(['renewal_grace','renewal_paid'].includes(current.payload.kind)){
+      const edge=await database.toybacoPostingScheduleContinuation.findUnique({where:{organizationId_rootId_rootGeneration_targetAuthorityId:{organizationId:schedule.organizationId,rootId:schedule.rootId,rootGeneration:schedule.rootGeneration,targetAuthorityId:current.authorityId}}});
+      const value=edge?.payload;
+      const renewal=await database.toybacoPostingRenewal.findUnique({where:{organizationId_operationId:{organizationId:schedule.organizationId,operationId:current.payload.operationId}}});
+      if(!edge||!renewal||renewal.state!=='ready'||toybacoPreparationHash(value)!==edge.continuationHash||toybacoPreparationHash(current.payload)!==current.authorityHash||toybacoPreparationHash(renewal.request.targetAuthority)!==current.authorityHash||toybacoPreparationHash(renewal.receipt)!==renewal.receiptHash||toybacoPreparationHash(renewal.receipt.roots)!==renewal.receipt.rootManifestHash)throw fail();
+      const {phase,...request}=renewal.request;
+      if(toybacoPreparationHash(request)!==renewal.requestHash||renewal.receipt.requestHash!==renewal.requestHash||value.operationId!==current.payload.operationId||value.handoffReceiptHash!==renewal.receiptHash||value.targetAuthorityId!==current.authorityId||value.targetAuthorityHash!==current.authorityHash||value.organizationId!==schedule.organizationId||value.rootId!==schedule.rootId||value.rootGeneration!==schedule.rootGeneration||value.scheduleHash!==schedule.scheduleHash||value.saveRequestId!==schedule.payload.saveRequestId||value.postPayloadHash!==schedule.payload.postPayloadHash||value.sourceAuthorityId!==schedule.authorityId||value.sourceAuthorityHash!==schedule.payload.authorityHash)throw fail();
+      const root=renewal.receipt.roots.find((v:any)=>v.rootId===schedule.rootId&&v.rootGeneration===schedule.rootGeneration);
+      if(!root||toybacoPreparationHash({...root,kind:current.payload.kind,organizationId:schedule.organizationId,operationId:renewal.operationId,handoffReceiptHash:renewal.receiptHash,sourceAuthorityId:root.originalAuthorityId,sourceAuthorityHash:root.originalAuthorityHash,targetAuthorityId:current.authorityId,targetAuthorityHash:current.authorityHash})!==edge.continuationHash)throw fail();
+      chain.push(edge.continuationHash);
+      current=await database.toybacoPostingAuthority.findUnique({where:{organizationId_authorityId:{organizationId:schedule.organizationId,authorityId:schedule.authorityId}}});
+      if(!current)throw fail();
+      continue;
+    }
+    if(chain.length>=2 || visited.has(current.authorityId) || current.payload.kind!=='paid_upgrade' || toybacoPreparationHash(current.payload)!==current.authorityHash)throw fail();
+    visited.add(current.authorityId);
+    const edge=await database.toybacoPostingScheduleContinuation.findUnique({where:{organizationId_rootId_rootGeneration_targetAuthorityId:{organizationId:schedule.organizationId,rootId:schedule.rootId,rootGeneration:schedule.rootGeneration,targetAuthorityId:current.authorityId}}});
+    const value=edge?.payload;
+    if(!edge || toybacoPreparationHash(value)!==edge.continuationHash || value.organizationId!==schedule.organizationId || value.rootId!==schedule.rootId || value.rootGeneration!==schedule.rootGeneration || value.scheduleHash!==schedule.scheduleHash || value.saveRequestId!==schedule.payload.saveRequestId || value.postPayloadHash!==schedule.payload.postPayloadHash || value.targetAuthorityId!==current.authorityId || value.targetAuthorityHash!==current.authorityHash || value.sourceAuthorityId!==current.payload.sourceAuthorityId || value.sourceAuthorityHash!==current.payload.sourceAuthorityHash || value.handoffReceiptHash!==current.payload.handoffReceiptHash || value.operationId!==current.payload.operationId)throw fail();
+    const handoff=await database.toybacoPostingPaidUpgrade.findUnique({where:{organizationId_operationId:{organizationId:schedule.organizationId,operationId:value.operationId}}});
+    if(!handoff || handoff.state!=='ready' || toybacoPreparationHash(handoff.request)!==handoff.requestHash || toybacoPreparationHash(handoff.receipt)!==handoff.receiptHash || handoff.receiptHash!==value.handoffReceiptHash || toybacoPreparationHash(handoff.receipt.roots)!==handoff.receipt.rootManifestHash || !handoff.receipt.roots.some((v:any)=>v.rootId===schedule.rootId && v.rootGeneration===schedule.rootGeneration && v.scheduleHash===schedule.scheduleHash) || !handoff.application || toybacoPreparationHash(handoff.application)!==handoff.applicationHash || handoff.application.authorityId!==current.authorityId)throw fail();
+    chain.push(edge.continuationHash);
+    current=await database.toybacoPostingAuthority.findUnique({where:{organizationId_authorityId:{organizationId:schedule.organizationId,authorityId:value.sourceAuthorityId}}});
+    if(!current || current.authorityHash!==value.sourceAuthorityHash)throw fail();
+  }
+  if(current.authorityHash!==schedule.payload.authorityHash || toybacoPreparationHash(current.payload)!==current.authorityHash)throw fail();
+  return chain;
 }

@@ -1,3 +1,4 @@
+import { postingProviderExecution } from '@gitroom/nestjs-libraries/toybaco/provider-execution-context';
 import { TweetV2, TwitterApi } from 'twitter-api-v2';
 import { createHmac, randomBytes } from 'crypto';
 import { parseFragment } from 'parse5';
@@ -642,7 +643,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     try {
       return await func();
     } catch (err: any) {
-      if (totalRetries <= 2 && (err?.code === 429 || err?.rateLimitError)) {
+      if (!postingProviderExecution() && totalRetries <= 2 && (err?.code === 429 || err?.rateLimitError)) {
         await timer(5000 * (totalRetries + 1));
         return this.uploadWithRateLimitRetry(func, totalRetries + 1);
       }

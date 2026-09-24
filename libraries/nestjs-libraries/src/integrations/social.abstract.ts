@@ -1,3 +1,4 @@
+import { postingProviderExecution } from '@gitroom/nestjs-libraries/toybaco/provider-execution-context';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { Integration } from '@prisma/client';
 import {
@@ -369,6 +370,7 @@ export abstract class SocialAbstract {
       const handleError = this.handleErrors(json, status);
 
       if (
+        !postingProviderExecution() &&
         totalRetries <= 2 &&
         (status === 429 ||
           (status === 500 && !handleError) ||
@@ -471,6 +473,8 @@ export abstract class SocialAbstract {
 
     const request = await fetch(url, {
       ...options,
+      // Redirecting a mutation can send the same durable step a second time.
+      ...(postingProviderExecution() ? { redirect: 'manual' as const } : {}),
       // @ts-ignore - undici-only option, not in the lib.dom RequestInit type
       dispatcher: (options as any).dispatcher ?? getSsrfSafeDispatcher(),
     });
@@ -495,10 +499,11 @@ export abstract class SocialAbstract {
     const handleError = this.handleErrors(json || '{}', request.status);
 
     if (
-      request.status === 429 ||
-      (request.status === 500 && !handleError) ||
-      json.includes('rate_limit_exceeded') ||
-      json.includes('Rate limit')
+      !postingProviderExecution() &&
+      (request.status === 429 ||
+        (request.status === 500 && !handleError) ||
+        json.includes('rate_limit_exceeded') ||
+        json.includes('Rate limit'))
     ) {
       await timer(5000);
       return this.fetch(
@@ -511,7 +516,7 @@ export abstract class SocialAbstract {
       );
     }
 
-    if (handleError?.type === 'retry') {
+    if (!postingProviderExecution() && handleError?.type === 'retry') {
       await timer(5000);
       return this.fetch(
         url,

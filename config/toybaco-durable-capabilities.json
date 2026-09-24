@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "application": "postiz",
+  "capabilities": {
+    "posting-retention-v1": {
+      "schema_sha256": "5cee5728d89ea9363aeba96e0c3bd5086352e478fa00d3e1165649f1da546aa4",
+      "tables": [
+        "ToybacoPostingRetention",
+        "ToybacoPostingRetentionHistory",
+        "ToybacoPostingPreparation"
+      ]
+    },
+    "posting-authority-v1": {
+      "schema_sha256": "5cee5728d89ea9363aeba96e0c3bd5086352e478fa00d3e1165649f1da546aa4",
+      "tables": [
+        "ToybacoPostingAuthority",
+        "ToybacoPostingAuthorityCurrent",
+        "ToybacoPostingPaidUpgrade",
+        "ToybacoPostingSchedule",
+        "ToybacoPostingScheduleContinuation",
+        "ToybacoPostingStep"
+      ]
+    },
+    "posting-renewal-v1": {
+      "schema_sha256": "5cee5728d89ea9363aeba96e0c3bd5086352e478fa00d3e1165649f1da546aa4",
+      "tables": [
+        "ToybacoPostingRenewal"
+      ]
+    }
+  }
+}
