@@ -30,10 +30,10 @@ function fixtures() {
     box('ftyp', Buffer.from('jxl \0\0\0\0')),
     box('jxlp', Buffer.from([0, 0, 0, 0, 255, 10, 1, 0]), size),
   ]);
-  const icns = size => {
+  const icns = (size, fileLength) => {
     const buffer = Buffer.alloc(16);
     buffer.write('icns', 0);
-    buffer.writeUInt32BE(16, 4);
+    buffer.writeUInt32BE(fileLength ?? 16, 4);
     buffer.write('ic07', 8);
     buffer.writeUInt32BE(size ?? 8, 12);
     return buffer;
@@ -53,16 +53,20 @@ function fixtures() {
     return buffer;
   };
   // These are dimensions-only format fixtures. The PNG is an encoded 1px image.
+  // A rejection counts only with the reason the parser gives for that input. Another error,
+  // such as the JXL bit reader running off the end, means the expected check did not fire.
   return {
-    'heif-zero': { data: heif(0), reject: true },
-    'heif-short': { data: heif(19), reject: true },
-    'jxl-zero': { data: jxl(0), reject: true },
-    'jxl-short': { data: jxl(11), reject: true },
-    'icns-zero': { data: icns(0), reject: true },
-    'icns-short': { data: icns(4), reject: true },
-    'icns-seven': { data: icns(7), reject: true },
-    'icns-truncated': { data: icns().subarray(0, 15), reject: true },
-    'ico-overflow': { data: ico(2), reject: true },
+    'heif-zero': { data: heif(0), reject: true, error: /^Invalid HEIF, no sizes found$/ },
+    'heif-short': { data: heif(19), reject: true, error: /^Invalid HEIF$/ },
+    'jxl-zero': { data: jxl(0), reject: true, error: /^Invalid JXL$/ },
+    'jxl-short': { data: jxl(11), reject: true, error: /^Invalid JXL$/ },
+    'icns-zero': { data: icns(0), reject: true, error: /^Invalid ICNS/ },
+    // The declared file length ends right after the short entry (8 + entry length), so only
+    // the entry-length check can reject these; the header bounds check is never reached.
+    'icns-short': { data: icns(4, 12), reject: true, error: /^Invalid ICNS/ },
+    'icns-seven': { data: icns(7, 15), reject: true, error: /^Invalid ICNS/ },
+    'icns-truncated': { data: icns().subarray(0, 15), reject: true, error: /^Invalid ICNS/ },
+    'ico-overflow': { data: ico(2), reject: true, error: /^Invalid ICO$/ },
     'heif-valid': { data: heif(), dimensions: [32, 48] },
     'jxl-valid': { data: jxl(), dimensions: [8, 8] },
     'icns-valid': { data: icns(), dimensions: [128, 128] },
@@ -160,6 +164,7 @@ async function main() {
           assert.equal(result.status, 0, `${label}: ${result.stderr}`);
           const observation = JSON.parse(result.stdout);
           assert.equal(observation.status, fixture.reject ? 'rejected' : 'parsed', label);
+          if (fixture.reject) assert.match(observation.error, fixture.error, label);
           if (!fixture.reject) assert.deepEqual(observation.dimensions, fixture.dimensions, label);
           checked++;
         }
