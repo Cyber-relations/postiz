@@ -40,6 +40,18 @@ function fixtures() {
   };
   const partialIcns = icns(1024);
   partialIcns.writeUInt32BE(1032, 4);
+  // ICONDIR (reserved 0, type 1 = icon, image count) followed by one 16-byte ICONDIRENTRY.
+  const ico = count => {
+    const buffer = Buffer.alloc(6 + 16);
+    buffer.writeUInt16LE(1, 2);
+    buffer.writeUInt16LE(count ?? 1, 4);
+    buffer[6] = 32;
+    buffer[7] = 48;
+    buffer.writeUInt16LE(1, 10);
+    buffer.writeUInt16LE(32, 12);
+    buffer.writeUInt32LE(22, 18);
+    return buffer;
+  };
   // These are dimensions-only format fixtures. The PNG is an encoded 1px image.
   return {
     'heif-zero': { data: heif(0), reject: true },
@@ -50,10 +62,12 @@ function fixtures() {
     'icns-short': { data: icns(4), reject: true },
     'icns-seven': { data: icns(7), reject: true },
     'icns-truncated': { data: icns().subarray(0, 15), reject: true },
+    'ico-overflow': { data: ico(2), reject: true },
     'heif-valid': { data: heif(), dimensions: [32, 48] },
     'jxl-valid': { data: jxl(), dimensions: [8, 8] },
     'icns-valid': { data: icns(), dimensions: [128, 128] },
     'icns-partial': { data: partialIcns, dimensions: [128, 128] },
+    'ico-valid': { data: ico(), dimensions: [32, 48] },
     'png-valid': {
       data: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64'),
       dimensions: [1, 1],
@@ -61,19 +75,26 @@ function fixtures() {
   };
 }
 
+// image-size 2.0.3 and later ship separate CommonJS and ESM trees below dist/cjs and dist/esm.
+function hasSplitLayout(version) {
+  const [major, minor, patch] = version.split('.').map(Number);
+  return major === 2 && (minor > 0 || patch >= 3);
+}
+
 async function child() {
   const [packageRoot, mode, name, inputFile] = process.argv.slice(3);
   const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json')));
+  assert.ok(hasSplitLayout(manifest.version), `Unsupported image-size layout: ${manifest.version}`);
   const isEsm = mode.endsWith('esm');
-  const extension = isEsm ? 'mjs' : manifest.version.startsWith('2.') ? 'cjs' : 'js';
+  const tree = isEsm ? 'dist/esm' : 'dist/cjs';
   const type = mode.startsWith('type-') ? mode.split('-')[1] : undefined;
-  const entry = type ? `dist/types/${type}.${extension}`
-    : mode.startsWith('file-') && manifest.version.startsWith('2.') ? `dist/fromFile.${extension}`
-      : isEsm ? 'dist/index.mjs' : manifest.main;
+  const entry = type ? `${tree}/types/${type}.js`
+    : mode.startsWith('file-') ? `${tree}/fromFile.js`
+      : isEsm ? 'dist/esm/index.js' : manifest.main;
   const modulePath = path.join(packageRoot, entry);
   const loaded = isEsm ? await import(pathToFileURL(modulePath).href) : require(modulePath);
   const fn = type ? loaded[type.toUpperCase()].calculate
-    : mode.startsWith('file-') && manifest.version.startsWith('2.') ? loaded.imageSizeFromFile
+    : mode.startsWith('file-') ? loaded.imageSizeFromFile
       : loaded.imageSize || loaded.default || loaded;
   assert.equal(typeof fn, 'function');
   const input = mode.startsWith('file-') ? inputFile : fixtures()[name].data;
@@ -125,10 +146,9 @@ async function main() {
       fs.writeFileSync(path.join(fixtureRoot, name), fixture.data);
     }
     for (const dependency of packages) {
-      assert.ok(['1.2.1', '2.0.2'].includes(dependency.version), `Unreviewed image-size version: ${dependency.version}`);
-      const modes = dependency.version.startsWith('2.')
-        ? ['cjs', 'esm', 'file-cjs', 'file-esm', 'type-heif-cjs', 'type-heif-esm', 'type-jxl-cjs', 'type-jxl-esm', 'type-icns-cjs', 'type-icns-esm']
-        : ['cjs', 'file-cjs', 'type-heif-cjs', 'type-jxl-cjs', 'type-icns-cjs'];
+      assert.ok(['2.0.4'].includes(dependency.version), `Unreviewed image-size version: ${dependency.version}`);
+      const modes = ['cjs', 'esm', 'file-cjs', 'file-esm', 'type-heif-cjs', 'type-heif-esm', 'type-jxl-cjs', 'type-jxl-esm',
+        'type-icns-cjs', 'type-icns-esm', 'type-ico-cjs', 'type-ico-esm'];
       for (const mode of modes) {
         for (const [name, fixture] of Object.entries(cases)) {
           if (mode.startsWith('type-') && !name.startsWith(`${mode.split('-')[1]}-`)) continue;
