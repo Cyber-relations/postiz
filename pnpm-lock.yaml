@@ -30,6 +30,7 @@ overrides:
   fast-xml-parser@>=5 <5.5.6: 5.5.6
   h3@>=1 <2: 1.15.6
   hono@>=4 <5: 4.12.25
+  image-size@<2.0.4: 2.0.4
   immutable@>=5 <6: 5.1.8
   ip-address@>=10 <11: 10.3.1
   js-cookie@>=3 <4: 3.0.7
@@ -91,14 +92,6 @@ overrides:
   '@tiptap/react': 3.30.5
   '@tiptap/starter-kit': 3.30.5
   '@tiptap/suggestion': 3.30.5
-
-patchedDependencies:
-  image-size@1.2.1:
-    hash: a3f70bad797f9892a136c68f2eac04c671f9063aad256ee8308144298e04059a
-    path: patches/image-size@1.2.1.patch
-  image-size@2.0.2:
-    hash: 96b2c3dbcbfdcdbef47dc62db847e43fca126382575d62fc75c9c656544dc14a
-    path: patches/image-size@2.0.2.patch
 
 importers:
 
@@ -12032,14 +12025,9 @@ packages:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
 
-  image-size@1.2.1:
-    resolution: {integrity: sha512-rH+46sQJ2dlwfjfhCyNx5thzrv+dtmBIhPHk0zgRUukHzZ/kRueTJXoYYsclBaKcSMBWuGbOFXtioLpzTb5euw==}
-    engines: {node: '>=16.x'}
-    hasBin: true
-
-  image-size@2.0.2:
-    resolution: {integrity: sha512-IRqXKlaXwgSMAMtpNzZa1ZAe8m+Sa1770Dhk8VkSsP9LS+iHD62Zd8FQKs8fbPiagBE7BzoFX23cxFnwshpV6w==}
-    engines: {node: '>=16.x'}
+  image-size@2.0.4:
+    resolution: {integrity: sha512-QRUkFFsRV/6fuESxb9Vkq+a0LkSrgKXuc2NEqfikiXxxN/G3tjWt5EVUlMaImRBZRZK/jRBEbYvpPYZL8t08Zw==}
+    engines: {node: '>=18'}
     hasBin: true
 
   image-to-pdf@3.0.2:
@@ -15073,9 +15061,6 @@ packages:
 
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
-
-  queue@6.0.2:
-    resolution: {integrity: sha512-iHZWu+q3IdFZFX36ro/lKBkSvfkztY5Y7HMiPlOUjhupPcG2JMfst2KKEpu5XndviX/3UhFbRngUPNKtgvtZiA==}
 
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
@@ -21886,7 +21871,7 @@ snapshots:
       '@mastra/core': 1.21.0(@cfworker/json-schema@4.1.1)(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.1(zod@3.25.76))(zod@3.25.76))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.1(zod@3.25.76))(zod@3.25.76))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@3.25.76))(@types/json-schema@7.0.15)(bufferutil@4.1.0)(openapi-types@12.1.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@mastra/schema-compat': 1.2.7(zod@3.25.76)
       async-mutex: 0.5.0
-      image-size: 2.0.2(patch_hash=96b2c3dbcbfdcdbef47dc62db847e43fca126382575d62fc75c9c656544dc14a)
+      image-size: 2.0.4
       json-schema: 0.4.0
       lru-cache: 11.2.7
       probe-image-size: 7.2.3
@@ -31654,11 +31639,7 @@ snapshots:
 
   ignore@7.0.5: {}
 
-  image-size@1.2.1(patch_hash=a3f70bad797f9892a136c68f2eac04c671f9063aad256ee8308144298e04059a):
-    dependencies:
-      queue: 6.0.2
-
-  image-size@2.0.2(patch_hash=96b2c3dbcbfdcdbef47dc62db847e43fca126382575d62fc75c9c656544dc14a): {}
+  image-size@2.0.4: {}
 
   image-to-pdf@3.0.2:
     dependencies:
@@ -33552,7 +33533,7 @@ snapshots:
       flow-enums-runtime: 0.0.6
       graceful-fs: 4.2.11
       hermes-parser: 0.33.3
-      image-size: 1.2.1(patch_hash=a3f70bad797f9892a136c68f2eac04c671f9063aad256ee8308144298e04059a)
+      image-size: 2.0.4
       invariant: 2.2.4
       jest-worker: 29.7.0
       jsc-safe-url: 0.2.4
@@ -35394,10 +35375,6 @@ snapshots:
   querystringify@2.2.0: {}
 
   queue-microtask@1.2.3: {}
-
-  queue@6.0.2:
-    dependencies:
-      inherits: 2.0.4
 
   quick-format-unescaped@4.0.4: {}
 
