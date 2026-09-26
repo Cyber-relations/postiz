@@ -60,12 +60,12 @@ function fixtures() {
     'heif-short': { data: heif(19), reject: true, error: /^Invalid HEIF$/ },
     'jxl-zero': { data: jxl(0), reject: true, error: /^Invalid JXL$/ },
     'jxl-short': { data: jxl(11), reject: true, error: /^Invalid JXL$/ },
-    'icns-zero': { data: icns(0), reject: true, error: /^Invalid ICNS/ },
+    'icns-zero': { data: icns(0), reject: true, error: /^Invalid ICNS$/ },
     // The declared file length ends right after the short entry (8 + entry length), so only
     // the entry-length check can reject these; the header bounds check is never reached.
-    'icns-short': { data: icns(4, 12), reject: true, error: /^Invalid ICNS/ },
-    'icns-seven': { data: icns(7, 15), reject: true, error: /^Invalid ICNS/ },
-    'icns-truncated': { data: icns().subarray(0, 15), reject: true, error: /^Invalid ICNS/ },
+    'icns-short': { data: icns(4, 12), reject: true, error: /^Invalid ICNS$/ },
+    'icns-seven': { data: icns(7, 15), reject: true, error: /^Invalid ICNS$/ },
+    'icns-truncated': { data: icns().subarray(0, 15), reject: true, error: /^Invalid ICNS$/ },
     'ico-overflow': { data: ico(2), reject: true, error: /^Invalid ICO$/ },
     'heif-valid': { data: heif(), dimensions: [32, 48] },
     'jxl-valid': { data: jxl(), dimensions: [8, 8] },
