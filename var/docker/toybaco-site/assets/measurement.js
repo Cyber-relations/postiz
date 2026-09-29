@@ -296,7 +296,7 @@
     if (path === '/pricing/' || path === '/pricing/index.html')
       emit('pricing_view', { pricing_location: 'pricing_page' });
     if (path === '/' || path === '/index.html') {
-      const marker = document.querySelector('#pricing .price-h .mk, #pricing.lp-section h2');
+      const marker = document.querySelector('#pricing .price-h .mk, #pricing.lp-section h2, #pricing.section h2');
       let visible = false, timer = null, done = false;
       const reset = () => { clearTimeout(timer); timer = null; };
       const update = () => {

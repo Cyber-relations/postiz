@@ -1,0 +1,307 @@
+:root{--navy:#1F3A5F;--coral:#FF6B5B;--muted:#647181;--line-soft:#E7E5DE;--spring:cubic-bezier(.22,1,.36,1)}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;overflow:hidden}body{font:15px/1.8 "Zen Kaku Gothic New",sans-serif;background:#FCFCFA;color:#1F3A5F}#canvas{position:absolute;left:0;top:0;width:1100px;height:620px;padding:24px;transform-origin:top left}button{font:inherit}/* ---- アプリシェル(実UI準拠: Chatwoot v4 + toybaco-brand.css) ---- */
+.app-wrap{position:relative}
+.app{
+  /* 実アプリの値: surface #FCFBF8 / 地 #FAF7F2 / 罫線 #E7E5DE / 墨 #24303F / 補助 #6B7684 */
+  --ab:#FCFBF8; --af:#FAF7F2; --al:#E7E4DC; --at:#24303F; --am:#6B7684;
+  --anavy:#1F3A5F; --awash:#E9EFF6; --acoral:#FF6B5B;
+  position:relative; background:var(--ab); border-radius:16px; overflow:hidden;
+  border:1px solid var(--al);
+  box-shadow:0 3px 8px rgba(31,58,95,.07),0 40px 90px rgba(31,58,95,.17);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  font-size:13px; line-height:1.6; color:var(--at); text-align:left;
+  height:clamp(500px, 62vh, 620px);
+  transition:background .6s ease, border-color .6s ease;
+}
+.app *{transition-property:background,color,border-color,opacity,transform; transition-duration:.4s}
+/* 実アプリのダーク(toybaco-brand.css .dark の blue スケール実値) */
+.app.night{--ab:#121A26; --af:#0F151E; --al:#22304A; --at:#D6E4F2; --am:#8EA6C0;
+  --anavy:#4A76A6; --awash:#1F3046}
+.app-titlebar{
+  display:flex; align-items:center; gap:12px; padding:9px 16px;
+  border-bottom:1px solid var(--al); background:var(--ab);
+}
+.app-titlebar .dots3{display:flex; gap:6px}
+.app-titlebar .dots3 i{width:10px; height:10px; border-radius:50%; background:var(--al)}
+.app-titlebar .dots3 i:nth-child(1){background:#FF6B5B}
+.app-titlebar .dots3 i:nth-child(2){background:#F09A3E}
+.app-titlebar .dots3 i:nth-child(3){background:#2FA35C}
+.app-search{
+  flex:1; max-width:330px; margin:0 auto; background:var(--af); border-radius:8px;
+  padding:4px 12px; font-size:.72rem; color:var(--am); text-align:center;
+}
+.app-clock{font-size:.72rem; font-weight:700; color:var(--am); display:flex; align-items:center; gap:6px}
+.app-clock .moon{display:none}
+.night .app-clock .moon{display:inline}
+.app-ava{width:24px; height:24px; border-radius:50%; background:var(--anavy); color:#fff; display:grid; place-items:center; font-size:.62rem; font-weight:900}
+.app-body{display:grid; grid-template-columns:168px 226px 1fr 196px; height:calc(100% - 43px); position:relative}
+
+/* サイドバー(Chatwoot v4 一次ナビ。「投稿」「ご契約内容」は実際に注入される項目) */
+.app-nav{border-right:1px solid var(--al); background:var(--af); padding:10px 8px; display:flex; flex-direction:column; gap:2px}
+.nav-acct{display:flex; align-items:center; gap:8px; padding:6px 8px 12px; font-weight:800; font-size:.78rem}
+.nav-acct img{width:22px}
+.nav-item{
+  display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:9px;
+  font-size:.76rem; font-weight:600; color:var(--am);
+}
+.nav-item svg{width:15px; height:15px; flex:none}
+.nav-item.on{background:var(--awash); color:var(--anavy); font-weight:800}
+.night .nav-item.on{color:#BBD3EE}
+.nav-item .navdot{margin-left:auto; background:var(--anavy); color:#fff; font-size:.6rem; font-weight:900; border-radius:999px; padding:0 7px}
+.nav-foot{margin-top:auto; display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:.7rem; color:var(--am)}
+.nav-foot .app-ava{width:20px; height:20px; font-size:.56rem}
+
+/* 会話リスト */
+.app-side{border-right:1px solid var(--al); display:flex; flex-direction:column; background:var(--ab)}
+.side-head{display:flex; align-items:center; gap:8px; padding:11px 14px 7px; font-weight:800; font-size:.82rem}
+.side-head .cnt{
+  background:var(--anavy); color:#fff; font-size:.62rem; font-weight:900;
+  border-radius:999px; padding:1px 7px; margin-left:auto;
+}
+.side-head .cnt.pop{animation:pop .5s var(--spring)}
+.side-tabs{display:flex; gap:2px; padding:0 10px 8px; border-bottom:1px solid var(--al)}
+.side-tabs span{font-size:.68rem; font-weight:700; color:var(--am); padding:3px 9px; border-radius:7px}
+.side-tabs span.on{background:var(--awash); color:var(--anavy)}
+.convs{overflow:hidden; flex:1}
+.conv{
+  display:flex; gap:9px; padding:10px 12px; border-bottom:1px solid var(--al);
+  align-items:flex-start; position:relative;
+}
+.conv.sel{background:var(--awash); box-shadow:inset 2.5px 0 0 var(--anavy)}
+.cava{
+  width:30px; height:30px; border-radius:50%; flex:none; display:grid; place-items:center;
+  color:#fff; font-size:.66rem; font-weight:900; position:relative;
+}
+.cava .chip{
+  position:absolute; right:-4px; bottom:-4px; width:15px; height:15px; border-radius:5px;
+  display:grid; place-items:center; border:1.5px solid var(--ab);
+}
+.cava .chip svg{width:8.5px; height:8.5px}
+.conv .cc{min-width:0; flex:1}
+.conv .cn{display:flex; align-items:baseline; gap:6px}
+.conv .cn b{font-size:.76rem}
+.conv .cn small{margin-left:auto; font-size:.62rem; color:var(--am); flex:none}
+.conv .cp{display:block; font-size:.68rem; color:var(--am); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.conv .und{position:absolute; right:11px; bottom:12px; width:7px; height:7px; border-radius:50%; background:var(--anavy)}
+.conv.newin{max-height:0; opacity:0; padding-top:0; padding-bottom:0; overflow:hidden;
+  transition:max-height .5s var(--spring), opacity .4s ease .15s, padding .5s var(--spring)}
+.conv.newin.shown{max-height:70px; opacity:1; padding-top:10px; padding-bottom:10px; background:#FFF6EE}
+.night .conv.newin.shown{background:#1C2637}
+.conv.newin.shown.settle{background:transparent; transition:background 1.2s ease .8s}
+
+/* チャット */
+.app-main{position:relative; overflow:hidden; background:var(--af)}
+.chat-empty{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  color:var(--am); font-size:.76rem; opacity:1; transition:opacity .3s;
+}
+.chat-empty .ce-ic{font-size:1.5rem; margin-bottom:6px; opacity:.6}
+.chat{position:absolute; inset:0; display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity .45s ease}
+.chat.open{opacity:1}
+.app-main:has(.chat.open) .chat-empty{opacity:0}
+.chat-head{
+  display:flex; align-items:center; gap:9px; padding:9px 14px; background:var(--ab);
+  border-bottom:1px solid var(--al);
+}
+.chat-head b{font-size:.82rem}
+.tagchip{
+  font-size:.62rem; font-weight:900; border-radius:999px; padding:2.5px 9px;
+  background:#E7F6EC; color:#0B7A35;
+}
+.night .tagchip{background:#173226; color:#7ED8A2}
+.resolve-btn{
+  margin-left:auto; display:inline-flex; align-items:center; gap:5px;
+  background:#2E9E63; color:#fff; font-size:.68rem; font-weight:800;
+  border-radius:8px; padding:5px 12px;
+}
+.tagchip.assign{
+  background:var(--awash); color:var(--anavy);
+  opacity:0; transform:scale(.6); transition:opacity .3s, transform .45s var(--spring);
+}
+.night .tagchip.assign{color:#BBD3EE}
+.tagchip.assign.shown{opacity:1; transform:scale(1)}
+.msgs{flex:1; padding:14px 18px; display:flex; flex-direction:column; gap:9px; overflow:hidden}
+.m{max-width:72%; padding:8px 13px; border-radius:13px; font-size:.76rem; line-height:1.7}
+.m.in{align-self:flex-start; background:var(--ab); border:1px solid var(--al); border-bottom-left-radius:4px;
+  box-shadow:0 1px 2px rgba(31,58,95,.04)}
+.m.out{align-self:flex-end; background:var(--anavy); color:#fff; border-bottom-right-radius:4px}
+.night .m.out{color:#F2F7FD}
+.m.hiddenm{display:none}
+.m.popin{animation:mpop .45s var(--spring)}
+@keyframes mpop{0%{opacity:0; transform:translateY(10px) scale(.92)}100%{opacity:1; transform:none}}
+/* Chatwoot のアクティビティ(システム)メッセージは中央の小さいグレー */
+.mmeta{font-size:.64rem; color:var(--am); font-weight:600; display:flex; align-items:center; gap:5px}
+.mmeta.center{align-self:center}
+.mmeta.right{align-self:flex-end}
+.mmeta .ok{color:#238A50; font-weight:900}
+.mmeta.hiddenm{display:none}
+.ai-think{
+  align-self:flex-start; display:none; align-items:center; gap:7px;
+  font-size:.68rem; font-weight:700; color:var(--am);
+}
+.ai-think.shown{display:flex}
+.ai-think .sp{width:13px; height:13px; border-radius:50%;
+  border:2px solid var(--al); border-top-color:var(--anavy); animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-badge{
+  display:inline-flex; align-items:center; gap:4px; font-size:.6rem; font-weight:900;
+  background:var(--anavy); color:#fff; border-radius:999px; padding:2px 8px;
+}
+.composer{
+  margin:0 14px 12px; background:var(--ab); border:1px solid var(--al); border-radius:11px;
+  position:relative; box-shadow:0 2px 6px rgba(31,58,95,.05);
+}
+.composer .ctabs{display:flex; gap:2px; padding:7px 10px 0; font-size:.66rem; font-weight:700; color:var(--am)}
+.composer .ctabs span{padding:3px 10px; border-radius:7px}
+.composer .ctabs span.on{background:var(--awash); color:var(--anavy)}
+.composer .crow{display:flex; align-items:center; gap:10px; padding:7px 12px 9px}
+.composer .ph{color:var(--am); font-size:.74rem; flex:1; white-space:nowrap; overflow:hidden}
+.composer .ph .caret{display:inline-block; width:1.5px; height:12px; background:var(--acoral);
+  vertical-align:-2px; margin-left:1px; animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.composer .tools{display:flex; gap:8px; color:var(--am); font-size:.8rem}
+.composer .sendb{
+  background:var(--anavy); color:#fff; font-size:.68rem; font-weight:800; border:none;
+  border-radius:8px; padding:6px 13px; font-family:inherit; white-space:nowrap;
+}
+.slash-pop{
+  position:absolute; left:10px; bottom:calc(100% + 8px); width:250px;
+  background:var(--ab); border:1px solid var(--al); border-radius:12px; padding:6px;
+  box-shadow:0 14px 34px rgba(31,58,95,.18);
+  opacity:0; transform:translateY(8px) scale(.96); pointer-events:none;
+  transition:opacity .25s, transform .35s var(--spring); z-index:5;
+}
+.slash-pop.shown{opacity:1; transform:none}
+.slash-pop .sp-h{font-size:.6rem; font-weight:900; color:var(--am); letter-spacing:.1em; padding:4px 8px}
+.slash-pop .sp-i{font-size:.72rem; font-weight:600; padding:6px 9px; border-radius:8px; display:flex; gap:7px; align-items:baseline}
+.slash-pop .sp-i b{color:var(--anavy); font-size:.68rem}
+.slash-pop .sp-i small{color:var(--am); font-weight:500; font-size:.64rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.slash-pop .sp-i.hl{background:var(--awash)}
+
+/* 右パネル(Chatwoot: 会話の操作+連絡先情報) */
+.app-info{border-left:1px solid var(--al); background:var(--ab); padding:12px; font-size:.7rem; overflow:hidden}
+.ci-h{font-size:.62rem; font-weight:900; letter-spacing:.08em; color:var(--am); margin:2px 0 8px}
+.ci-block{padding-bottom:12px; border-bottom:1px solid var(--al); margin-bottom:12px}
+.ci-row{display:flex; align-items:center; gap:8px; padding:4px 0}
+.ci-row .k{color:var(--am); width:4.2em; flex:none}
+.ci-row .ava-s{width:20px; height:20px; border-radius:50%; background:var(--anavy); color:#fff; display:grid; place-items:center; font-size:.56rem; font-weight:900}
+.ci-label{display:inline-flex; align-items:center; gap:4px; background:var(--awash); color:var(--anavy); font-size:.64rem; font-weight:700; border-radius:999px; padding:2px 9px}
+.night .ci-label{color:#BBD3EE}
+.ci-contact{display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; padding:4px 0 0}
+.ci-contact .ci-ava{width:40px; height:40px; border-radius:50%; background:#03B952; color:#fff; display:grid; place-items:center; font-weight:900; font-size:.85rem}
+.ci-contact b{font-size:.78rem}
+.ci-contact small{color:var(--am)}
+
+/* 投稿パネル(実挙動: サイドバーの右側に iframe パネルが被さる) */
+.post-panel{
+  position:absolute; top:0; bottom:0; right:0; left:168px; z-index:6;
+  background:var(--af); border-left:1px solid var(--al);
+  display:flex; flex-direction:column;
+  opacity:0; transform:translateX(24px); pointer-events:none;
+  transition:opacity .4s ease, transform .5s cubic-bezier(.3,.8,.3,1);
+}
+.postview .post-panel{opacity:1; transform:none}
+.pp-load{
+  position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; gap:12px;
+  align-items:center; justify-content:center; background:var(--af);
+  color:var(--am); font-size:.74rem;
+  transition:opacity .35s ease;
+}
+.pp-load .sp2{width:26px; height:26px; border-radius:50%; border:3px solid #E8E2D8; border-top-color:#1F3A5F; animation:spin 1s linear infinite}
+.post-panel.loaded .pp-load{opacity:0; pointer-events:none}
+.pp-close{position:absolute; top:8px; right:12px; z-index:3; width:26px; height:26px; border-radius:50%;
+  border:1px solid var(--al); background:var(--ab); color:var(--am); display:grid; place-items:center; font-size:.8rem}
+.pp-body{flex:1; display:flex; flex-direction:column; opacity:0; transition:opacity .4s ease .1s}
+.post-panel.loaded .pp-body{opacity:1}
+.pp-head{display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--al); background:var(--ab)}
+.pp-head b{font-size:.8rem}
+.pp-head .pp-new{margin-left:auto; background:var(--anavy); color:#fff; font-size:.68rem; font-weight:800; border-radius:8px; padding:5px 13px}
+.pp-cols{flex:1; display:flex; gap:12px; padding:12px 14px}
+.pv-comp{
+  flex:1.2; background:#FFFDF9; border:1px solid #E8E2D8; border-radius:12px; padding:13px;
+  display:flex; flex-direction:column; gap:9px;
+  box-shadow:0 2px 6px rgba(31,58,95,.05);
+}
+.pv-comp .pv-h{font-size:.72rem; font-weight:800}
+.pv-text{background:#F7F3EC; border-radius:9px; padding:9px 12px; font-size:.73rem; line-height:1.7}
+.pv-media{display:flex; gap:8px; align-items:center}
+.pv-thumb{width:46px; height:46px; border-radius:8px;
+  background:linear-gradient(135deg,#FFD9A8,#FF9A8B 55%,#C86DD7); position:relative; overflow:hidden}
+.pv-thumb::after{content:"✂️"; position:absolute; inset:0; display:grid; place-items:center; font-size:1rem}
+.pv-chips{display:flex; gap:6px; flex-wrap:wrap}
+.pv-chips .pvc{display:inline-flex; align-items:center; gap:5px; font-size:.64rem; font-weight:700;
+  border:1.5px solid #E8E2D8; border-radius:999px; padding:3px 10px; color:var(--at)}
+.pv-chips .pvc i{width:13px; height:13px; border-radius:4px; display:grid; place-items:center}
+.pv-chips .pvc i svg{width:8px; height:8px}
+.pv-chips .pvc.on{border-color:#1F3A5F; background:#E9EFF6}
+.pv-foot{display:flex; align-items:center; gap:9px; margin-top:auto}
+.pv-when{font-size:.66rem; font-weight:700; color:var(--am)}
+.pv-btn{margin-left:auto; background:#1F3A5F; color:#fff; border:none; font-family:inherit;
+  font-size:.68rem; font-weight:800; border-radius:8px; padding:6px 14px}
+.pv-note{font-size:.6rem; color:var(--am)}
+.pv-queue{flex:1; display:flex; flex-direction:column; gap:7px}
+.pv-queue .q-h{font-size:.66rem; font-weight:900; color:var(--am); letter-spacing:.06em}
+.qcard{
+  display:flex; align-items:center; gap:8px; background:#FFFDF9; border:1px solid #E8E2D8;
+  border-radius:10px; padding:8px 11px; font-size:.68rem; font-weight:600; color:var(--at);
+  opacity:0; transform:translateX(-26px) scale(.94);
+  transition:opacity .35s ease, transform .5s var(--spring);
+  box-shadow:0 2px 6px rgba(31,58,95,.04);
+}
+.qcard.shown{opacity:1; transform:none}
+.qcard i{width:21px; height:21px; border-radius:6px; display:grid; place-items:center; flex:none}
+.qcard i svg{width:11px; height:11px}
+.qcard small{margin-left:auto; color:var(--am); font-weight:700; font-size:.6rem; flex:none; white-space:nowrap}
+.qcard .approve{background:#FDF2E3; color:#B26A00; font-size:.58rem; font-weight:900; border-radius:999px; padding:1px 7px; flex:none}
+.qcard .qk{color:#2E9E63; font-weight:900}
+
+/* ゴーストカーソル */
+.ghost{
+  position:absolute; left:50%; top:70%; z-index:40; width:20px; pointer-events:none;
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.3));
+  transition:left .6s cubic-bezier(.35,.7,.3,1), top .6s cubic-bezier(.35,.7,.3,1), opacity .3s;
+  opacity:0;
+}
+.ghost.on{opacity:1}
+.ghost::after{
+  content:""; position:absolute; left:-9px; top:-9px; width:36px; height:36px; border-radius:50%;
+  background:rgba(255,107,91,.35); transform:scale(0); opacity:0;
+}
+.ghost.clicked::after{animation:gclick .45s ease-out}
+@keyframes gclick{0%{transform:scale(.2); opacity:1}100%{transform:scale(1.6); opacity:0}}
+
+/* 通知トースト */
+.toast{
+  position:absolute; top:14px; right:14px; z-index:30; width:240px;
+  background:rgba(255,255,255,.96); backdrop-filter:blur(8px);
+  border:1px solid var(--line-soft); border-radius:13px; padding:10px 13px;
+  box-shadow:0 16px 40px rgba(30,42,56,.22);
+  display:flex; gap:9px; align-items:flex-start;
+  opacity:0; transform:translateY(-14px) scale(.95);
+  transition:opacity .3s, transform .45s var(--spring);
+  font-size:.72rem; text-align:left;
+}
+.toast.shown{opacity:1; transform:none}
+.toast i{width:26px; height:26px; border-radius:8px; background:#06C755; flex:none; display:grid; place-items:center}
+.toast i svg{width:14px; height:14px}
+.toast b{display:block; font-size:.72rem}
+.toast span{color:var(--muted); font-size:.66rem}
+
+@media (max-width:1180px){
+  .tour-grid{grid-template-columns:1fr; gap:18px}
+  .tour-steps{grid-auto-flow:column; grid-auto-columns:minmax(150px,1fr); overflow-x:auto; gap:6px; padding-bottom:4px}
+  .tstep{padding:10px 12px}
+  .tstep p{display:none}
+  .app{height:480px; font-size:11.5px}
+  .app-body{grid-template-columns:44px 190px 1fr}
+  .app-info{display:none}
+}
+@media (max-width:700px){
+  .app-body{grid-template-columns:40px 1fr}
+  .app-side{display:none}
+  .app{height:430px}
+  .tour-triggers .trg{height:80vh}
+}
+
+
+.app{height:560px;box-shadow:0 10px 25px #1f3a5f16}.app-wrap{width:100%;height:560px}.ghost{z-index:10}.toast{z-index:11}
