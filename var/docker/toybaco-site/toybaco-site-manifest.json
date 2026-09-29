@@ -1089,7 +1089,7 @@
     "site/guide/what-is-scheduled-post/index.html": "5ac7dfc6b0ee318f2aa1909bf8531970ffd19dfb92a365710223d838b9d5359a",
     "site/guide/what-is-team-inbox/index.html": "f3daa7e60e3ca0b8043dacc2cfea0b5a0d925f5829a5dbf4fb8610cda1520cc7",
     "site/guide/what-is-unified-inbox/index.html": "3a743ca75493b326644b9c99a4f36018bab30f2a9f55c10c98668db0f0ae3e27",
-    "site/index.html": "bc258aed45f3c559cf78b6673a01e125c1170aca26bef8e0dfa350ef827fe881",
+    "site/index.html": "74f689f975c3c41eef874f0027e51aa21f3df1b06b88eb3df02b55e6a5c2c119",
     "site/industries/auto/index.html": "0247f620ca2a9a217efb6bd175b7aeee9d62394f2675978eafc5d797eaaa7b4e",
     "site/industries/beauty/index.html": "b3eeb95dc94c0e8016628f435b58f65db5ff01e54acb71a0ef2677d02107eaf3",
     "site/industries/bridal-photo/index.html": "5720ffa28159778f8c0c3eac544888d825412d5de1d31e8988616b63a1472c5f",
@@ -2208,7 +2208,7 @@
     "guide/what-is-scheduled-post/index.html": "e070c9339e51224431afb5a90f9999e25537930ab3bec8edb43baf881b23c5d6",
     "guide/what-is-team-inbox/index.html": "fd617b4007c59e0d6388a3eb25371f60b48d14fc541778b527f763e06f194b6e",
     "guide/what-is-unified-inbox/index.html": "10e900e7de370d0ff6bf32854617c97029762efa67b566ae5412ede6144b7465",
-    "index.html": "ee7cb0a31cf25b4949b4f0a6543c75f536729c8b60e911fb64683157ce58bc98",
+    "index.html": "915a0a6be8212691d404dfc713d85ddc50b4bc485cd5a2ee8600c19037c41216",
     "industries/auto/index.html": "896b6866966923f445450ee5d41c87e9c79964e3a307b01ba5e06eac7778eac9",
     "industries/beauty/index.html": "6b8a01daf322088f48fd2092b594085fc489f7fbcfde6ee9af6f1d34eb200542",
     "industries/bridal-photo/index.html": "bcaf9d9a5d296f54906d32d5c84d25372dcac424becd5281aaf383aadff48561",
@@ -2239,7 +2239,7 @@
     "tokushoho/index.html": "e469c5a5739fb38b9774b3449dfb37c19857404352a0d42224fe503f7fd01da9",
     "welcome/index.html": "c97bdc84f1f04321d95babf94e806c41b35f22ab09576fa9707cc88e30f15f99"
   },
-  "renderer_sha256": "be89da4be855dbc6a840edf5ec14c5bf158eda487a4cc8c45eeaa3a11e011372",
+  "renderer_sha256": "221583b359da5dfe2b07e89f7c258f964d4fea3ea9884b40d267bd068b12cc77",
   "roster_sha256": "3d82ce48b49627b461fc2052867d28b5080801e362c8e13960171220f8fb4ec8",
   "schema_version": 1,
   "site_origin": "https://staging.toybaco.jp"
