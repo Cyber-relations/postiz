@@ -68,7 +68,7 @@
     if (codes[key]) return codes[key].includes(value);
     if (key === 'question_id') return /^[a-z0-9_]+_faq_[0-9]{2}$/.test(value);
     if (key === 'industry_id') return ['beauty', 'food', 'estate', 'retail-ec', 'clinic', 'school', 'auto', 'reform', 'hotel', 'bridal-photo', 'pet', 'pro'].includes(value);
-    if (key === 'link_text') return ["このプランを相談する", "お問い合わせ", "お問い合わせフォーム", "チャットからどうぞ", "チャットでご相談ください", "チャットで伝える", "チャットで相談", "チャットで相談する", "チャットで質問する", "フォームで相談", "フォームで相談する"].includes(value);
+    if (key === 'link_text') return ["このプランを相談する", "お問い合わせ", "お問い合わせフォーム", "チャットからどうぞ", "チャットでご相談ください", "チャットで伝える", "チャットで相談", "チャットで相談する", "チャットで質問する", "フォームで相談", "フォームで相談する", "使っている媒体が接続できるか相談する", "導入・接続について相談する"].includes(value);
     if (key === 'link_url') return value === '' || value === location.origin + '/contact/';
     return false;
   };
@@ -83,10 +83,22 @@
       eventCallback: completion, eventTimeout: completion ? 1200 : undefined });
     return true;
   };
+  // Stop every GA4 destination actually loaded by this page, including an isolated QA stream.
+  const stopLoadedAnalytics = () => {
+    window['ga-disable-G-YR5P1YSG3G'] = true;
+    for (const script of document.querySelectorAll('script[src]')) {
+      try {
+        const url = new URL(script.src);
+        const id = url.searchParams.get('id') || '';
+        if (url.protocol === 'https:' && url.hostname === 'www.googletagmanager.com' &&
+          url.pathname === '/gtag/js' && /^G-[A-Z0-9]+$/.test(id)) window['ga-disable-' + id] = true;
+      } catch (_) { /* Ignore unrelated or invalid script URLs. */ }
+    }
+  };
   const setChoice = next => {
     if (!['accepted', 'denied'].includes(next)) return false;
     active = false;
-    window['ga-disable-G-YR5P1YSG3G'] = true;
+    stopLoadedAnalytics();
     let stored = true;
     try {
       if (production) localStorage.setItem(choiceKey, JSON.stringify({ choice: next, expires: Date.now() + choiceLifetime }));
@@ -97,7 +109,7 @@
       // A refused write must never prevent an in-memory opt-out.
     }
     if (next !== 'accepted') {
-      window['ga-disable-G-YR5P1YSG3G'] = true;
+      stopLoadedAnalytics();
       for (const cookie of document.cookie.split(';')) {
         const name = cookie.trim().split('=')[0];
         if (!(production ? /^tb_site(?:_|$)/ : /^tb_staging(?:_|$)/).test(name)) continue;
@@ -112,7 +124,7 @@
   window.toybacoMeasurement = Object.freeze({ context, emit, setChoice, get active() { return active; } });
   const position = el => el.closest('header, nav.menu') ? 'header'
     : el.closest('footer') ? 'footer' : el.closest('#pricing, .plans2, #staffCalc, .lp-plans, #lp-selector') ? 'pricing'
-    : path.startsWith('/guide/') ? 'article' : el.closest('.acts, .contact-options, #cta') ? 'main_cta' : 'other';
+    : path.startsWith('/guide/') ? 'article' : el.closest('.acts, .hero-actions, .contact-options, #cta') ? 'main_cta' : 'other';
   document.addEventListener('click', e => {
     const el = e.target.closest('a[href^="mailto:"]');
     if (!active || !e.isTrusted || !el || el.matches('[data-open-chat]')) return;
@@ -126,7 +138,7 @@
     if (e.key !== choiceKey && e.key !== null) return;
     if (readChoice() === choice) return;
     active = false;
-    window['ga-disable-G-YR5P1YSG3G'] = true;
+    stopLoadedAnalytics();
     location.reload();
   });
   if (active && (staging || production)) {
