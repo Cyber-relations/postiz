@@ -46,11 +46,15 @@ export function retentionRequest(request: any) {
   try { body = JSON.parse(raw); } catch { throw denied(); }
   const fields = ['version', 'account_id', 'organization_id', 'transition_id', 'keep_integration_ids',
     'scheduled_posts_per_account', 'policy_hash', 'issuer', 'audience'];
-  if (!body || Array.isArray(body) || Object.keys(body).sort().join(',') !== fields.sort().join(',') ||
+  // A later stop after a Free return names the returned hold: both parent keys or neither.
+  const parent = ['previous_transition_id', 'previous_receipt_hash'];
+  if (!body || Array.isArray(body) || ![fields, [...fields, ...parent]].some(set => Object.keys(body).sort().join(',') === [...set].sort().join(',')) ||
       JSON.stringify(body) !== raw || body.version !== 1 || body.issuer !== config.issuer || body.audience !== config.audience ||
       body.organization_id !== retentionOrganization(body.account_id)) throw denied();
+  const previous = body.previous_transition_id === undefined ? {} :
+    { previousTransitionId: body.previous_transition_id, previousReceiptHash: body.previous_receipt_hash };
   const policy = toybacoRetentionPolicy(body.organization_id, { transitionId: body.transition_id,
-    keepIntegrationIds: body.keep_integration_ids, scheduledPostsPerAccount: body.scheduled_posts_per_account });
+    keepIntegrationIds: body.keep_integration_ids, scheduledPostsPerAccount: body.scheduled_posts_per_account, ...previous });
   if (policy.policyHash !== body.policy_hash) throw denied();
   return { policy, accountId: body.account_id, requestHash: createHash('sha256').update(raw).digest('hex') };
 }
