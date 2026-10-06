@@ -1,0 +1,95 @@
+/* Final craft layer for the two service-detail proposals only. */
+.service-detail .detail-hero h1{text-wrap:balance}
+.service-detail .detail-section .section-intro h2{text-wrap:balance}
+.service-detail .detail-hero-art{background:linear-gradient(155deg,#FFFFFFF2,#FBFCF9F2);border-color:#DDE4E8;box-shadow:0 16px 36px #1F3A5F08,0 2px 5px #1F3A5F04}
+.service-detail .detail-section p{overflow-wrap:anywhere}
+.service-detail .detail-page-index summary{min-height:44px}
+.service-detail .demo-toggle{min-height:44px;min-width:72px}
+.service-detail :is(button,a,summary){scroll-margin-block:110px}
+.service-detail :is(.detail-brand img,.detail-brand svg){display:block}
+.service-detail .detail-hero-art .diagram-window-body>.detail-brand svg{width:40px;height:40px}
+.service-detail .detail-hero-art .diagram-target{min-height:58px;gap:9px}
+.service-detail .detail-hero-art .diagram-target-text{font-size:12px;line-height:1.65}
+.service-detail .detail-hero-art .diagram-target-text small{font-size:11px}
+.service-detail :is(.inquiry-function-groups,.posting-function-groups){gap:0}
+.service-detail :is(.inquiry-function-group,.posting-function-group){padding:36px 0;border:0;border-top:1px solid #D9E2E8;border-radius:0;background:transparent;gap:34px}
+.service-detail :is(.inquiry-function-group-header,.posting-function-group-header){padding:9px 0}
+.service-detail :is(.inquiry-function-group-header,.posting-function-group-header)>svg{width:42px;height:42px;padding:8px;box-sizing:content-box;background:#F3F5F5;border:1px solid #E2E8EB;border-radius:14px;margin-bottom:19px}
+.service-detail :is(.inquiry-function-pair,.posting-function-pair){gap:24px}
+.service-detail :is(.inquiry-function-pair,.posting-function-pair) .detail-function{border:1px solid #E0E6EA;padding:26px;background:#fff;border-radius:14px;box-shadow:0 3px 8px #1F3A5F03}
+.service-detail :is(.inquiry-function-pair,.posting-function-pair) .detail-function h3{font-size:22px;line-height:1.6}
+.service-detail :is(.inquiry-function-pair,.posting-function-pair) .feature-figure{margin-top:20px;background:#F5F7F7;border-color:#E5EAEC;padding:17px;min-height:230px;justify-content:center}
+.service-detail .feature-figure :is(.diagram-document p,.diagram-copy p){font-size:14px;line-height:1.85}
+.service-detail .feature-figure .diagram-heading{font-size:13px}
+.service-detail :is(.diagram-table-head,.diagram-tag,.document-label,.diagram-date small,.diagram-caption){font-size:12px}
+.service-detail .diagram-flow-box b{font-size:14px}.service-detail .diagram-flow-box small{font-size:12px}
+.service-detail .feature-figure .diagram-table .diagram-row b{font-size:14px}
+.service-detail .feature-figure .diagram-row small{font-size:12px}
+.service-detail .feature-figure .diagram-route small{font-size:12px}
+.service-detail .feature-figure .bubble{font-size:14px}.service-detail .feature-figure .bubble small{font-size:12px}
+.service-detail .detail-ai-grid{gap:24px}
+.service-detail :is(.inquiry-case,.posting-case){box-shadow:0 3px 8px #1F3A5F03;border-color:#DDE5EA}
+.service-detail :is(.inquiry-case,.posting-case)>h3+p{font-size:15px;line-height:1.85}
+.service-detail .inquiry-case-flow{position:relative;gap:17px;margin-left:0}
+.service-detail .inquiry-case-flow:before{content:"";position:absolute;left:11px;top:15px;bottom:14px;width:1px;background:#DCE4EB}
+.service-detail .inquiry-case-flow li{position:relative;grid-template-columns:24px minmax(0,1fr);gap:12px}
+.service-detail .inquiry-case-flow li>span{display:grid;place-items:center;width:24px;height:24px;padding:0;color:var(--navy);font-size:11px;border:1px solid #D3DFE8;border-radius:50%;background:#F5F8FA;line-height:1;z-index:1}
+.service-detail .inquiry-case-flow b{font-size:15px}.service-detail .inquiry-case-flow p{font-size:14px;line-height:1.85}
+.service-detail .inquiry-case-sources .detail-brand{width:29px;height:29px}.service-detail .inquiry-case-sources .detail-brand :is(img,svg){width:28px;height:28px}
+.service-detail .inquiry-case-box{background:#EFF3F5;border-color:#D7E1E8}
+.service-detail .inquiry-detail-quality-combination{display:flex;gap:14px;border-top:1px solid var(--line);padding-top:20px;margin-top:24px}
+.inquiry-detail-quality-combination>svg{width:32px;height:32px;stroke:var(--navy);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:3px}
+.inquiry-detail-quality-combination strong{font-size:18px;font-weight:900;line-height:1.7;display:block}
+.inquiry-detail-quality-combination p{font-size:15px;line-height:1.9;color:var(--muted);margin:6px 0 0}
+.inquiry-detail .together-illustration>.inquiry-together-mobile{display:none}
+.service-detail .detail-faq summary{transition:color .18s ease}
+.service-detail .detail-faq details[open] summary{color:var(--navy)}
+.service-detail .detail-faq details[open]{background:linear-gradient(90deg,#F3F6F8A0,transparent)}
+.service-detail .detail-faq details[open]>p{padding-left:18px;border-left:2px solid #A9BCCA}
+.service-detail :is(.posting-demo-tabs,.inquiry-demo-tabs) button{transition:background-color .18s ease,color .18s ease,box-shadow .18s ease;touch-action:manipulation}
+.service-detail :is(.posting-demo-tabs,.inquiry-demo-tabs) button[aria-selected=true]{box-shadow:0 3px 8px #1F3A5F21}
+.service-detail .feature-figure figcaption{font-size:12px;line-height:1.8;color:#536778}
+.detail-case-tabs[hidden]{display:none}
+.service-detail :is(.inquiry-case,.posting-case)[hidden]{display:none}
+.detail-case-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:16px}
+.detail-case-tabs button{padding:12px 4px;min-height:66px;border:1px solid #D2DEE6;border-radius:10px;background:#fff;color:var(--navy);font:inherit;cursor:pointer;transition:background-color .18s ease,color .18s ease;touch-action:manipulation}
+.detail-case-tabs b{display:block;font-size:14px;line-height:1.6}.detail-case-tabs small{display:block;font-size:12px;line-height:1.7;margin-top:3px;color:#536778}
+.detail-case-tabs button[aria-selected=true]{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 3px 8px #1F3A5F21}
+.detail-case-tabs button[aria-selected=true] small{color:#E0E8EF}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+ .service-detail :is(.inquiry-case,.posting-case,.detail-function){transition:border-color .24s ease,box-shadow .24s ease}
+ .service-detail :is(.inquiry-case,.posting-case,.detail-function):hover{border-color:#BCCDD9;box-shadow:0 6px 20px #1F3A5F09}
+ .service-detail .detail-faq summary:hover{color:#3C6282}
+}
+@media(max-width:1100px){
+ .service-detail :is(.inquiry-function-pair,.posting-function-pair){gap:18px}
+ .service-detail :is(.inquiry-function-pair,.posting-function-pair) .detail-function{padding:21px}
+}
+@media(max-width:900px){
+ .service-detail :is(.inquiry-function-group-header,.posting-function-group-header){padding:0}
+ .service-detail :is(.inquiry-function-group-header,.posting-function-group-header)>svg{width:28px;height:28px;padding:7px;margin:4px 0 0;box-sizing:border-box;width:42px;height:42px;border-radius:11px}
+}
+@media(max-width:760px){
+ .service-detail .detail-hero{gap:26px}
+ .service-detail .detail-hero h1{font-size:clamp(24px,7.2vw,30px)}
+ .service-detail .detail-hero-art .diagram-target{min-height:57px;gap:8px}
+ .service-detail .detail-hero-art .diagram-target-text{font-size:12px}.service-detail .detail-hero-art .diagram-target-text small{font-size:11px}
+ .service-detail :is(.inquiry-function-group,.posting-function-group){padding:25px 0;gap:17px}
+ .service-detail :is(.inquiry-function-group-header,.posting-function-group-header){grid-template-columns:42px 1fr;gap:4px 13px}
+ .service-detail :is(.inquiry-function-group-header,.posting-function-group-header) h3{font-size:22px}
+ .service-detail :is(.inquiry-function-pair,.posting-function-pair){gap:0;border:1px solid #DDE4EA;border-radius:13px;background:#fff}
+ .service-detail :is(.inquiry-function-pair,.posting-function-pair) .detail-function{border:0;border-radius:0;padding:23px 18px;background:transparent;box-shadow:none}
+ .service-detail :is(.inquiry-function-pair,.posting-function-pair) .detail-function+.detail-function{border-top:1px solid #DDE4EA}
+ .service-detail :is(.inquiry-function-pair,.posting-function-pair) .detail-function h3{font-size:21px}
+ .service-detail :is(.inquiry-function-pair,.posting-function-pair) .feature-figure{padding:0;border:0;min-height:0;background:transparent;margin-top:16px}
+ .service-detail :is(.inquiry-case,.posting-case){padding:22px 20px}
+ .service-detail .inquiry-case-flow:before{left:11px}
+ .service-detail .inquiry-case-flow b{font-size:16px}
+ .service-detail .inquiry-case-flow p{font-size:14px}
+ .service-detail .inquiry-detail-quality-combination{gap:11px;padding-top:16px;margin-top:20px}.inquiry-detail-quality-combination strong{font-size:17px}.inquiry-detail-quality-combination p{font-size:14px}
+ .inquiry-detail .together-illustration>.inquiry-together-desktop{display:none}.inquiry-detail .together-illustration>.inquiry-together-mobile{display:block}
+ .inquiry-detail .together-illustration figcaption small{font-size:12px}
+ .service-detail .detail-faq details[open]>p{padding-left:12px}
+ .service-detail :is(button,a,summary){scroll-margin-block:100px}
+}
+@media(prefers-reduced-motion:reduce){.service-detail *{scroll-behavior:auto!important}.service-detail :is(.detail-faq summary,.posting-demo-tabs button,.inquiry-demo-tabs button,.detail-case-tabs button){transition:none}}

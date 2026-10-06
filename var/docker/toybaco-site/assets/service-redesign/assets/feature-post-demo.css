@@ -1,0 +1,85 @@
+/* Reused from the current Toybaco posting-calendar animation. */
+
+.pcal-wrap{position:relative}
+.pbody{grid-template-columns:168px 1fr}
+.pcal-main{position:relative; display:flex; flex-direction:column; background:var(--af); overflow:hidden}
+.pcal-week{font-size:.72rem; color:var(--am); font-weight:700}
+.pp-new{
+  margin-left:auto; background:var(--anavy); color:#fff; font-size:.68rem; font-weight:800;
+  border-radius:8px; padding:5px 13px; transition:transform .2s var(--spring);
+}
+.pp-new.hit{transform:scale(.93)}
+.pcal-days{display:grid; grid-template-columns:repeat(7,1fr); background:var(--ab); border-bottom:1px solid var(--al)}
+.pcal-days span{padding:7px 0 6px; text-align:center; font-size:.64rem; font-weight:800; color:var(--am); border-right:1px solid var(--al)}
+.pcal-days span:last-child{border-right:none}
+.pcal-days span b{display:block; font-size:.88rem; color:var(--at); font-weight:800; margin-top:1px}
+.pcal-days span.today{color:#E85948}
+.pcal-days span.today b{color:#E85948}
+.pcal-grid{flex:1; display:grid; grid-template-columns:repeat(7,1fr)}
+.pcal-cell{border-right:1px solid var(--al); padding:8px 6px; display:flex; flex-direction:column; gap:6px; min-height:0}
+.pcal-cell:last-child{border-right:none}
+.pcal-cell.today{background:#FFF6EE}
+.night .pcal-cell.today{background:#1C2637}
+.pchip{
+  background:var(--ab); border:1px solid var(--al); border-radius:9px; padding:6px 7px;
+  font-size:.62rem; font-weight:700; line-height:1.5;
+  display:flex; flex-direction:column; gap:3px;
+  box-shadow:0 1px 3px rgba(31,58,95,.07);
+}
+.pchip .pc-top{display:flex; align-items:center; gap:3px}
+.pchip .pc-top small{margin-left:auto; color:var(--am); font-weight:800; font-size:.58rem}
+.pchip i{width:15px; height:15px; border-radius:5px; display:grid; place-items:center; flex:none}
+.pchip i svg{width:9px; height:9px}
+.pchip .pc-t{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.pchip em{font-style:normal; font-size:.56rem; font-weight:900; border-radius:999px; padding:1.5px 7px; align-self:flex-start}
+.pchip em.ok{background:#E7F6EC; color:#0B7A35}
+.pchip em.sch{background:var(--awash); color:var(--anavy)}
+.pchip em.wait{background:#FDF2E3; color:#B26A00}
+.pchip.done{opacity:.68}
+.pchip.newp{opacity:0; transform:translateY(10px) scale(.92); transition:opacity .35s, transform .5s var(--spring)}
+.pchip.newp.shown{opacity:1; transform:none}
+/* 作成パネル(カレンダーの上に右からスライド) */
+.pcal-comp{
+  position:absolute; top:43px; right:0; bottom:0; width:44%; z-index:4;
+  background:var(--ab); border-left:1px solid var(--al);
+  box-shadow:-20px 0 44px rgba(31,58,95,.14);
+  padding:13px 15px; display:flex; flex-direction:column; gap:10px;
+  transform:translateX(105%); transition:transform .5s cubic-bezier(.3,.8,.3,1);
+  text-align:left;
+}
+.pcal-comp.open{transform:none}
+.pc-h{font-size:.76rem; font-weight:800; display:flex; align-items:center}
+.pc-close{margin-left:auto; width:24px; height:24px; border:1px solid var(--al); border-radius:50%;
+  display:grid; place-items:center; color:var(--am); font-size:.75rem}
+.pc-text{background:var(--af); border-radius:9px; padding:9px 11px; font-size:.73rem; line-height:1.75; min-height:58px}
+.pc-text .pc-ph{color:var(--am); opacity:.7}
+.pc-chips{display:flex; gap:6px; flex-wrap:wrap}
+.pc-chips .pvc{display:inline-flex; align-items:center; gap:5px; font-size:.62rem; font-weight:700;
+  border:1.5px solid var(--al); border-radius:999px; padding:3px 10px; color:var(--at);
+  transition:border-color .25s, background .25s}
+.pc-chips .pvc i{width:13px; height:13px; border-radius:4px; display:grid; place-items:center}
+.pc-chips .pvc i svg{width:8px; height:8px}
+.pc-chips .pvc.on{border-color:var(--anavy); background:var(--awash)}
+.pc-foot{display:flex; align-items:center; margin-top:auto; gap:8px}
+.pc-foot .pv-when{font-size:.66rem}
+@media (max-width:1180px){
+  .posting-grid{grid-template-columns:1fr; gap:18px}
+  .post-points{grid-auto-flow:column; grid-auto-columns:minmax(180px,1fr); overflow-x:auto; gap:8px}
+  .ppoint p{display:none}
+}
+@media (max-width:700px){
+  .pcal-comp{width:70%}
+  .pbody{grid-template-columns:44px 1fr}
+  .pcal-wrap .nav-acct, .pcal-wrap .nav-item{font-size:0; gap:0; justify-content:center}
+  .pcal-wrap .nav-item svg{width:16px; height:16px}
+  .pcal-wrap .navdot{display:none}
+}
+
+
+/* Six equal destinations, with official coloured media marks. */
+.pc-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.pc-chips .pvc{min-width:0;padding:5px 7px;gap:6px;font-size:10px;border-radius:8px}
+.pc-chips .pvc i{background:transparent;width:18px;height:18px;flex:none}
+.pc-chips .pvc img{width:18px;height:18px;object-fit:contain}
+.pchip i{background:transparent;width:15px;height:15px}
+.pchip i img{width:15px;height:15px;object-fit:contain}

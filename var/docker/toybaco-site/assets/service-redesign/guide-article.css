@@ -1,0 +1,66 @@
+/* Reading layout for existing guide articles in the shared proposal. */
+.guide-article-page{background:#FCFCFA;font-family:"Zen Kaku Gothic New",sans-serif;--line-soft:#D5E0E7}
+.guide-article-page::before,.guide-article-page::after{display:none}
+.guide-article-page .wrap2{width:min(1140px,calc(100% - 80px));margin-inline:auto}
+.guide-article-page .phero{padding:26px 0 48px}
+.guide-article-page .crumbs{font-size:13px;color:#536778;line-height:1.9;margin:0 0 34px}
+.guide-article-page .sep{margin-inline:9px}
+.guide-article-page .eyebrow2{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;margin-bottom:14px}
+.guide-article-page .phero h1{font-size:42px;line-height:1.6;font-weight:900;margin-bottom:24px}
+.guide-article-page .lead{max-width:54em;font-size:16px;line-height:2;color:#536778}
+.guide-article-page .sec{padding:50px 0 64px}
+.guide-article-page .sec.tint{background:#F7F5F0;border-block:1px solid #E1E5E4}
+.guide-article-page .art{max-width:46rem;margin-inline:auto;text-align:left}
+.guide-article-page .art h2{font-size:25px;line-height:1.65;font-weight:900;margin:42px 0 16px}
+.guide-article-page .art h2:first-child{margin-top:0}
+.guide-article-page .art h3{font-size:21px;font-weight:700;line-height:1.75;margin:24px 0 12px}
+.guide-article-page .art p,.guide-article-page .art ul,.guide-article-page .art ol{font-size:16px;line-height:2.1;color:#536778;margin-bottom:18px;overflow-wrap:anywhere}
+.guide-article-page .art ul,.guide-article-page .art ol{padding-left:1.5em}
+.guide-article-page .art li{margin-bottom:8px}
+.guide-article-page .date{font-size:12px!important;margin:0;color:#687683!important}
+.guide-article-page .gtbl-wrap{overflow-x:auto;max-width:100%;margin:16px 0 24px;overscroll-behavior-x:contain}
+.guide-article-page .gtbl{width:100%;min-width:540px;border-collapse:separate;border-spacing:0;border:1px solid #D5E0E7;border-radius:9px;background:#fff;font-size:14px;line-height:1.9}
+.guide-article-page .gtbl :is(th,td){padding:12px 15px;border-bottom:1px solid #E4EBEF;text-align:left}
+.guide-article-page .gtbl th{background:#EEF3F6;color:#1F3A5F}
+.guide-article-page .gtbl tr:last-child td{border-bottom:none}
+.guide-article-page .ok{color:#20894D;font-weight:700}.guide-article-page .ng{color:#687683}
+.guide-article-page .guide-related-link a{color:#1F3A5F;font-weight:700;text-decoration:underline;text-underline-offset:.2em}
+.guide-article-page .guide-related-link a:hover{text-decoration-thickness:2px}
+.guide-article-page .acts{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.guide-article-page .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:10px 19px;border:1px solid #A2B4C3;border-radius:7px;background:#fff;color:#1F3A5F;font:inherit;font-size:14px;font-weight:700;text-decoration:none;line-height:1.8}
+.guide-article-page .btn:hover{background:#EEF3F6}
+.guide-article-page .btn-coral{background:#20894D;border-color:#20894D;color:#fff;box-shadow:0 3px 0 #176B3B}
+.guide-article-page .btn-coral:hover{background:#187A42}
+.guide-article-page .faq2 details{border-top:1px solid #CAD7E0}
+.guide-article-page .faq2 details:last-child{border-bottom:1px solid #CAD7E0}
+.guide-article-page .faq2 summary{display:flex;gap:13px;list-style:none;padding:20px 0;cursor:pointer;font-size:16px;font-weight:700;line-height:1.9}
+.guide-article-page .faq2 summary::-webkit-details-marker{display:none}
+.guide-article-page .q{font-size:13px;flex:none;color:#687683;padding-top:3px}
+.guide-article-page .arw{margin-left:auto;flex:none;color:#687683}
+.guide-article-page .faq2 details[open] .arw{transform:rotate(180deg)}
+.guide-article-page .faq2 .a{padding:0 0 22px 26px;font-size:16px;line-height:2.1;color:#536778;overflow-wrap:anywhere}
+.guide-article-page .close2{max-width:1140px;margin-inline:auto}
+.guide-article-page .close2 .markimg{width:50px;height:50px;object-fit:contain;margin-bottom:16px}
+.guide-article-page .close2 h2{font-size:30px;font-weight:900;line-height:1.65;margin-bottom:18px}
+.guide-article-page .close2 .sub2{font-size:16px;color:#536778;line-height:2}
+.guide-article-page .close2 .acts{justify-content:center;gap:20px;margin-top:26px}
+.guide-article-page .close2 :is(.button,.floating-contact){min-width:230px;min-height:56px;font-size:17px;font-weight:900;text-align:center;justify-content:center}
+.guide-article-page .close2 .floating-contact{font-family:inherit;line-height:1.7;padding:12px 20px;border:1px solid #A5B5C5;background:#fff;border-radius:11px;color:#1F3A5F;box-shadow:inset 0 1px 2px #fff,0 2px 5px #1F3A5F09;cursor:pointer}
+.guide-article-page .close2 .floating-contact:hover{background:#F0F4F7;border-color:#1F3A5F}
+.guide-article-page .closing-pre{font-size:12px;font-weight:700}
+.guide-article-page :is(a,button,summary):focus-visible{outline:3px solid #1F3A5F;outline-offset:4px}
+.guide-article-page .site-footer a:focus-visible{outline-color:#fff}
+@media(max-width:760px){
+ .guide-article-page .wrap2{width:calc(100% - 40px)}
+ .guide-article-page .phero{padding:21px 0 30px}.guide-article-page .crumbs{font-size:12px;margin-bottom:26px}
+ .guide-article-page .phero h1{font-size:clamp(25px,7.4vw,31px);margin-bottom:18px}
+ .guide-article-page .lead{font-size:15px}.guide-article-page .sec{padding:32px 0 40px}
+ .guide-article-page .art h2{font-size:22px;margin-top:32px}.guide-article-page .art h3{font-size:19px}
+ .guide-article-page .art p,.guide-article-page .art ul,.guide-article-page .art ol,.guide-article-page .faq2 .a{font-size:15px;line-height:2}
+ .guide-article-page .acts{gap:12px}
+ .guide-article-page .btn{font-size:13px;padding:10px 15px}.guide-article-page .faq2 summary{font-size:15px;padding-block:18px}
+ .guide-article-page .close2 h2{font-size:25px}.guide-article-page .close2 .sub2{font-size:15px}
+ .guide-article-page .close2 .acts{flex-direction:column;gap:8px}
+ .guide-article-page .close2 :is(.button,.floating-contact){font-size:16px;width:240px;min-width:0;max-width:100%}
+}
+@media(prefers-reduced-motion:reduce){.guide-article-page *{transition:none!important;animation:none!important}}

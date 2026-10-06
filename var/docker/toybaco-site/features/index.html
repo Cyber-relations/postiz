@@ -1,319 +1,101 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<script src="/assets/measurement.js?v=20260929-home" defer></script>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light">
-<title>機能一覧 — 問い合わせ一元管理・チーム受信箱 | トイバコ</title>
-<meta name="description" content="LINE・Instagram・Webチャット・メールの問い合わせをひとつの受信箱に。担当割り当て・社内メモ・定型文・ラベルで、チームの誰でも同じ品質で返せます。">
-<link rel="canonical" href="https://staging.toybaco.jp/features/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="トイバコ">
-<meta property="og:title" content="機能一覧 — 問い合わせ一元管理・チーム受信箱 | トイバコ">
-<meta property="og:description" content="LINE・Instagram・Webチャット・メールの問い合わせをひとつの受信箱に。担当割り当て・社内メモ・定型文・ラベルで、チームの誰でも同じ品質で返せます。">
-<meta property="og:url" content="https://staging.toybaco.jp/features/">
-<meta property="og:image" content="https://staging.toybaco.jp/assets/og-growth.png?v=2026-09-25.1">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/png" href="../assets/favicon.png?v=ivory-20260914">
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"トイバコ","url":"https://staging.toybaco.jp/","publisher":{"@type":"Organization","name":"株式会社サイバーリレーションズ","url":"https://cyber-relations.jp/","logo":"https://staging.toybaco.jp/assets/toybaco-app-icon-ivory.png"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"トップ","item":"https://staging.toybaco.jp/"},{"@type":"ListItem","position":2,"name":"できること","item":"https://staging.toybaco.jp/features/"}]}]}</script>
-<link rel="stylesheet" href="../assets/fonts/zenkaku.css?v=20260901a">
-<link rel="stylesheet" href="../assets/contact.css?v=20260914b">
-<link rel="stylesheet" href="../assets/sub.css?v=ivory-20260914">
-<style>
-/* 受信箱デモ(製品画面の再現 = Hiragino) */
-.fx-demo{max-width:56rem; margin:0 auto; background:#fff; border:1px solid var(--line-soft); border-radius:20px;
-  overflow:hidden; box-shadow:0 3px 8px rgba(30,42,56,.05), 0 30px 64px rgba(30,42,56,.12);
-  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif; text-align:left}
-.fx-bar{display:flex; align-items:center; gap:7px; padding:11px 16px; border-bottom:1px solid var(--line-soft); background:#FAFBFC}
-.fx-bar i{width:11px; height:11px; border-radius:50%; background:#E4E9EF}
-.fx-bar i:nth-child(1){background:#FF6159}.fx-bar i:nth-child(2){background:#FFBD2E}.fx-bar i:nth-child(3){background:#28C840}
-.fx-bar .url{margin-left:12px; font-size:.7rem; color:var(--muted); background:#fff; border:1px solid var(--line-soft); border-radius:7px; padding:2px 12px}
-.fx-ui{display:grid; grid-template-columns:15rem 1fr; min-height:330px}
-.fx-side{border-right:1px solid var(--line-soft); padding:10px; background:#FBFCFD}
-.fx-row{display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:10px; font-size:.76rem; font-weight:600; color:#3A4756}
-.fx-row .dot{width:8px; height:8px; border-radius:50%; flex:none}
-.fx-row small{margin-left:auto; font-size:.62rem; color:#98A3B0; font-weight:600}
-.fx-row em{font-style:normal; background:var(--coral); color:#fff; font-size:.6rem; font-weight:800; min-width:16px; height:16px; border-radius:999px; display:grid; place-items:center}
-.fx-row.on{background:#EDF3FB; color:var(--navy); font-weight:700}
-.fx-main{padding:18px 22px; display:flex; flex-direction:column; gap:10px}
-.fx-in{align-self:flex-start; background:#F2F4F7; border-radius:13px; border-bottom-left-radius:4px; padding:9px 14px; font-size:.8rem; max-width:78%}
-.fx-note{align-self:stretch; background:#FFF9E3; border:1px solid #F2E3AC; border-radius:10px; padding:7px 12px; font-size:.72rem; color:#7A6A2F}
-.fx-meta{font-size:.68rem; color:#8A95A3; font-weight:700}
-.fx-out{align-self:flex-end; background:var(--navy); color:#fff; border-radius:13px; border-bottom-right-radius:4px; padding:9px 14px; font-size:.8rem; max-width:78%}
-.fx-ok{align-self:flex-end; font-size:.68rem; color:#1F8A4B; font-weight:800}
-@media (max-width:780px){.fx-ui{grid-template-columns:1fr}.fx-side{display:flex; overflow-x:auto; border-right:none; border-bottom:1px solid var(--line-soft)}.fx-row{flex:none}}
-/* 定型文ポップ */
-.fx-canned{position:relative; align-self:flex-start; width:100%; max-width:24rem}
-.fx-cin{border:1.5px solid var(--coral); border-radius:11px; padding:8px 13px; font-size:.8rem; color:var(--navy); background:#fff; font-weight:700}
-.fx-cpop{margin-top:7px; background:#fff; border:1px solid var(--line-soft); border-radius:12px; padding:10px 14px;
-  box-shadow:0 10px 26px rgba(30,42,56,.14); font-size:.74rem}
-.fx-cpop b{display:block; color:var(--coral); font-size:.76rem; margin-bottom:2px}
-.fx-cpop span{color:var(--muted)}
-/* チャネルカード */
-.chg{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; max-width:70rem; margin:0 auto; text-align:left}
-.chc{background:#fff; border:1px solid var(--line-soft); border-radius:18px; padding:22px 20px;
-  box-shadow:0 2px 4px rgba(30,42,56,.04),0 12px 30px rgba(30,42,56,.06);
-  transition:transform .2s var(--spring), box-shadow .25s ease}
-.chc:hover{transform:translateY(-4px); box-shadow:0 4px 8px rgba(30,42,56,.05),0 22px 44px rgba(30,42,56,.11)}
-.chc .icon{width:42px; height:42px; border-radius:13px; display:grid; place-items:center; margin-bottom:13px}
-.chc .icon svg{width:23px; height:23px}
-.chc h3{font-size:.94rem; color:var(--navy); margin-bottom:5px; line-height:1.5}
-.chc p{font-size:.78rem; color:var(--muted); line-height:1.85}
-@media (max-width:1080px){.chg{grid-template-columns:repeat(2,1fr); max-width:34rem}}
-/* ブリッジ2枚 */
-.bridge{display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:60rem; margin:0 auto}
-.bri{position:relative; border-radius:20px; padding:30px 30px 26px; text-align:left; overflow:hidden;
-  background:#fff; border:1px solid var(--line-soft);
-  box-shadow:0 2px 4px rgba(30,42,56,.04),0 14px 34px rgba(30,42,56,.07);
-  transition:transform .2s var(--spring), box-shadow .25s ease; display:block; text-decoration:none}
-.bri:hover{transform:translateY(-4px); box-shadow:0 4px 8px rgba(30,42,56,.05),0 24px 48px rgba(30,42,56,.12)}
-.bri .tag{display:inline-block; font-size:.66rem; font-weight:900; letter-spacing:.16em; color:var(--coral); margin-bottom:10px}
-.bri h3{font-size:1.3rem; color:var(--navy); margin-bottom:8px; font-weight:900}
-.bri p{font-size:.86rem; color:var(--muted); line-height:1.95}
-.bri .go{display:inline-block; margin-top:14px; font-size:.84rem; font-weight:800; color:var(--coral)}
-.bri.dark{background:linear-gradient(135deg,#16233A,#1F3A5F); border-color:#2C4A73}
-.bri.dark h3{color:#fff}
-.bri.dark p{color:rgba(255,255,255,.66)}
-.bri.dark .tag{color:#FF9A8D}
-@media (max-width:860px){.bridge{grid-template-columns:1fr; max-width:32rem}}
-</style>
-<link rel="stylesheet" href="/assets/lp-candidate.css?v=2026-09-25.1">
-<meta name="robots" content="noindex,nofollow,noarchive">
-</head>
-<body><!-- toybaco-lp-pricing:2026-09-25.1 -->
-<script>window.__p='../';</script>
-
-<div class="ribbon"></div>
-<header class="site">
-  <a class="logo" href="../index.html" aria-label="トイバコ"><img src="../assets/logo.webp?v=ivory-20260914" alt="トイバコ"></a>
-  <nav class="menu" id="siteMenu" aria-label="サイト内メニュー">
-    <a class="on" href="../features/">できること</a>
-    <a href="../posting/">投稿機能</a>
-    <a href="../ai/">AI応答</a>
-    <a href="../industries/">業界パック</a>
-    <a href="../pricing/">料金</a>
-    <a href="../start/">はじめ方</a>
-    <a class="nav-contact" href="../contact/">お問い合わせ</a>
-    <a class="login" href="https://app.staging.toybaco.jp">ログイン</a>
-    <a class="btn btn-coral btn-sm" href="../signup/" style="margin-left:6px">申し込む</a>
-  </nav>
-  <button class="nav-toggle" id="navToggle" aria-label="メニューを開く" aria-expanded="false"><i></i><i></i><i></i></button>
-</header>
-
-<main>
-<section class="phero">
-  <div class="wrap2">
-    <p class="crumbs"><a href="../index.html">トップ</a><span class="sep">/</span>できること</p>
-    <span class="eyebrow2"><span class="dots"><i></i><i></i><i></i><i></i></span>できること</span>
-    <h1>4チャネルの問い合わせを、<br>ひとつの受信箱で一元管理<span class="maru">。</span></h1>
-    <p class="lead">LINE・Instagram DM・Web チャット・メール — 4チャネルの問い合わせをひとつの受信箱に集約。担当割り当て・社内メモ・定型文・ラベルで、<strong>チームの誰でも同じ品質で返せる</strong>体制がその日から手に入ります。</p>
-    <div class="pstats reveal" style="--d:.2s">
-      <div class="pstat"><i style="background:var(--ch-green)"></i><b>4チャネル</b><span>をひとつの受信箱に</span></div>
-      <div class="pstat"><i style="background:var(--ch-blue)"></i><b>1画面</b><span>で受信も返信も投稿も</span></div>
-      <div class="pstat"><i style="background:var(--ch-pink)"></i><b>人数課金なし</b><span>人数上限はプランごと</span></div>
-    </div>
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>問い合わせ管理｜トイバコ 下層ページ修正提案</title><meta name="description" content="複数のメール・LINE・Instagram DMの確認と返信を一元管理。担当者の割り当て、社内メモ、定型文、AI返信案と接続条件を紹介します。"><link rel="stylesheet" href="/assets/fonts/zenkaku.css"><link rel="stylesheet" href="/assets/service-redesign/top-design.css"><link rel="stylesheet" href="/assets/service-redesign/top-design-brand.css"><link rel="stylesheet" href="/assets/service-redesign/top-design-revisions.css"><link rel="stylesheet" href="/assets/service-redesign/subpages.css"><link rel="stylesheet" href="/assets/service-redesign/site-navigation.css"><link rel="stylesheet" href="/assets/service-redesign/service-details.css"><link rel="stylesheet" href="/assets/service-redesign/service-diagrams.css"><link rel="stylesheet" href="/assets/service-redesign/inbox-comparison.css"><link rel="stylesheet" href="/assets/service-redesign/inquiry-layout.css"><link rel="stylesheet" href="/assets/service-redesign/inquiry-improvements.css"><link rel="stylesheet" href="/assets/service-redesign/detail-quality.css"><link rel="stylesheet" href="/assets/service-redesign/detail-craft.css"><link rel="stylesheet" href="/assets/service-redesign/final-refinements.css?rev=20261005-final3"><link rel="stylesheet" href="/assets/service-redesign/sns-media-balance.css?rev=20261005-1"><link rel="stylesheet" href="/assets/service-redesign/layout-polish.css?rev=20261005-1"><link rel="stylesheet" href="/assets/service-redesign/text-link-interactions.css?rev=20261005-1"><link rel="canonical" href="https://staging.toybaco.jp/features/"><script src="/assets/measurement.js?v=20261006" defer></script><script src="/assets/measurement-controls.js?v=20261006" defer></script><meta name="robots" content="noindex,nofollow,noarchive">
+</head><body class="subpage service-detail inquiry-detail"><div class="color-line"></div><div class="brand-glow coral-glow" aria-hidden="true"></div><div class="brand-glow navy-glow" aria-hidden="true"></div><header class="site-header"><a href="/" class="logo" aria-label="トイバコ トップ"><img src="/assets/service-redesign/assets/toybaco-logo.png" alt="トイバコ" width="148" height="65"></a><nav id="menu" aria-label="メインメニュー"><details class="nav-group"><summary>サービス</summary><div class="nav-panel"><a href="/features/">問い合わせ管理</a><a href="/posting/">SNS投稿管理</a><a href="/industries/">業界パック</a><a href="/security/">セキュリティ</a></div></details><a href="/pricing/">料金プラン</a><details class="nav-group"><summary>サポート</summary><div class="nav-panel"><a href="/faq/">よくある質問</a><a href="/guide/">お役立ちガイド</a><a href="/contact/">お問い合わせ</a></div></details><a href="https://app.staging.toybaco.jp" class="login" target="_blank" rel="noopener">ログイン</a><a href="/signup/" class="button small">お申し込み</a></nav><button class="menu-toggle" aria-expanded="false" aria-controls="menu">メニュー <span>☰</span></button></header><main><div class="wrap"><p class="breadcrumbs"><a href="/">トップ</a><span> / 問い合わせ管理</span></p><section class="detail-hero"><div><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>問い合わせ管理</p><h1>メールもDMも<br>確認・返信をひとつに<span class="heading-maru" aria-hidden="true">。</span></h1><p class="lead">複数のメールアドレスやLINE・Instagram DMをひとつの受信箱へ。問い合わせの確認から担当者への引き継ぎ、返信までまとめて進められます。</p><div class="inquiry-detail-quality-combination"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16l2 12v4H2v-4L4 4ZM2 15h6l2 3h4l2-3h6M7 9h10"/></svg><div><strong>問い合わせ対応も SNS投稿も</strong><p>問い合わせの履歴を確認したら<br>SNSのお知らせも同じ管理画面で準備</p></div></div></div><div class="detail-hero-art" role="group" aria-label="メール・LINE・Instagram DMから届く問い合わせをひとつの受信箱へ集め、対応状況も確認する図"><p class="diagram-heading">お客様からの連絡をまとめる</p><div class="diagram-sources"><div class="diagram-window"><div class="diagram-window-bar" aria-hidden="true"><i></i><i></i><i></i></div><div class="diagram-window-body"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><span>メール</span></div></div><div class="diagram-window"><div class="diagram-window-bar" aria-hidden="true"><i></i><i></i><i></i></div><div class="diagram-window-body"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="36" height="36"></span><span>LINE公式アカウント</span></div></div><div class="diagram-window"><div class="diagram-window-bar" aria-hidden="true"><i></i><i></i><i></i></div><div class="diagram-window-body"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="36" height="36"></span><span>Instagram DM</span></div></div></div><div class="diagram-down" aria-hidden="true"><span>↓</span><span>↓</span><span>↓</span></div><div class="diagram-home"><div class="diagram-home-head"><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="25" height="25"><b>トイバコの受信箱</b><small>確認・返信・共有</small></div><div class="diagram-table"><div class="diagram-table-head"><b>問い合わせの一覧</b><span>対応状況</span></div><div class="diagram-row"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><div><b>商品についてのご相談</b><small>代表メール</small></div><span class="diagram-tag">未対応</span></div><div class="diagram-row"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="36" height="36"></span><div><b>営業時間を教えてください</b><small>LINE公式アカウント</small></div><span class="diagram-tag">担当あり</span></div><div class="diagram-row"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="36" height="36"></span><div><b>取り扱い店舗について</b><small>Instagram DM</small></div><span class="diagram-tag">返信済み</span></div></div></div><p class="diagram-hero-benefit">探す場所はひとつ<br>担当と対応状況も一緒にわかる</p></div></section><details class="detail-page-index" data-question-id="features_faq_03"><summary>このページの内容</summary><div><a href="#workflow">操作の流れ</a><a href="#functions">機能と便利さ</a><a href="#ai">AIの活用</a><a href="#connection">接続条件</a><a href="#plans">機能とプランの範囲</a></div></details></div><section id="channels" class="detail-section" data-section-id="features_channels"><div class="wrap"><div class="section-intro"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>ひとつの受信箱へ</p><h2>いつもの窓口を<br>まとめて確認<span class="heading-maru" aria-hidden="true">。</span></h2><p>お客様が使う窓口はそのまま<br>接続した問い合わせをトイバコに集めて対応します</p></div><figure class="inbox-comparison" id="inbox-comparison" aria-label="問い合わせ管理の導入前と導入後の比較"><div class="inbox-comparison-layout"><div class="inbox-comparison-panel inbox-comparison-before"><span class="inbox-comparison-label">これまで</span><h3>窓口ごとに画面を開いて確認</h3><div class="inbox-separate-screens"><div class="inbox-separate-screen"><div class="inbox-screen-chrome" aria-hidden="true"><i></i><i></i><i></i></div><div class="inbox-screen-name"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><div>代表メール<small>info@…</small></div></div><div class="inbox-screen-message"><b>届いた問い合わせ</b>商品についてのご相談</div></div><div class="inbox-separate-screen"><div class="inbox-screen-chrome" aria-hidden="true"><i></i><i></i><i></i></div><div class="inbox-screen-name"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><div>サポートメール<small>support@…</small></div></div><div class="inbox-screen-message"><b>届いた問い合わせ</b>使い方を教えてください</div></div><div class="inbox-separate-screen"><div class="inbox-screen-chrome" aria-hidden="true"><i></i><i></i><i></i></div><div class="inbox-screen-name"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="28" height="28"></span><div>LINE公式アカウント<small>メッセージ</small></div></div><div class="inbox-screen-message"><b>届いた問い合わせ</b>営業時間を教えてください</div></div><div class="inbox-separate-screen"><div class="inbox-screen-chrome" aria-hidden="true"><i></i><i></i><i></i></div><div class="inbox-screen-name"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="28" height="28"></span><div>Instagram DM<small>メッセージ</small></div></div><div class="inbox-screen-message"><b>届いた問い合わせ</b>取り扱い店舗について</div></div></div><p class="inbox-comparison-result">受信箱も管理画面も それぞれ確認</p></div><div class="inbox-comparison-arrow" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M6 22h31M25 10l12 12-12 12"/></svg></div><div class="inbox-comparison-panel inbox-comparison-after"><span class="inbox-comparison-label">トイバコなら</span><h3>ひとつの管理画面でまとめて確認</h3><div class="inbox-unified-screen"><div class="inbox-unified-header"><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="29" height="29"><b>トイバコ</b><small>問い合わせ管理</small></div><div class="inbox-unified-tabs"><b>受信箱</b><span>すべて</span><span>未対応</span></div><div class="inbox-unified-row"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><div><b>商品についてのご相談</b><small>代表メール</small></div><span class="inbox-unified-status">未対応</span></div><div class="inbox-unified-row"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><div><b>使い方を教えてください</b><small>サポートメール</small></div><span class="inbox-unified-status">未対応</span></div><div class="inbox-unified-row"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="28" height="28"></span><div><b>営業時間を教えてください</b><small>LINE公式アカウント</small></div><span class="inbox-unified-status">対応中</span></div><div class="inbox-unified-row"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="28" height="28"></span><div><b>取り扱い店舗について</b><small>Instagram DM</small></div><span class="inbox-unified-status">返信済み</span></div></div><p class="inbox-comparison-result">確認する画面は<strong>ひとつ</strong>に</p></div></div><figcaption>複数のメールアドレスも LINEやInstagram DMも 接続した窓口の問い合わせをひとつの一覧へ<br>仕組みを説明するイメージです。実際の画面とは異なります。</figcaption></figure><div class="detail-channel-grid"><article class="detail-channel"><div class="detail-channel-head"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><h3>メール</h3></div><p>代表メールやサポートメールなど、複数のメールアドレスに届く問い合わせをまとめて確認・返信。</p><p class="channel-example">例：info@… と support@…</p></article><article class="detail-channel"><div class="detail-channel-head"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="40" height="40"></span><h3>LINE公式アカウント</h3></div><p>LINE公式アカウントに届くメッセージを受信箱で確認。他の窓口と一緒に対応を進められます。</p><p class="channel-example">例：営業時間や商品についてのご質問</p></article><article class="detail-channel"><div class="detail-channel-head"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="40" height="40"></span><h3>Instagram DM</h3></div><p>Instagramに届くDMをメールやLINEと同じ受信箱で確認。対応状況も管理できます。</p><p class="channel-example">例：SNSを見たお客様からのご相談</p></article></div><p class="detail-inline-note">接続は提供元の審査状況やアカウントの条件に応じて順次開放します。掲載媒体がすべて無条件に使えるわけではありません。接続条件はこのページの後半で説明しています。</p></div></section><section id="workflow" class="detail-section tint" data-section-id="features_workflow"><div class="wrap"><div class="section-intro"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>操作の流れ</p><h2>届いた連絡を選んで<br>内容を確認して返信<span class="heading-maru" aria-hidden="true">。</span></h2><p>画面を行き来する手間を減らして<br>目の前のお客様への対応に集中できます</p></div><div class="detail-experience inquiry-experience" data-experience="inquiry" hidden><div class="experience-topbar"><div><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="30" height="30">トイバコ<span>受信箱</span></div><small>説明用の操作イメージ</small></div>
+ <div class="experience-command"><div><b>届いた連絡を選んでみる</b> <span>確認 → 共有 → 返信</span></div><button class="experience-reset" type="button" data-reset>最初に戻す</button></div>
+ <div class="experience-body">
+  <div class="experience-inboxes" role="group" aria-label="説明用の問い合わせ一覧"><p>4つの窓口を ひとつの一覧へ</p>
+   <button type="button" class="experience-message" data-message="0" aria-pressed="true"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><span><b>申し込み方法について</b><small>代表メール · <span data-row-state="0">未対応</span></small></span></button>
+   <button type="button" class="experience-message" data-message="1" aria-pressed="false"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><span><b>設定の進め方について</b><small>サポートメール · <span data-row-state="1">未対応</span></small></span></button>
+   <button type="button" class="experience-message" data-message="2" aria-pressed="false"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="32" height="32"></span><span><b>営業時間を教えてください</b><small>LINE公式アカウント · <span data-row-state="2">未対応</span></small></span></button>
+   <button type="button" class="experience-message" data-message="3" aria-pressed="false"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="32" height="32"></span><span><b>商品の取り扱いについて</b><small>Instagram DM · <span data-row-state="3">未対応</span></small></span></button>
   </div>
-</section>
-
-<!-- 受信箱デモ -->
-<section class="sec tint">
-  <div class="wrap2 center">
-    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>チーム受信箱</span>
-    <h2 class="reveal">全チャネルの会話を、時系列で一元表示<span class="maru">。</span></h2>
-    <p class="sub2 reveal" style="--d:.08s">LINE・Instagram DM・Web チャット・メール。どこから届いても時系列でひとつの受信箱に並びます。左で選んで、右で返す — 覚える操作はこれだけです。</p>
-    <div class="fx-demo reveal" style="--d:.14s" aria-hidden="true">
-      <div class="fx-bar"><i></i><i></i><i></i><span class="url">app.toybaco.jp</span></div>
-      <div class="fx-ui">
-        <div class="fx-side">
-          <div class="fx-row on"><span class="dot" style="background:var(--ch-green)"></span>佐藤さま<small>LINE</small><em>1</em></div>
-          <div class="fx-row"><span class="dot" style="background:var(--ch-pink)"></span>tanaka__m<small>Instagram</small><em>2</em></div>
-          <div class="fx-row"><span class="dot" style="background:var(--ch-blue)"></span>サイト訪問者<small>チャット</small></div>
-          <div class="fx-row"><span class="dot" style="background:var(--ch-amber)"></span>suzuki@…<small>メール</small></div>
-        </div>
-        <div class="fx-main">
-          <div class="fx-in">明日の15時にカット予約できますか?</div>
-          <div class="fx-meta">担当: 田中(ルールで自動設定) · ラベル: 予約</div>
-          <div class="fx-note">社内メモ: 常連のお客様です。指名は佐々木さん</div>
-          <div class="fx-out">ご連絡ありがとうございます! 明日15時、ご案内できます。お名前の確認だけお願いできますか?</div>
-          <div class="fx-ok">✓ LINE に送信されました</div>
-        </div>
-      </div>
-    </div>
-    <p class="note2 reveal" style="--d:.2s">ブラウザだけで動作。スマホ・タブレット・パソコンから、外出先でも返信できます。</p>
+  <div class="experience-conversation">
+   <div class="experience-conversation-heading"><div><small data-source>代表メール</small><h3 data-subject>申し込み方法について</h3></div><span class="experience-status" data-status>未対応</span></div>
+   <div class="experience-bubble"><small>お客様からの連絡</small><span data-customer>サービスの申し込みを検討しています。手続きの進め方を教えてください。</span></div>
+   <div class="experience-note" data-memo hidden><small>担当：申し込み窓口 / 社内メモ</small><span data-memo-text></span></div>
+   <div class="experience-reply" data-reply hidden><small data-reply-label>返信の下書き例</small><span data-reply-text></span></div>
+   <div class="experience-actions"><button class="experience-action" type="button" data-assign aria-pressed="false">担当・社内メモの例</button><button class="experience-action" type="button" data-draft aria-pressed="false">定型文の返信例</button><button class="experience-action solid" type="button" data-resolve hidden>対応完了の例を見る</button></div>
   </div>
-</section>
-
-<!-- 6機能 -->
-<section class="sec">
-  <div class="wrap2 center">
-    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>できること</span>
-    <h2 class="reveal">対応漏れ・属人化を仕組みで防ぐ、6つのチーム機能<span class="maru">。</span></h2>
-    <p class="sub2 reveal" style="--d:.08s">担当割り当て・社内メモ・定型文・ラベル・履歴 — すべて標準搭載です。</p>
-    <div class="cardg">
-      <div class="fcard reveal" style="--d:0s">
-        <div class="ico" style="background:var(--ch-green)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></div>
-        <h3>一元受信</h3>
-        <p>4チャネルの問い合わせを、届いた順にひとつの受信箱へ。アプリを行き来する時間と、二重返信・対応漏れを仕組みでなくします。</p>
-      </div>
-      <div class="fcard reveal" style="--d:.08s">
-        <div class="ico" style="background:var(--ch-blue)"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8.5" r="3.2" stroke="#fff" stroke-width="2"/><path d="M3.8 19c.6-3 2.7-4.6 5.2-4.6s4.6 1.6 5.2 4.6" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="m15.5 8.5 2 2 3.5-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>担当の自動割り当て</h3>
-        <p>会話ごとに担当者を設定。手動でも、ルールで自動でも。「これ誰が返すの?」の宙ぶらりんが起きません。</p>
-      </div>
-      <div class="fcard reveal" style="--d:.16s">
-        <div class="ico" style="background:var(--ch-amber)"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6.2C5 5 6 4 7.2 4h9.6C18 4 19 5 19 6.2v11.6c0 1.2-1 2.2-2.2 2.2H7.2C6 20 5 19 5 17.8V6.2z" stroke="#fff" stroke-width="2"/><path d="M8.5 9h7M8.5 12.5h7M8.5 16h4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <h3>社内メモ</h3>
-        <p>会話の中に、お客様には見えないメモを残せます。「この方、常連さんです」「@佐々木さん 空き確認おねがいします」をその場で共有。</p>
-      </div>
-      <div class="fcard reveal" style="--d:0s">
-        <div class="ico" style="background:var(--coral)"><svg viewBox="0 0 24 24" fill="none"><path d="M13 3 5 13.5h5L10.2 21 19 10.5h-5.4L13 3z" fill="#fff"/></svg></div>
-        <h3>定型文</h3>
-        <p>よく使う返信は <b>/</b> と打つだけで呼び出し。業界パックの定型文が最初から入っているので、新人でも初日からベテランと同じ品質で返せます。</p>
-      </div>
-      <div class="fcard reveal" style="--d:.08s">
-        <div class="ico" style="background:var(--ch-pink)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5h10M4 12h16M4 16.5h7" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="18.5" cy="7.5" r="2.4" stroke="#fff" stroke-width="2"/></svg></div>
-        <h3>ラベルと対応状況</h3>
-        <p>「予約」「見積」のラベルと、未対応・対応済みの状況管理。いま何件残っているかが、開いた瞬間にわかります。</p>
-      </div>
-      <div class="fcard reveal" style="--d:.16s">
-        <div class="ico" style="background:var(--navy)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 8v4l2.5 2.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>顧客履歴</h3>
-        <p>同じお客様のやり取りは、チャネルをまたいで1本の履歴に。担当が替わっても「はじめまして」を繰り返させません。</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- チャネル -->
-<section class="sec tint" id="channels">
-  <div class="wrap2 center">
-    <span class="eyebrow2 reveal"><span class="dots"><i></i><i></i><i></i><i></i></span>チャネル</span>
-    <h2 class="reveal">既存アカウントをそのまま接続。作り直し不要<span class="maru">。</span></h2>
-    <p class="sub2 reveal" style="--d:.08s">作り直しは不要。接続作業は当社が代行します。</p>
-    <div class="chg">
-      <div class="chc reveal" style="--d:0s">
-        <div class="icon" style="background:#06C755"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.8C4 5.2 5.3 4 6.9 4h10.2C18.7 4 20 5.2 20 6.8v6.4c0 1.6-1.3 2.8-2.9 2.8H10l-4.2 3v-3H6.9C5.3 16 4 14.8 4 13.2V6.8z" fill="#fff"/></svg></div>
-        <h3>LINE公式アカウント</h3>
-        <p>いまのアカウントをそのまま接続。友だちリストも引き継ぎ。</p>
-      </div>
-      <div class="chc reveal" style="--d:.06s">
-        <div class="icon" style="background:radial-gradient(circle at 28% 110%,#FEDA75 8%,#FA7E1E 28%,#D62976 55%,#962FBF 78%,#4F5BD5 100%)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.6" stroke="#fff" stroke-width="2"/><circle cx="16.6" cy="7.4" r="1.2" fill="#fff"/></svg></div>
-        <h3>Instagram DM</h3>
-        <p>プロアカウントの DM を受信箱へ。新規のお客様の声を逃さない。</p>
-      </div>
-      <div class="chc reveal" style="--d:.12s">
-        <div class="icon" style="background:var(--ch-blue)"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5C5 5.1 6.1 4 7.5 4h9C17.9 4 19 5.1 19 6.5v5c0 1.4-1.1 2.5-2.5 2.5H12l-3.6 2.6V14H7.5C6.1 14 5 12.9 5 11.5v-5z" fill="#fff"/></svg></div>
-        <h3>Webチャット</h3>
-        <p>ホームページに貼るだけ。このページ右下のチャットが実物です。</p>
-      </div>
-      <div class="chc reveal" style="--d:.18s">
-        <div class="icon" style="background:var(--ch-amber)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2.4" stroke="#fff" stroke-width="2"/><path d="m5.5 8 6.5 5 6.5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>メール</h3>
-        <p>お問い合わせメールも同じ箱へ。埋もれと見落としをゼロに。</p>
-      </div>
-    </div>
-    <p class="note2 reveal" style="--d:.3s">Instagram DM はスタンダードプラン以上。ライトは LINE・メール・Web チャットの3チャネルです。Shopify 連携はスタンダード以上で利用できます。</p>
-  </div>
-</section>
-
-<!-- ブリッジ -->
-<section class="sec">
-  <div class="wrap2 center">
-    <h2 class="reveal">受信箱+SNS投稿+AI応答。1契約ですべて<span class="maru">。</span></h2>
-    <p class="sub2 reveal" style="--d:.08s">「受け取る」「届ける」「自動で応える」を単一製品で提供 — トイバコだけの構成です。</p>
-    <div class="bridge">
-      <a class="bri reveal" style="--d:.1s" href="../posting/">
-        <span class="tag">投稿機能</span>
-        <h3>SNS 予約投稿</h3>
-        <p>Instagram・Google マップ・X など6つの投稿先へ、一度書いてまとめて予約投稿。お客様の声を見ながら、同じ画面で次のお知らせを書けます。</p>
-        <span class="go">投稿機能を見る →</span>
-      </a>
-      <a class="bri dark reveal" style="--d:.18s" href="../ai/">
-        <span class="tag">AI応答</span>
-        <h3>AI 応答エージェント</h3>
-        <p>営業時間外や混雑時の一次応答は AI が担当。お店の情報と FAQ をもとに即答し、難しい相談は人に引き継ぎます。</p>
-        <span class="go">AI応答を見る →</span>
-      </a>
-    </div>
-  </div>
-</section>
-
-<section class="sec tint" style="padding:56px 0">
-  <div class="wrap2 center">
-    <p class="note2" style="font-size:.85rem; font-weight:700">関連ガイド:
-      <a href="../guide/line-multi-user/" style="color:var(--navy)">LINE公式アカウントを複数人で管理する方法</a> ・
-      <a href="../guide/inbox-unify/" style="color:var(--navy)">問い合わせを一元管理する方法</a> ・
-      <a href="../guide/no-missed-reply/" style="color:var(--navy)">返信漏れを仕組みで防ぐ方法</a>
-    </p>
-  </div>
-</section>
-
-<section class="sec close2" id="cta">
-  <div class="wrap2 center">
-    <img class="markimg reveal" src="../assets/toybaco-app-icon-ivory.webp" alt="">
-    <p class="closing-pre reveal">「ありそうでなかった」を、あなたのお店に。</p>
-    <h2 class="reveal" style="--d:.05s">無料プランから始める、新しい料金プラン<span class="maru">。</span></h2>
-    <p class="sub2 reveal" style="--d:.1s">1店舗ごとの定額料金。全プランでスタッフ数は無制限です。</p>
-    <div class="acts reveal" style="--d:.15s">
-      <a class="btn btn-coral btn-lg" href="../signup/">無料で始める</a>
-      <a class="btn btn-ghost btn-lg" href="#toybaco-staging-chat-preview" data-open-chat>チャットで相談する</a>
-      <a class="btn btn-ghost btn-lg" href="../contact/" data-contact-form>フォームで相談する</a>
-      <a class="btn btn-ghost btn-lg" href="../pricing/">料金を見る</a>
-    </div>
-  </div>
-</section>
-<section class="lp-section" id="lp-plan-limits"><div class="lp-wrap"><h2>新料金で使える機能と上限</h2><p class="lp-intro">1店舗ごとの定額料金。全プランでスタッフ数は無制限です。</p><div class="lp-table-scroll" role="region" aria-label="4プランの機能比較、横にスクロールできます" tabindex="0"><table class="lp-table"><caption>プランごとの機能・上限</caption><thead><tr><th scope="col">1店舗あたり</th><th scope="col">無料プラン</th><th scope="col">ライト</th><th scope="col">スタンダード</th><th scope="col">プロ</th></tr></thead><tbody><tr><th scope="row">スタッフ数</th><td>無制限</td><td>無制限</td><td>無制限</td><td>無制限</td></tr><tr><th scope="row">受信箱の接続数</th><td>2</td><td>4</td><td>4</td><td>4</td></tr><tr><th scope="row">投稿アカウントの接続数</th><td>1</td><td>3</td><td>6</td><td>6</td></tr><tr><th scope="row">投稿先ごとの同時予約上限</th><td>5件</td><td>30件</td><td>300件</td><td>300件</td></tr><tr><th scope="row">AI生成の月間共通枠</th><td>20回</td><td>100回</td><td>500回</td><td>2,000回</td></tr><tr><th scope="row">人が確認する返信案・投稿文</th><td>○</td><td>○</td><td>○</td><td>○</td></tr><tr><th scope="row">AI自動返信（通常時）</th><td>—</td><td>—</td><td>○</td><td>○</td></tr><tr><th scope="row">AI追加パックの購入</th><td>—</td><td>—</td><td>○</td><td>○</td></tr><tr><th scope="row">保存容量</th><td>1GB</td><td>10GB</td><td>50GB</td><td>100GB</td></tr></tbody></table></div><p class="lp-note">接続枠は媒体の種類数ではなく、実際に接続する受信箱・投稿アカウントの数です。同じInstagramを受信と投稿に使う場合は、それぞれ1接続を使います。利用できる媒体は提供元の審査状況・アカウント種別・店舗の権限で異なります。</p><p class="lp-note">予約件数は月間の投稿数ではなく、同時に予約しておける件数です。公開すると枠が空きます。LINEは既存のMessaging APIを使い、必要な設定は管理者へ引き継ぎます。Instagramの受信と投稿は目的ごとに権限を確認します。組織メールでは管理者の同意が必要な場合があります。すべての媒体が無条件に接続できるものではありません。</p></div></section></main>
-
-<footer class="site2">
-  <div class="fgrid">
-    <div class="fbrand">
-      <div class="fbrand-logo"><img src="../assets/toybaco-app-icon-ivory.webp" alt="" width="38" height="38"><span>トイバコ</span></div>
-      <p>問い合わせも、投稿も。ひとつの箱に。<br>運営: 株式会社サイバーリレーションズ</p>
-      <div class="footer-contact"><span>お問い合わせ</span><a href="../contact/" data-contact-form>お問い合わせフォーム</a></div>
-    </div>
-    <div>
-      <h4>サービス</h4>
-      <ul>
-        <li><a href="../features/">できること</a></li>
-        <li><a href="../posting/">投稿機能</a></li>
-        <li><a href="../ai/">AI応答</a></li>
-        <li><a href="../industries/">業界パック</a></li>
-        <li><a href="../security/">セキュリティ</a></li>
-        <li><a href="../faq/">よくある質問</a></li>
-        <li><a href="../guide/">お役立ちガイド</a></li>
-      </ul>
-    </div>
-    <div>
-      <h4>ご利用の流れ</h4>
-      <ul>
-        <li><a href="../pricing/">料金</a></li>
-        <li><a href="../enterprise/">個別設計プラン</a></li>
-        <li><a href="../compare/">ツールの選び方</a></li>
-        <li><a href="../start/">はじめ方</a></li>
-        <li><a href="../signup/">お申し込み</a></li>
-        <li><a href="https://app.staging.toybaco.jp">ログイン</a></li>
-      </ul>
-    </div>
-    <div>
-      <h4>会社・規約</h4>
-      <ul>
-        <li><a href="../news/">お知らせ</a></li>
-        <li><a href="../partners/">パートナー募集</a></li>
-        <li><a href="https://cyber-relations.jp/" target="_blank" rel="noopener">運営会社</a></li>
-        <li><a href="../terms/">利用規約</a></li>
-        <li><a href="../privacy/">プライバシーポリシー</a></li>
-        <li><a href="../tokushoho/">特定商取引法に基づく表記</a></li>
-      </ul>
-    </div>
-  </div>
-  <div class="fcopy"><span>© 2026 株式会社サイバーリレーションズ — 福岡より</span><span class="fdots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
-</footer>
-
-<!-- 相談チャット: Chatwoot(トイバコの Web チャットそのもの) -->
-
-<script src="../assets/sub.js?v=20260901a"></script>
-<script id="lp-candidate-data" type="application/json">{"version":"2026-09-25.1","preview":false,"plans":[{"plan_id":"free","version":"2026-09-25.1","name":"無料プラン","free":true,"amount":0,"annual":null,"limits":{"agents":null,"stores":1,"inboxes":2,"posting_accounts":1,"scheduled_posts_per_account":5,"ai_generations":20,"storage_bytes":1000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":false,"pack":false},{"plan_id":"light","version":"2026-09-25.1","name":"ライト","free":false,"amount":9800,"annual":105840,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":3,"scheduled_posts_per_account":30,"ai_generations":100,"storage_bytes":10000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":false,"pack":false},{"plan_id":"standard","version":"2026-09-25.1","name":"スタンダード","free":false,"amount":19800,"annual":213840,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":6,"scheduled_posts_per_account":300,"ai_generations":500,"storage_bytes":50000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":true,"pack":true},{"plan_id":"pro","version":"2026-09-25.1","name":"プロ","free":false,"amount":29800,"annual":321840,"limits":{"agents":null,"stores":1,"inboxes":4,"posting_accounts":6,"scheduled_posts_per_account":300,"ai_generations":2000,"storage_bytes":100000000000,"history_months":24,"inbound_attachment_bytes":25000000,"posting_file_bytes":250000000},"automatic":true,"pack":true}]}</script><script src="/assets/lp-candidate.js?v=2026-09-25.1"></script>
+ </div>
+ <div class="experience-result" role="status" aria-live="polite" aria-atomic="true"><span class="experience-result-mark" aria-hidden="true">✓</span><div><strong data-result-title>探す場所はひとつ</strong><p data-result-text>メールもDMも 同じ一覧から連絡を選んで内容を確認</p></div></div>
+</div><p class="experience-footnote">画面上のボタンで操作例を切り替えられます。実際の受信・担当者登録・返信は行いません。掲載画面は説明用で、実際の管理画面とは異なります。</p><details class="legacy-demo" open><summary>参考の操作アニメーションと手順</summary><div class="detail-workflow"><div class="inquiry-mobile-demo"><div class="inquiry-demo-tabs" role="tablist" aria-label="問い合わせ対応の操作イメージ"><button type="button" role="tab" id="demo-tab-receive" aria-controls="demo-panel-receive" aria-selected="true" tabindex="0"><small>01</small>受信</button><button type="button" role="tab" id="demo-tab-read" aria-controls="demo-panel-read" aria-selected="false" tabindex="-1"><small>02</small>確認</button><button type="button" role="tab" id="demo-tab-share" aria-controls="demo-panel-share" aria-selected="false" tabindex="-1"><small>03</small>共有</button><button type="button" role="tab" id="demo-tab-reply" aria-controls="demo-panel-reply" aria-selected="false" tabindex="-1"><small>04</small>返信</button></div><div class="inquiry-demo-panel" role="tabpanel" id="demo-panel-receive" aria-labelledby="demo-tab-receive" tabindex="0"><div class="inquiry-demo-bar"><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="25" height="25">トイバコ<small>受信箱</small></div><div class="inquiry-demo-body"><h3>届いた連絡をまとめて確認</h3><div class="inquiry-demo-row"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><div><b>サービスAの申し込みについて</b><small>問い合わせメール · 未対応</small></div></div><div class="inquiry-demo-row"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="36" height="36"></span><div><b>営業時間を教えてください</b><small>LINE公式アカウント · 未対応</small></div></div><div class="inquiry-demo-row"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="36" height="36"></span><div><b>商品の取り扱いについて</b><small>Instagram DM · 返信済み</small></div></div></div><p class="inquiry-demo-caption">窓口を行き来せず 今対応したい連絡へ</p></div><div class="inquiry-demo-panel" role="tabpanel" id="demo-panel-read" aria-labelledby="demo-tab-read" tabindex="0" hidden><div class="inquiry-demo-bar"><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="25" height="25">トイバコ<small>会話の内容</small></div><div class="inquiry-demo-body"><h3>サービスAの申し込みについて</h3><div class="inquiry-demo-message"><small>お客様からのメール</small>会社のメールアドレスで申し込めますか？ 手続きも教えてください。</div><div class="inquiry-demo-reply"><small>同じ会話での前の返信</small>サービスAの内容は、案内ページでご確認いただけます。</div></div><p class="inquiry-demo-caption">会話を選べば 内容とやり取りを確認できる</p></div><div class="inquiry-demo-panel" role="tabpanel" id="demo-panel-share" aria-labelledby="demo-tab-share" tabindex="0" hidden><div class="inquiry-demo-bar"><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="25" height="25">トイバコ<small>担当・社内メモ</small></div><div class="inquiry-demo-body"><h3>対応する人と確認事項を整理</h3><dl class="inquiry-demo-fields"><div><dt>担当者</dt><dd>サービスA担当</dd></div><div><dt>ラベル</dt><dd>申し込み前の相談</dd></div><div><dt>社内メモ</dt><dd>法人利用の条件を確認済み。会社のメールアドレスで申し込み可能。フォームの案内を返信。</dd></div></dl></div><p class="inquiry-demo-caption">担当が替わっても 確認事項を共有<br><small>社内メモはお客様には表示されません</small></p></div><div class="inquiry-demo-panel" role="tabpanel" id="demo-panel-reply" aria-labelledby="demo-tab-reply" tabindex="0" hidden><div class="inquiry-demo-bar"><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="25" height="25">トイバコ<small>返信</small></div><div class="inquiry-demo-body"><h3>定型文を整えて返信</h3><div class="inquiry-demo-message"><small>呼び出した定型文：お申し込みのご案内</small>お申し込みは、フォームから受け付けています。</div><div class="inquiry-demo-reply"><small>相談内容に合わせて編集した返信</small>会社のメールアドレスでお申し込みいただけます。サービスAのお申し込みフォームに必要事項をご入力ください。</div></div><p class="inquiry-demo-caption">返信内容を確認して送信し 対応状況も管理</p></div><p class="inquiry-demo-note">ボタンで場面を切り替えられます。架空のサービスAへの問い合わせを使った説明用の例です。実際の画面やトイバコの契約条件とは異なります。</p></div><figure class="feature-animation"><p class="detail-demo-hint">操作イメージは左右にスワイプして確認できます</p><div class="feature-animation-screen"><iframe src="/assets/service-redesign/feature-inbox-demo.html" title="受信から担当の確認・定型文での返信までの操作イメージ" loading="lazy"></iframe></div><figcaption><span>受信から担当の確認・定型文での返信まで</span><button type="button" class="demo-toggle" aria-pressed="false">一時停止</button></figcaption></figure><ol class="workflow-steps"><li><span class="step-number">01</span><div><h3>問い合わせを受信</h3><p>接続した窓口からの連絡を一覧で確認。</p></div></li><li><span class="step-number">02</span><div><h3>内容・履歴を確認</h3><p>会話を選び、これまでのやり取りを確認。</p></div></li><li><span class="step-number">03</span><div><h3>担当と状況を共有</h3><p>誰が対応するか、何の問い合わせかを整理。</p></div></li><li><span class="step-number">04</span><div><h3>返信して対応を管理</h3><p>定型文などを使って返信。対応状況も更新。</p></div></li></ol></div></details><p class="detail-inline-note">画面は説明用の操作イメージです。受信・返信できる範囲は、媒体ごとの接続条件によって異なります。</p></div></section><section id="examples" class="detail-section tint" data-section-id="features_examples"><div class="wrap"><div class="section-intro"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>会社でも 店舗でも</p><h2>日々の対応に<br>こんな使い方<span class="heading-maru" aria-hidden="true">。</span></h2><p>連絡を受け取ったあとの確認・引き継ぎ・返信まで<br>会社や店舗の仕事に合わせて活用できます</p></div><div class="inquiry-cases"><article class="inquiry-case"><p class="inquiry-case-kicker"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="4" width="22" height="24" rx="2"/><path d="M10 10h3m6 0h3M10 16h3m6 0h3M13 28v-6h6v6"/></svg>複数サービスを扱う会社</p><h3>サービスごとの連絡を<br>担当につなぐ</h3><p>トイバコの運営会社でも複数サービスの問い合わせ・申し込みを管理しています。以下は、その使い方を説明する流れの例です。</p><ul class="inquiry-case-sources"><li><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>サービスAの問い合わせ</li><li><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>サービスBの申し込み通知</li><li><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>サービスCの利用相談</li></ul><div class="inquiry-case-box"><span aria-hidden="true">↓</span><b><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="26" height="26">トイバコの受信箱</b></div><ol class="inquiry-case-flow"><li><span>01</span><div><b>サービスごとの連絡を確認</b><p>接続したメールに届く問い合わせや申し込み通知を、同じ受信箱で確認。</p></div></li><li><span>02</span><div><b>担当と確認事項を共有</b><p>サービスのラベルと担当者を設定し、社内メモに確認事項を残します。</p></div></li><li><span>03</span><div><b>案内文を整えて返信</b><p>会話の履歴や定型文を使い、相談内容に合わせて返信します。</p></div></li></ol><p class="inquiry-case-benefit">複数サービスの確認と引き継ぎを 一か所で</p></article><article class="inquiry-case"><p class="inquiry-case-kicker"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 14v14h22V14M3 14l3-9h20l3 9M3 14c0 5 7 5 7 0 0 5 6 5 6 0 0 5 6 5 6 0 0 5 7 5 7 0M10 28v-8h7v8M22 20h2"/></svg>店舗型ビジネス</p><h3>営業の合間でも<br>問い合わせに対応</h3><p>メールやLINE、Instagram DMから届く質問をまとめて確認。対応できる担当者が、状況を見ながら返信を進める活用例です。</p><ul class="inquiry-case-sources"><li><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="36" height="36"></span>LINE：営業時間の質問</li><li><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="36" height="36"></span>Instagram DM：商品の相談</li><li><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>メール：来店前の問い合わせ</li></ul><div class="inquiry-case-box"><span aria-hidden="true">↓</span><b><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="26" height="26">トイバコの受信箱</b></div><ol class="inquiry-case-flow"><li><span>01</span><div><b>届いた質問をまとめて確認</b><p>別々の窓口を開く代わりに、未対応の連絡を同じ一覧で確認。</p></div></li><li><span>02</span><div><b>確認が必要な内容を共有</b><p>商品や来店について確認が必要なら、担当者と社内メモで引き継ぎます。</p></div></li><li><span>03</span><div><b>よくある案内を使って返信</b><p>営業時間などの定型文を呼び出し、お客様に合わせて編集して送信。</p></div></li></ol><p class="inquiry-case-benefit">日々の接客と 問い合わせ対応を両立しやすく</p></article><article class="inquiry-case"><p class="inquiry-case-kicker"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="11" y="3" width="10" height="9" rx="1"/><path d="M16 12v6M6 18h20M6 18v4m20-4v4"/><rect x="2" y="22" width="9" height="7" rx="1"/><rect x="21" y="22" width="9" height="7" rx="1"/></svg>複数店舗を支える管理本部</p><h3>本部に届く相談を<br>店舗・内容で整理</h3><p>本部が受け付ける店舗への共通問い合わせや取材相談を、本部の受信箱で管理する活用例です。</p><ul class="inquiry-case-sources"><li><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>本部の代表メール</li><li><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>店舗に関する共通相談</li><li><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>取材・法人からの連絡</li></ul><div class="inquiry-case-box"><span aria-hidden="true">↓</span><b><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="26" height="26">トイバコの受信箱</b></div><ol class="inquiry-case-flow"><li><span>01</span><div><b>本部の窓口へ届く連絡を確認</b><p>本部で対応する問い合わせを、接続した受信箱でまとめて確認。</p></div></li><li><span>02</span><div><b>店舗や相談内容で整理</b><p>対象店舗・問い合わせ内容をラベルで整理し、本部内の担当者を設定。</p></div></li><li><span>03</span><div><b>確認事項を残して返信</b><p>店舗への確認が必要な内容は社内メモに残し、確認後に担当者が返信。</p></div></li></ol><p class="inquiry-case-benefit">どの店舗の何の相談か 本部内で共有しやすく</p></article></div><p class="detail-inline-note">フォームや申し込みサイトの通知は、メールの受信方法によって扱える範囲を確認します。店舗ごとに導入する場合は、各店舗に1ライセンスが必要です。本部と各店舗の利用範囲・契約単位は導入時にご確認ください。</p></div></section><section id="functions" class="detail-section" data-section-id="features_functions"><div class="wrap"><div class="section-intro"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>日々の対応を支える機能</p><h2>1人でもチームでも<br>対応の状況がわかる<span class="heading-maru" aria-hidden="true">。</span></h2><p>確認・返信に加えて 引き継ぎや対応状況の整理も<br>ひとつの受信箱で進められます</p></div><div class="inquiry-function-groups"><div class="inquiry-function-group"><div class="inquiry-function-group-header"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="7" width="30" height="27" rx="4"/><path d="M5 22h9l3 5h6l3-5h9M12 14h16M12 18h12"/></svg><span>確認する</span><h3>届いた連絡を<br>見つけやすく</h3><p>窓口と対応状況を整理して 今対応したい問い合わせへ</p></div><div class="inquiry-function-pair"><article class="detail-function"><h3>問い合わせの一覧</h3><p>接続した窓口と対応状況を同じ一覧で確認。今返信したい問い合わせを選び、そのまま会話の内容へ進めます。</p><figure class="feature-figure"><div class="diagram-table"><div class="diagram-table-head"><b>問い合わせの一覧</b><span>対応状況</span></div><div class="diagram-row"><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span><div><b>商品について</b><small>メール</small></div><span class="diagram-tag">未対応</span></div><div class="diagram-row"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="36" height="36"></span><div><b>営業時間について</b><small>LINE</small></div><span class="diagram-tag">担当あり</span></div><div class="diagram-row"><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="36" height="36"></span><div><b>在庫について</b><small>Instagram DM</small></div><span class="diagram-tag">返信済み</span></div></div><figcaption>窓口ごとの確認を、ひとつの一覧へ</figcaption></figure><p class="function-benefit">確認のために開く画面を減らせる</p></article><article class="detail-function"><h3>ラベル・対応状況</h3><p>「見積」「商品相談」などのラベルで分類。未対応・対応済みの状況を確認できます。</p><figure class="feature-figure"><div class="diagram-board"><div><b>未対応</b><span class="diagram-tag warm">商品相談</span><p>在庫について</p><span class="diagram-tag">見積</span><p>見積依頼</p></div><div><b>対応済み</b><span class="diagram-tag">営業時間</span><p>返信済み</p></div></div><figcaption>ラベルで内容を分類し、対応状況も確認</figcaption></figure><p class="function-benefit">まだ返していない連絡を見つけやすい</p></article></div></div><div class="inquiry-function-group"><div class="inquiry-function-group-header"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="9" width="14" height="23" rx="3"/><rect x="22" y="9" width="14" height="23" rx="3"/><path d="M18 17h4M18 24h4M9 15h4M9 20h4M27 15h4M27 20h4"/></svg><span>共有する</span><h3>担当が替わっても<br>対応をつなぐ</h3><p>担当者と社内メモで チームの引き継ぎをスムーズに</p></div><div class="inquiry-function-pair"><article class="detail-function"><h3>担当者の割り当て</h3><p>会話ごとに担当者を設定。手動での割り当てに加え、設定したルールでの振り分けもできます。</p><figure class="feature-figure"><div class="diagram-route"><div><small>問い合わせのラベル</small><strong>商品相談</strong></div><span class="diagram-arrow" aria-hidden="true">→</span><div><small>担当者</small><strong>商品担当</strong></div></div><div class="diagram-route"><div><small>問い合わせのラベル</small><strong>使い方の相談</strong></div><span class="diagram-arrow" aria-hidden="true">→</span><div><small>担当者</small><strong>サポート担当</strong></div></div><figcaption>設定したルールで振り分ける例。手動でも担当を設定できます</figcaption></figure><p class="function-benefit">誰が返信するかを明確にできる</p></article><article class="detail-function"><h3>社内メモ</h3><p>お客様には見えないメモを会話に残せます。対応の注意点や引き継ぎ事項を担当者間で共有。</p><figure class="feature-figure"><div class="diagram-chat"><div class="bubble"><small>お客様</small>商品の納期を教えてください</div><div class="bubble reply"><small>返信</small>確認してご案内します</div><div class="bubble note"><small><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>社内メモ／お客様には非表示</small>納期を確認して商品担当へ引き継ぎ</div></div><figcaption>返信と社内の引き継ぎを、同じ会話で整理</figcaption></figure><p class="function-benefit">お客様に見えない情報も共有できる</p></article></div></div><div class="inquiry-function-group"><div class="inquiry-function-group-header"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M7 8h26a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H16l-9 5v-5a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3ZM13 16h16M13 22h11"/></svg><span>返信する</span><h3>文章を整えて<br>次の対応へ</h3><p>定型文とこれまでの履歴を使い お客様に合わせて返信</p></div><div class="inquiry-function-pair"><article class="detail-function"><h3>定型文</h3><p>よく使う返信文を呼び出して編集。毎回ゼロから文章を書く手間を減らせます。</p><figure class="feature-figure"><div class="diagram-template"><small>よく使う定型文</small><span>営業時間のご案内</span><span class="diagram-tag">呼び出す</span></div><div class="diagram-editor"><small>返信欄</small>お問い合わせありがとうございます。<br>営業時間は10:00〜18:00です。<div class="editor-foot"><span>内容を編集</span><b>確認して送信</b></div></div><figcaption>必要な文章を呼び出し、お客様に合わせて編集</figcaption></figure><p class="function-benefit">毎回ゼロから文章を書かずに済む</p></article><article class="detail-function"><h3>やり取りの履歴</h3><p>会話の履歴を確認しながら返信。担当者が替わるときも、これまでの対応をたどれます。</p><figure class="feature-figure"><ol class="diagram-timeline"><li><small>前回</small><b>商品についてお問い合わせ</b><span>ご相談の内容を確認</span></li><li><small>前回</small><b>ご案内を返信</b><span>回答した内容が残る</span></li><li><small>今回</small><b>履歴を見ながら次の対応へ</b><span>担当者が替わっても確認</span></li></ol><figcaption>同じ会話のやり取りを見ながら対応</figcaption></figure><p class="function-benefit">前の担当者に聞く手間を減らせる</p></article></div></div></div><p class="detail-inline-note">よく使う定型文やラベルを業種に合わせて用意した業界パックもあります。</p></div></section><section id="ai" class="detail-section tint" data-section-id="features_ai"><div class="wrap"><div class="section-intro"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>返信づくりをお手伝い</p><h2>返信案をAIで下書き<br>自動返信も選べます<span class="heading-maru" aria-hidden="true">。</span></h2><p>文章づくりの補助と 自動での一次対応 <br>目的に合わせて使い分けられます</p></div><div class="detail-ai-grid"><article class="detail-ai"><span class="plan-tag">全プラン</span><h3>返信案をAIで下書き</h3><p>返信案を作り、担当者が内容を確認・編集してから送信。AIを使わずに返信することもできます。</p><p class="ai-example"><b>例：サービスAへの申し込みについての相談</b>AIで返信案を下書きし、担当者が契約条件や個別の事情を確認して編集。内容を整えてから送信します。</p><figure class="feature-figure inquiry-ai-conversation" aria-label="サービスAへの申し込み相談とAI返信案の例"><div class="inquiry-ai-question"><small>お客様からの質問</small><p>会社のメールアドレスで申し込めますか？ 手続きも教えてください。</p></div><div class="inquiry-ai-answer"><small>AIで作る返信案の例</small><p>お問い合わせありがとうございます。会社のメールアドレスでお申し込みいただけます。サービスAのお申し込みフォームからお手続きください。</p></div><div class="inquiry-ai-check"><b>担当者が確認して送信</b><span>法人利用の条件と申込先を確認し 必要に応じて編集</span></div><figcaption>全プランで、必要なときだけ使えます。架空のサービスAを使った下書きの例です。</figcaption></figure></article><article class="detail-ai"><span class="plan-tag">Standard・Pro</span><h3>案内できる範囲でAI自動返信</h3><p>営業時間外などの一次対応に活用できます。回答に使う情報を準備し、対象媒体と稼働条件を確認してから使います。</p><p class="ai-example"><b>例：営業時間についての質問への一次対応</b>営業時間などの案内情報を整理し、自動返信で扱う内容を決めます。すべての質問への回答や、個別の判断を任せる機能ではありません。</p><figure class="feature-figure inquiry-ai-conversation" aria-label="用意した営業時間の情報からAIが自動返信する例"><div class="inquiry-ai-context"><b>回答に使う案内情報の例</b><span>営業時間 10:00〜18:00／水曜定休</span></div><div class="inquiry-ai-question"><small>お客様からの質問</small><p>営業時間を教えてください。</p></div><div class="inquiry-ai-answer"><small>AI自動返信の例</small><p>営業時間は10:00〜18:00です。水曜日は定休日です。</p></div><figcaption>通常利用はStandard・Pro。対象媒体・稼働条件を確認します。営業時間と回答は架空の店舗を使った説明用の例です。</figcaption></figure></article></div><div class="inquiry-ai-boundary"><h3>個別の判断は<br>担当者が確認する運用に</h3><p>見積金額の確定、返金、予約の変更・確定など、個別の判断が必要な相談は担当者が確認する運用を決めておきます。自動返信の設定範囲や、人への引き継ぎ方法は導入時に確認します。</p></div><p class="detail-inline-note">AI生成回数は返信案・SNS投稿文・AI自動返信などで共通です。Standardは月500回、Proは月2,000回。対象媒体や稼働条件は導入時にご確認ください。</p></div></section><section id="connection" class="detail-section" data-section-id="features_connection"><div class="wrap"><div class="section-intro"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>接続前に確認したいこと</p><h2>使いたい窓口と<br>必要な設定を確認<span class="heading-maru" aria-hidden="true">。</span></h2><p>掲載している媒体でも 接続には提供元の審査やアカウントごとの条件があります<br>接続前に使いたい窓口と必要な設定を確認します</p></div><div class="inquiry-availability"><strong>接続は審査完了後に<br>順次開放します</strong><p>提供元の審査が必要な接続は、審査完了後に順次開放します。<b>サイトの媒体一覧だけでは、お使いの環境で接続できるかは判断できません。</b>利用する媒体・アカウント種別・管理権限を導入時に確認します。</p></div><dl class="detail-condition-list"><div><dt><span class="detail-brand" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>メール</dt><dd>Gmail・Microsoftは提供元の審査完了後に順次開放します。組織メールでは管理者の同意が必要な場合があります。利用中のメールサービスとアドレスをご確認ください。</dd></div><div><dt><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/line.png" alt="" width="36" height="36"></span>LINE公式アカウント</dt><dd>既存のMessaging APIを利用します。必要な設定はアカウントの管理者へ引き継ぎます。既存設定との併用や返信できる範囲は、現在の運用を踏まえて確認が必要です。</dd></div><div><dt><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="36" height="36"></span>Instagram DM</dt><dd>受信のためのアカウント種別・権限を確認します。SNS投稿にも使う場合は、投稿の権限を別に確認し、受信箱と投稿先それぞれの接続枠を使います。</dd></div></dl><div class="detail-condition-callout"><h3>フォーム・予約サイトは通知の受信方法を確認</h3><p>通知メールの受信方法によって、問い合わせや申し込みの通知をまとめられる場合があります。通知を受け取ることと、お客様への返信・予約の変更や確定は対応範囲が異なります。フォームや予約サイトへ直接接続して操作できるという意味ではありません。</p></div></div></section><section id="together" class="detail-section tint" data-section-id="features_together"><div class="wrap"><div class="detail-shared-use"><div><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>受け取ることと 届けることをひとつに</p><h2>問い合わせに返信<br>SNSのお知らせも<span class="heading-maru" aria-hidden="true">。</span></h2><p>よく聞かれる内容を次のSNS投稿に。問い合わせの履歴を確認したあと、同じ管理画面でお知らせを準備できます。</p><a class="feature-link" href="/posting/">SNS投稿管理を詳しく見る</a></div><figure class="together-illustration"><svg class="inquiry-together-desktop" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 760" role="img" aria-labelledby="together-graphic-title together-graphic-description">
+ <title id="together-graphic-title">問い合わせの確認・返信も SNS投稿の作成・予約も トイバコひとつで</title>
+ <desc id="together-graphic-description">メール、LINE公式アカウント、Instagram DMで受け取る問い合わせをトイバコの受信箱へまとめます。同じトイバコで担当者が内容を確認・編集し、Instagram・X・Google マップ・Facebook・Threads・TikTokへのお知らせを作成・予約できます。</desc>
+ <defs>
+  <marker id="together-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 7 5 1 9" fill="none" stroke="#92A5B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+ </defs>
+ <g font-family="Zen Kaku Gothic New, Hiragino Kaku Gothic ProN, sans-serif" fill="#1F3A5F">
+  <text x="280" y="31" text-anchor="middle" font-size="26" font-weight="900">お客様からの問い合わせを受け取る</text>
+  <g fill="#F6F8FA" stroke="#DDE5ED"><rect x="14" y="51" width="166" height="121" rx="13"/><rect x="197" y="51" width="166" height="121" rx="13"/><rect x="380" y="51" width="166" height="121" rx="13"/></g>
+  <g fill="none" stroke="#1F3A5F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="76" y="73" width="42" height="31" rx="4"/><path d="m79 76 18 14 18-14"/></g>
+  <image href="/assets/service-redesign/assets/brands/line.png" x="260" y="65" width="40" height="40"/>
+  <image href="/assets/service-redesign/assets/brands/instagram-color.png" x="443" y="65" width="40" height="40"/>
+  <g text-anchor="middle" font-size="22" font-weight="700"><text x="97" y="132">メール</text><text x="280" y="132">LINE公式</text><text x="463" y="132">Instagram DM</text></g>
+  <g text-anchor="middle" font-size="19" fill="#687683"><text x="97" y="156">複数のアドレスも</text><text x="280" y="156">アカウント</text><text x="463" y="156">メッセージ</text></g>
+  <g fill="white" stroke="#DDE5ED"><path d="M26 185h143a8 8 0 0 1 8 8v20a8 8 0 0 1-8 8H109l-12 9-12-9H26a8 8 0 0 1-8-8v-20a8 8 0 0 1 8-8Z"/><path d="M209 185h143a8 8 0 0 1 8 8v20a8 8 0 0 1-8 8h-60l-12 9-12-9h-59a8 8 0 0 1-8-8v-20a8 8 0 0 1 8-8Z"/><path d="M392 185h143a8 8 0 0 1 8 8v20a8 8 0 0 1-8 8h-60l-12 9-12-9h-59a8 8 0 0 1-8-8v-20a8 8 0 0 1 8-8Z"/></g>
+  <g font-size="20" text-anchor="middle"><text x="97" y="210">営業時間は？</text><text x="280" y="210">商品のご相談</text><text x="463" y="210">在庫は？</text></g>
+  <g fill="none" stroke="#92A5B8" stroke-width="2" marker-end="url(#together-arrow)"><path d="M97 233v18"/><path d="M280 233v18"/><path d="M463 233v18"/></g>
+  <rect x="14" y="259" width="532" height="217" rx="14" fill="white" stroke="#B7C8D9" stroke-width="2"/>
+  <path d="M28 259h504a14 14 0 0 1 14 14v39H14v-39a14 14 0 0 1 14-14Z" fill="#1F3A5F"/>
+  <image href="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" x="31" y="270" width="32" height="32"/>
+  <text x="75" y="295" font-size="28" font-weight="900" fill="white">トイバコ</text>
+  <text x="526" y="294" font-size="22" text-anchor="end" fill="white">ひとつの管理画面</text>
+  <path d="M280 328v132" stroke="#E1E7ED" stroke-width="1.5"/>
+  <g font-size="24" text-anchor="middle" font-weight="900"><text x="146" y="348">確認・返信</text><text x="412" y="348">作成・予約</text></g>
+  <g fill="none" stroke="#1F3A5F" stroke-width="1.6"><rect x="34" y="367" width="22" height="16" rx="2"/><path d="m36 369 9 7 9-7"/></g>
+  <image href="/assets/service-redesign/assets/brands/line.png" x="33" y="396" width="23" height="23"/>
+  <image href="/assets/service-redesign/assets/brands/instagram-color.png" x="33" y="429" width="23" height="23"/>
+  <g font-size="20"><text x="67" y="383">営業時間は？</text><text x="67" y="415">商品のご相談</text><text x="67" y="448">在庫について</text></g>
+  <rect x="298" y="361" width="230" height="96" rx="8" fill="#F6F8FA" stroke="#DDE5ED"/>
+  <text x="412" y="389" text-anchor="middle" font-size="21" font-weight="700">営業時間のお知らせ</text>
+  <path d="M316 407h191M316 416h137" stroke="#C8D4DF" stroke-width="3" stroke-linecap="round"/>
+  <g fill="none" stroke="#92A5B8" stroke-width="1.5"><circle cx="326" cy="440" r="9"/><path d="M326 434v6l4 2"/></g>
+  <text x="345" y="446" font-size="19" fill="#687683">公開日時を予約</text>
+  <text x="280" y="509" text-anchor="middle" font-size="22" font-weight="700">内容を確認・編集して 投稿を準備</text>
+<path d="M280 520v19m-5-5 5 5 5-5" fill="none" stroke="#92A5B8" stroke-width="2"/>
+<rect x="14" y="549" width="532" height="195" rx="12" fill="#F6F8FA" stroke="#DDE5ED"/>
+<image href="/assets/service-redesign/assets/brands/instagram-color.png" x="81" y="565" width="40" height="40"/><text x="101" y="626" text-anchor="middle" font-size="20" font-weight="700">Instagram</text>
+<image href="/assets/service-redesign/assets/brands/x.png" x="260" y="565" width="40" height="40"/><text x="280" y="626" text-anchor="middle" font-size="20" font-weight="700">X</text>
+<image href="/assets/service-redesign/assets/brands/google-maps.webp" x="439" y="565" width="40" height="40"/><text x="459" y="626" text-anchor="middle" font-size="20" font-weight="700">Google マップ</text>
+<image href="/assets/service-redesign/assets/brands/facebook.png" x="81" y="653" width="40" height="40"/><text x="101" y="714" text-anchor="middle" font-size="20" font-weight="700">Facebook</text>
+<image href="/assets/service-redesign/assets/brands/threads.svg" x="260" y="653" width="40" height="40"/><text x="280" y="714" text-anchor="middle" font-size="20" font-weight="700">Threads</text>
+<image href="/assets/service-redesign/assets/brands/tiktok.png" x="439" y="653" width="40" height="40"/><text x="459" y="714" text-anchor="middle" font-size="20" font-weight="700">TikTok</text>
+</g></svg>
+<svg class="inquiry-together-mobile" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 680" role="img" aria-labelledby="inquiry-mobile-together-title inquiry-mobile-together-description">
+<title id="inquiry-mobile-together-title">メールやDMの確認・返信も SNS投稿の作成・予約も トイバコで</title>
+<desc id="inquiry-mobile-together-description">上段はメール・LINE公式アカウント・Instagram DMがトイバコの受信箱にまとまるイメージ。下段は同じ管理画面で担当者が内容を確認・編集し、SNSのお知らせを準備するイメージです。問い合わせから自動で投稿を作る流れではありません。</desc>
+<g font-family="Zen Kaku Gothic New, Hiragino Kaku Gothic ProN, sans-serif" fill="#1F3A5F">
+<rect x="1" y="1" width="318" height="678" rx="16" fill="white" stroke="#C9D5E0"/>
+<path d="M17 1h286a16 16 0 0 1 16 16v48H1V17A16 16 0 0 1 17 1Z" fill="#1F3A5F"/>
+<image href="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" x="17" y="17" width="31" height="31"/>
+<text x="59" y="40" font-size="22" font-weight="900" fill="white">トイバコ</text>
+<text x="300" y="40" text-anchor="end" font-size="15" fill="white">ひとつの管理画面</text>
+<text x="20" y="101" font-size="21" font-weight="900">問い合わせを確認・返信</text>
+<g font-size="14" text-anchor="middle" font-weight="700">
+<g fill="none" stroke="#1F3A5F" stroke-width="2"><rect x="39" y="121" width="30" height="23" rx="3"/><path d="m42 124 12 9 12-9"/></g>
+<image href="/assets/service-redesign/assets/brands/line.png" x="143" y="117" width="33" height="33"/>
+<image href="/assets/service-redesign/assets/brands/instagram-color.png" x="249" y="117" width="33" height="33"/>
+<text x="54" y="172">メール</text><text x="160" y="172">LINE公式</text><text x="266" y="172">Instagram DM</text>
+</g>
+<g stroke="#9AABBC" stroke-width="2" fill="none"><path d="M54 182v13h106v14M266 182v13H160M160 182v27m-5-5 5 5 5-5"/></g>
+<rect x="20" y="219" width="280" height="75" rx="8" fill="#F3F6F8"/>
+<text x="34" y="246" font-size="17" font-weight="900">受信箱にまとめる</text>
+<text x="34" y="274" font-size="15">届いた問い合わせを確認して返信</text>
+<path d="M20 313h280" stroke="#E1E7ED"/>
+<text x="20" y="349" font-size="21" font-weight="900">SNS投稿を作成・予約</text>
+<rect x="20" y="367" width="280" height="94" rx="8" fill="#F3F6F8"/>
+<text x="34" y="394" font-size="17" font-weight="900">営業時間のお知らせ</text>
+<text x="34" y="421" font-size="15">文面・素材を担当者が確認・編集</text>
+<text x="34" y="448" font-size="15">投稿先と公開日時を選んで予約</text>
+<path d="M160 473v18m-5-5 5 5 5-5" stroke="#9AABBC" stroke-width="2" fill="none"/>
+<image href="/assets/service-redesign/assets/brands/instagram-color.png" x="38" y="504" width="33" height="33"/><text x="54" y="561" text-anchor="middle" font-size="14" font-weight="700">Instagram</text>
+<image href="/assets/service-redesign/assets/brands/x.png" x="144" y="504" width="33" height="33"/><text x="160" y="561" text-anchor="middle" font-size="14" font-weight="700">X</text>
+<image href="/assets/service-redesign/assets/brands/google-maps.webp" x="250" y="504" width="33" height="33"/><text x="266" y="561" text-anchor="middle" font-size="14" font-weight="700">Google マップ</text>
+<image href="/assets/service-redesign/assets/brands/facebook.png" x="38" y="591" width="33" height="33"/><text x="54" y="648" text-anchor="middle" font-size="14" font-weight="700">Facebook</text>
+<image href="/assets/service-redesign/assets/brands/threads.svg" x="144" y="591" width="33" height="33"/><text x="160" y="648" text-anchor="middle" font-size="14" font-weight="700">Threads</text>
+<image href="/assets/service-redesign/assets/brands/tiktok.png" x="250" y="591" width="33" height="33"/><text x="266" y="648" text-anchor="middle" font-size="14" font-weight="700">TikTok</text>
+</g></svg>
+<figcaption><span>メール・DMの確認と返信も</span> <span>SNS投稿の作成と予約も</span> <span>トイバコひとつで</span><small>接続した窓口・投稿先を使う仕組みのイメージです</small></figcaption></figure></div></div></section><section id="questions" class="detail-section" data-section-id="features_questions"><div class="wrap"><div class="section-intro"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>よくある質問</p><h2>問い合わせ管理を<br>始める前に<span class="heading-maru" aria-hidden="true">。</span></h2><p>設定する人・今の運用・履歴の扱いなど<br>導入前によく迷う点をまとめました</p></div><div class="detail-faq"><details data-question-id="features_faq_05"><summary>使っている媒体が接続できるか、サイトで判断できますか？</summary><p>媒体名だけでは判断できません。提供元の審査完了後に順次開放する接続があり、アカウント種別や管理権限も確認が必要です。利用する媒体・アカウントの種類・現在の運用をお問い合わせ時にお知らせください。</p></details><details data-question-id="features_faq_06"><summary>接続の設定は誰が行いますか？</summary><p>管理権限が必要な設定は、利用するアカウントの管理者と確認して進めます。LINEは既存のMessaging APIを使い、必要な設定は管理者へ引き継ぎます。組織メールでは管理者の同意が必要な場合があります。</p></details><details data-question-id="features_faq_07"><summary>今使っているメールやLINEの画面も併用できますか？</summary><p>既存画面との併用や設定への影響は、利用する媒体・接続方法ごとに事前確認が必要です。既存画面で続けたい操作と現在の運用をお知らせください。併用できる範囲や設定への影響を確認してご案内します。</p></details><details data-question-id="features_faq_08"><summary>接続前のメールやDMの履歴も確認できますか？</summary><p>過去の履歴をどこまで扱えるかは、接続前に確認が必要です。利用中の媒体と確認したい履歴の範囲をお知らせください。接続前の履歴をまとめて参照したい場合も、対応範囲を確認してご案内します。</p></details><details data-question-id="features_faq_09"><summary>複数のメールアドレスは何接続になりますか？</summary><p>実際に接続する受信箱の数で数えます。代表メールとサポートメールをそれぞれ接続する場合は2接続です。媒体の種類数ではありません。</p></details><details data-question-id="features_faq_10"><summary>フォームや予約サイトに届く連絡も管理できますか？</summary><p>通知メールの受信方法によって扱える場合があります。通知メールを確認できることと、お客様への返信や予約の変更・確定は別の対応範囲です。利用中のサービスと受信方法をお知らせください。</p></details><details data-question-id="features_faq_11"><summary>担当者が増えると料金は変わりますか？</summary><p>全プランで1ライセンス内の担当者登録は人数無制限です。担当者数による追加料金はありません。店舗ごとに導入する場合は、それぞれに1ライセンスが必要です。</p></details><details data-question-id="features_faq_12"><summary>AIを使わずに返信できますか？</summary><p>できます。担当者が手動で返信したり、定型文を使ったりできます。AIの返信案は必要なときに使い、内容を確認・編集してから送信します。</p></details></div></div></section><section id="plans" class="detail-section tint" data-section-id="features_plans"><div class="wrap"><div class="section-intro"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>基本機能とAIの使い分け</p><h2>問い合わせ管理で<br>使える機能の範囲<span class="heading-maru" aria-hidden="true">。</span></h2><p>確認・返信・共有は共通の基本機能<br>まとめる窓口の数とAIの活用範囲がプランごとに異なります</p></div><div class="inquiry-scope-grid"><article><p class="scope-label">確認・返信・共有</p><h3>基本の問い合わせ管理は<br>全プランで</h3><p>問い合わせの一覧、担当者の割り当て、ラベル・対応状況、社内メモ、定型文、会話の履歴。窓口をまとめるだけでなく、日々の対応も進められます。</p><p class="inquiry-scope-stats"><b>受信箱：無料2接続／有料4接続</b><br>1ライセンス内の担当者登録は無制限</p></article><article><p class="scope-label">人が確認する文章づくり</p><h3>AIの返信案も<br>全プランで使える</h3><p>返信案をAIで下書きして、担当者が確認・編集してから送信。手動返信や定型文と組み合わせ、必要な場面で使えます。</p><p class="inquiry-scope-stats"><b>AI生成：無料 月20回／Light 月100回</b><br>Standard・Proでは生成枠が増えます</p></article><article><p class="scope-label">自動の一次対応にも</p><h3>通常のAI自動返信は<br>Standard・Proで</h3><p>文章づくりに加え、設定した対象・条件での自動返信も活用できます。日々のAI活用には、Lightの5倍の生成枠があるStandardがおすすめです。</p><p class="inquiry-scope-stats"><b>AI生成：Standard 月500回／Pro 月2,000回</b><br>ProはStandardの4倍の生成枠</p></article></div><p class="detail-inline-note">AI生成回数は返信案・SNS投稿文・AI自動返信などで共通です。問い合わせ件数や送信できるメッセージ数そのものを表す数字ではありません。AI生成枠を使い切っても、手動での返信は続けられます。</p><div class="slot-counting"><div><span class="detail-brand" aria-hidden="true"><img src="/assets/service-redesign/assets/brands/instagram-color.png" alt="" width="36" height="36"></span><span>同じInstagramを</span><small>受信と投稿に使う場合</small></div><span class="diagram-arrow" aria-hidden="true">→</span><div><span>受信箱</span><strong>1接続</strong></div><span class="diagram-arrow" aria-hidden="true">＋</span><div><span>投稿先</span><strong>1接続</strong></div></div><div class="plan-comparison-action"><a class="feature-link" href="/pricing/">料金・詳しい機能比較を見る</a></div><div class="detail-license"><b>会社でも店舗でも</b><p>1ライセンス内の担当者登録は人数無制限。会社単位でも店舗単位でも利用できます。店舗ごとに導入する場合は、各店舗に1ライセンスが必要です。</p></div></div></section><section class="detail-final wrap" id="try" data-section-id="features_try"><p class="eyebrow"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>まずは試してみる</p><h2>よく使う窓口から<br>問い合わせを<br class="mobile-line">まとめてみよう<span class="heading-maru" aria-hidden="true">。</span></h2><p>無料プランで使いやすさを確認できます</p><div class="hero-actions"><a class="button" href="https://app.staging.toybaco.jp/toybaco/free/signup" data-plan="free" data-lp-plan-link="free">無料プランで試す</a><a class="floating-contact" href="/contact/?topic=setup">お問い合わせ</a></div><p class="detail-note">無料プラン：受信箱2接続・投稿先1接続／担当者登録は無制限</p></section></main><footer class="site-footer full-footer" id="site-footer"><div class="footer-grid"><div class="footer-brand-row"><a class="footer-brand-logo" href="/" aria-label="トイバコ トップ"><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="38" height="38"><span>トイバコ</span></a><p class="footer-description">トイバコはメールやDMの問い合わせ管理とSNS予約投稿をひとつの管理画面にまとめるサービスです。</p><p class="footer-operator">運営：株式会社サイバーリレーションズ</p><div class="footer-contact"><span>導入・サービスに関するご相談</span><a href="/contact/">お問い合わせフォーム</a></div></div><nav class="footer-nav" aria-label="フッターメニュー"><section><h2>サービス</h2><ul><li><a href="/features/">問い合わせ管理</a></li><li><a href="/posting/">SNS投稿管理</a></li><li><a href="/industries/">業界パック</a></li><li><a href="/security/">セキュリティ</a></li><li><a href="/faq/">よくある質問</a></li><li><a href="/guide/">お役立ちガイド</a></li></ul></section><section><h2>料金・お申し込み</h2><ul><li><a href="/pricing/">料金プラン</a></li><li><a href="/signup/">お申し込み</a></li><li><a href="https://app.staging.toybaco.jp" target="_blank" rel="noopener">ログイン</a></li></ul></section><section><h2>会社・規約</h2><ul><li><a href="/news/">お知らせ</a></li><li><a href="/partners/" target="_blank" rel="noopener">パートナー募集</a></li><li><a href="https://cyber-relations.jp/" target="_blank" rel="noopener">運営会社</a></li><li><a href="/terms/" target="_blank" rel="noopener">利用規約</a></li><li><a href="/privacy/" target="_blank" rel="noopener">プライバシーポリシー</a></li><li><a href="/tokushoho/" target="_blank" rel="noopener">特定商取引法に基づく表記</a></li></ul></section></nav></div><div class="footer-copy-row"><p class="footer-copyright">© 2026 株式会社サイバーリレーションズ</p><span class="footer-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div></footer><nav class="detail-floating-cta" aria-label="お申し込み・お問い合わせ"><div class="floating-copy"><img src="/assets/service-redesign/assets/toybaco-app-icon-ivory.webp" alt="" width="34" height="34"><div><b>問い合わせもSNS投稿も ひとつの管理画面で</b><small>会社でも店舗でも まずは無料プランから</small></div></div><div class="floating-actions"><a class="floating-contact" href="/contact/?topic=setup">お問い合わせ</a><a class="button floating-primary" href="/signup/">お申し込み</a></div></nav><script src="/assets/service-redesign/assets/detail-preview.js"></script><script src="/assets/service-redesign/site-navigation.js"></script><script src="/assets/service-redesign/assets/feature-demos.js" defer></script><script src="/assets/service-redesign/assets/inquiry-mobile-demo.js" defer></script><script src="/assets/service-redesign/assets/detail-quality.js" defer></script><script src="/assets/service-redesign/assets/detail-experience.js" defer></script><script src="/assets/service-redesign/live-actions.js"></script>
 <!-- toybaco_staging_site_v1: staging consultation is a preview only -->
 <button type="button" onclick="document.getElementById('toybaco-staging-chat-preview').showModal()" style="position:fixed;right:16px;bottom:16px;z-index:999;padding:12px 16px;border:0;border-radius:24px;background:#1F3A5F;color:#fff;font:inherit;font-size:13px;cursor:pointer">相談チャット（確認用）</button>
 <dialog id="toybaco-staging-chat-preview" aria-labelledby="toybaco-staging-chat-title" style="margin:auto;width:min(calc(100% - 2rem),28rem);padding:24px;border:1px solid #D0D8E1;border-radius:18px;color:#1F3A5F;background:#fff">
@@ -321,5 +103,4 @@
   <p style="line-height:1.8;margin-bottom:18px">この検証環境では相談チャットに接続していません。メッセージは送信されません。</p>
   <form method="dialog"><button class="btn btn-coral" autofocus>閉じる</button></form>
 </dialog>
-</body>
-</html>
+</body></html>

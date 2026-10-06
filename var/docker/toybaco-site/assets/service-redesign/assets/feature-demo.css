@@ -1,0 +1,9 @@
+/* Card-sized close-ups of the existing product animations. */
+html{font-size:19px}body{background:#FCFBF8}#canvas{width:700px;height:460px;padding:0}
+.app,.app-wrap{height:460px!important}.app{border:0;border-radius:0;box-shadow:none;font-size:15px}
+.app-nav,.app-info{display:none!important}.app-body{grid-template-columns:210px minmax(0,1fr)!important;height:calc(100% - 43px)}
+.app-side{display:block!important}.app-titlebar{height:43px}.app-search{font-size:13px}.app-side .side-head{padding:12px}
+.ghost{z-index:10}.toast{z-index:11}.inbox-demo .app-body{grid-template-columns:210px minmax(0,1fr)!important}
+.posting-demo .app-body{grid-template-columns:minmax(0,1fr)!important}.pcal-comp{width:65%;top:43px;padding:16px}
+.pcal-grid .pcal-cell{padding:8px 4px}.pchip{padding:6px 5px}.pchip .pc-top{flex-wrap:wrap}.pchip .pc-top small{margin-left:0}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

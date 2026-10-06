@@ -27,18 +27,20 @@
     : /^\/(privacy|terms|tokushoho)\//.test(path) || path === '/404.html' ? 'corporate' : 'service';
   const context = Object.freeze({ site_name: 'toybaco', service_name: 'toybaco',
     page_language: document.documentElement.lang || 'ja', content_type: contentType });
+  const campaignCodes = {utm_source:['google','instagram','x','facebook','threads','tiktok','line','newsletter','partner','qr','qa'],utm_medium:['cpc','paid_social','social','email','referral','organic','qr','test'],utm_campaign:['toybaco_launch','service_site','staging_20261006'],utm_content:['header','hero','footer','article','floating_cta'],utm_id:['tb_launch','tb_service','tb_qa']};
+  const campaign = Object.fromEntries(Object.entries(campaignCodes).flatMap(([key,allowed])=>{const value=new URL(location.origin+path+(location.search||'')).searchParams.get(key);return allowed.includes(value)?[[{utm_source:'campaign_source',utm_medium:'campaign_medium',utm_campaign:'campaign_name',utm_content:'campaign_content',utm_id:'campaign_id'}[key],value]]:[]}));
   const safeReferrer = (() => {
-    try { const url = new URL(document.referrer); return url.origin === location.origin && knownPaths.has(url.pathname.replace(/index\.html$/, '')) ? url.origin + url.pathname : ''; }
+    try { const url = new URL(document.referrer); return url.origin === location.origin && knownPaths.has(url.pathname.replace(/index\.html$/, '')) ? url.origin + url.pathname : url.protocol==='https:' ? url.origin+'/' : '';  }
     catch (_) { return ''; }
   })();
   window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({ ...context, page_location: location.origin + path,
+  window.dataLayer.push({ ...context, ...campaign, page_location: location.origin + path,
     page_referrer: safeReferrer, page_title: production ? document.title : '[staging] ' + path,
     measurement_test_mode: production ? 'production' : 'staging',
     measurement_consent: active ? 'accepted' : 'denied',
     measurement_cookie_prefix: production ? 'tb_site' : 'tb_staging',
     measurement_debug: production ? undefined : true,
-    test_run: production ? undefined : 'toybaco_staging_20260924' });
+    test_run: production ? undefined : 'toybaco_staging_20261006' });
   const schema = {
     contact_click: ['link_position', 'link_text', 'link_url'],
     contact_form_start: ['form_id', 'form_type'],
@@ -50,33 +52,45 @@
     industry_select: ['industry_id'], demo_interaction: ['demo_action'],
     faq_open: ['question_id'], pricing_calculator_use: ['staff_count_band'],
     partner_click: ['link_position', 'inquiry_origin'], login_click: ['link_position'],
-    pricing_view: ['pricing_location']
+    pricing_view: ['pricing_location'],
+    section_view:['section_id'],service_detail_click:['cta_id','cta_target','link_position'],faq_category_select:['faq_category','result_count'],faq_search:['faq_category','result_count','has_results','query_length_band'],guide_filter_select:['content_category','result_count'],guide_article_select:['content_id','content_category','link_position']
   };
   const codes = {
-    link_position: ['header', 'footer', 'main_cta', 'pricing', 'article', 'work', 'other'],
+    link_position: ['header', 'footer', 'floating_cta', 'closing', 'hero', 'main_cta', 'pricing', 'article', 'work', 'other'],
     form_id: ['toybaco_contact'], form_type: ['contact'],
     inquiry_type: ['service', 'custom', 'setup', 'billing', 'support', 'other'],
     error_type: ['validation', 'api', 'network', 'system'],
     error_field: ['name', 'company', 'email', 'topic', 'message', 'consent', 'form'],
     plan_id: ['free', 'light', 'standard', 'pro'], billing_cycle: ['month', 'year'],
-    demo_action: ['pack_preview_change'], inquiry_origin: ['partners'],
+    demo_action: ['pack_preview_change','pause','resume','message_select','assign','draft','resolve','reset','format_change','preview_change','target_change','time_change','reserve','published_example','play'], inquiry_origin: ['partners'],
     staff_count_band: ['2_3', '4_5', '6_10', '11_20', '21_30'],
-    pricing_location: ['home_pricing', 'pricing_page']
+    pricing_location: ['home_pricing', 'pricing_page'],
+    cta_target:['signup_info','free_signup','checkout','contact_form','chat','features','posting','industries','security','pricing','faq','guide'],
+    contact_method:['form','chat'],faq_category:['all','start','connection','posting','contract','data','ai'],
+    query_length_band:['1_5','6_10','11_20','21_plus'],has_results:['true','false'],
+    demo_id:['inquiry','posting','industry_pack','feature_inbox','feature_post'],media_format:['image','video'],
+    content_category:['all','tag-1','tag-2','tag-3','tag-4','tag-5','tag-6']
   };
   const valid = (key, value) => {
+    if(key==='result_count')return Number.isInteger(value)&&value>=0&&value<=200;
     if (typeof value !== 'string' || value.length > 200) return false;
     if (codes[key]) return codes[key].includes(value);
+    if (key === 'cta_id') return /^(header|footer|hero|floating_cta|closing|pricing|article|main_cta|other)_(signup_info|free_signup|checkout|contact_form|chat|features|posting|industries|security|pricing|faq|guide)$/.test(value);
+    if (key === 'section_id') return sectionIds.includes(value);
+    if (key === 'content_id') return knownPaths.has('/guide/'+value+'/');
     if (key === 'question_id') return /^[a-z0-9_]+_faq_[0-9]{2}$/.test(value);
     if (key === 'industry_id') return ['beauty', 'food', 'estate', 'retail-ec', 'clinic', 'school', 'auto', 'reform', 'hotel', 'bridal-photo', 'pet', 'pro'].includes(value);
     if (key === 'link_text') return ["このプランを相談する", "お問い合わせ", "お問い合わせフォーム", "チャットからどうぞ", "チャットでご相談ください", "チャットで伝える", "チャットで相談", "チャットで相談する", "チャットで質問する", "フォームで相談", "フォームで相談する", "使っている媒体が接続できるか相談する", "導入・接続について相談する"].includes(value);
     if (key === 'link_url') return value === '' || value === location.origin + '/contact/';
     return false;
   };
-  const keys = [...new Set(Object.values(schema).flat())];
+  const optional = {contact_click:['cta_id','cta_target','contact_method'],signup_click:['cta_id','cta_target'],plan_select:['cta_id','cta_target'],checkout_click:['cta_id','cta_target'],faq_open:['faq_category'],demo_interaction:['demo_id','media_format']};
+  const sectionIds=["after_hours_reply_cta", "ai_reception_cost_cta", "auto_auto_reply_cta", "auto_inbox_cta", "auto_sns_cta", "beauty_auto_reply_cta", "beauty_inbox_cta", "beauty_sns_cta", "bridal_photo_auto_reply_cta", "bridal_photo_inbox_cta", "bridal_photo_sns_cta", "clinic_auto_reply_cta", "clinic_inbox_cta", "clinic_sns_cta", "contact_contact_done", "contact_contact_review", "estate_auto_reply_cta", "estate_inbox_cta", "estate_sns_cta", "faq_faq_ai", "faq_faq_connection", "faq_faq_contact", "faq_faq_contract", "faq_faq_data", "faq_faq_posting", "faq_faq_start", "features_ai", "features_channels", "features_connection", "features_examples", "features_functions", "features_plans", "features_questions", "features_together", "features_try", "features_workflow", "food_auto_reply_cta", "food_inbox_cta", "food_sns_cta", "google_map_post_cta", "guide_guide_cta", "guide_guide_industries", "guide_guide_themes", "home_channels", "home_explore", "home_faq", "home_features", "home_pricing", "hotel_auto_reply_cta", "hotel_inbox_cta", "hotel_sns_cta", "inbox_unify_cta", "industries_auto", "industries_beauty", "industries_bridal_photo", "industries_clinic", "industries_estate", "industries_food", "industries_hotel", "industries_pack_preview", "industries_pack_start", "industries_pack_workflow", "industries_pet", "industries_pro", "industries_reform", "industries_retail_ec", "industries_school", "instagram_dm_pc_cta", "instagram_schedule_cta", "line_multi_user_cta", "multi_store_sns_cta", "news_cta", "no_missed_reply_cta", "pet_auto_reply_cta", "pet_inbox_cta", "pet_sns_cta", "posting_ai", "posting_channels", "posting_connection", "posting_examples", "posting_functions", "posting_plans", "posting_questions", "posting_together", "posting_try", "posting_workflow", "pricing_ai_pack", "pricing_comparison", "pricing_cta", "pricing_custom_design", "pricing_payment", "pricing_plans", "pricing_pricing_faq", "pro_auto_reply_cta", "pro_inbox_cta", "pro_sns_cta", "reform_auto_reply_cta", "reform_inbox_cta", "reform_sns_cta", "retail_ec_auto_reply_cta", "retail_ec_inbox_cta", "retail_ec_sns_cta", "school_auto_reply_cta", "school_inbox_cta", "school_sns_cta", "security_security_ai", "security_security_contact", "security_security_ending", "security_security_faq", "security_security_location", "security_security_measures", "signup_paid_plans", "signup_registration_flow", "signup_signup_faq", "sns_bulk_post_cta", "what_is_ai_agent_cta", "what_is_approval_flow_cta", "what_is_gbp_cta", "what_is_scheduled_post_cta", "what_is_team_inbox_cta", "what_is_unified_inbox_cta"];
+  const keys = [...new Set([...Object.values(schema).flat(),...Object.values(optional).flat()])];
   const emit = (event, values = {}, completion) => {
     if (!active || !Object.hasOwn(schema, event)) return false;
     // Free has no billing cycle; the requirements selector has no staff-count input.
-    const fields = schema[event].filter(k => !(event === 'plan_select' && values.plan_id === 'free' && k === 'billing_cycle') && !(event === 'pricing_calculator_use' && !Object.hasOwn(values, 'staff_count_band') && k === 'staff_count_band'));
+    const fields = [...schema[event],...(optional[event]||[]).filter(k=>Object.hasOwn(values,k))].filter(k => !(event === 'plan_select' && values.plan_id === 'free' && k === 'billing_cycle') && !(event === 'pricing_calculator_use' && !Object.hasOwn(values, 'staff_count_band') && k === 'staff_count_band'));
     if (!fields.every(k => Object.hasOwn(values, k) && valid(k, values[k]))) return false;
     window.dataLayer.push({ ...Object.fromEntries(keys.map(k => [k, null])), ...context,
       ...Object.fromEntries(fields.map(k => [k, values[k]])), event,
@@ -124,7 +138,7 @@
   window.toybacoMeasurement = Object.freeze({ context, emit, setChoice, get active() { return active; } });
   const position = el => el.closest('header, nav.menu') ? 'header'
     : el.closest('footer') ? 'footer' : el.closest('#pricing, .plans2, #staffCalc, .lp-plans, #lp-selector') ? 'pricing'
-    : path.startsWith('/guide/') ? 'article' : el.closest('.acts, .hero-actions, .contact-options, #cta') ? 'main_cta' : 'other';
+    : el.closest('.detail-floating-cta,.pack-floating-cta,.guide-floating-cta,.signup-floating-cta') ? 'floating_cta' : el.closest('.detail-final,.closing,.signup-closing,#cta') ? 'closing' : el.closest('.hero,.detail-hero') ? 'hero' : path.startsWith('/guide/') ? 'article' : el.closest('.acts, .hero-actions, .contact-options, #cta') ? 'main_cta' : 'other';
   document.addEventListener('click', e => {
     const el = e.target.closest('a[href^="mailto:"]');
     if (!active || !e.isTrusted || !el || el.matches('[data-open-chat]')) return;
@@ -211,7 +225,9 @@
       const el = e.target.closest('a, button');
       if (!active || !el || !e.isTrusted) return;
       const events = [];
-      const record = (event, values) => events.push([event, values]);
+      const record = (event, values) => {
+        if(['signup_click','plan_select','checkout_click','contact_click'].includes(event)){const target=event==='contact_click'?(el.matches('[data-open-chat]')?'chat':'contact_form'):event==='checkout_click'||event==='plan_select'&&values.plan_id!=='free'?'checkout':link?.pathname==='/signup/'?'signup_info':'free_signup';values={...values,cta_id:pos+'_'+target,cta_target:target,...(event==='contact_click'?{contact_method:target==='chat'?'chat':'form'}:{})};}events.push([event,values]);
+      };
       const pos = position(el);
       const link = el.tagName === 'A' ? new URL(el.href, location.href) : null;
       if (el.matches('[data-open-chat]')) {
@@ -233,6 +249,8 @@
         }
       } else if (link?.hostname === (production ? 'app.toybaco.jp' : 'app.staging.toybaco.jp') && ['/', '/app/login', '/app/login/'].includes(link.pathname))
         record('login_click', { link_position: pos });
+      if(link&&link.origin===location.origin&&['/features/','/posting/','/industries/','/security/','/pricing/','/faq/','/guide/'].includes(link.pathname)){const target=link.pathname.split('/')[1];record('service_detail_click',{cta_id:pos+'_'+target,cta_target:target,link_position:pos});}
+      if(link&&link.origin===location.origin&&/^\/guide\/[a-z0-9-]+\/$/.test(link.pathname))record('guide_article_select',{content_id:link.pathname.split('/')[2],content_category:el.closest('[data-guide-tag]')?.dataset.guideTag||'all',link_position:pos});
       if (el.matches('[data-lp-cycle]')) {
         const group = el.closest('.lp-billing'), next = el.dataset.lpCycle;
         if (nextCycles.get(group) !== next) record('billing_cycle_change', { billing_cycle: next });
@@ -288,7 +306,7 @@
       let userToggle = false, wasOpen = details.open;
       details.querySelector('summary')?.addEventListener('click', e => { userToggle = e.isTrusted; });
       details.addEventListener('toggle', () => {
-        if (userToggle && details.open && !wasOpen) emit('faq_open', { question_id: details.dataset.questionId });
+        if (userToggle && details.open && !wasOpen) emit('faq_open', { question_id: details.dataset.questionId, ...(details.dataset.category?{faq_category:details.dataset.category}:{}) });
         userToggle = false; wasOpen = details.open;
       });
     });
@@ -308,7 +326,7 @@
     if (path === '/pricing/' || path === '/pricing/index.html')
       emit('pricing_view', { pricing_location: 'pricing_page' });
     if (path === '/' || path === '/index.html') {
-      const marker = document.querySelector('#pricing .price-h .mk, #pricing.lp-section h2, #pricing.section h2');
+      const marker = document.querySelector('#pricing h2');
       let visible = false, timer = null, done = false;
       const reset = () => { clearTimeout(timer); timer = null; };
       const update = () => {

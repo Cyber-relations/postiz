@@ -1,0 +1,78 @@
+/* Shared interaction for underlined text links on lower pages. */
+:is(.subpage,.pricing-page,.contact-page,.signup-page,.news-page) main :is(
+  .breadcrumbs a,
+  .signup-crumbs a,
+  .crumbs a,
+  p a:not(.button):not(.contact-button):not(.btn),
+  .detail-page-index a,
+  .detail-shared-use .feature-link,
+  .detail-final .text-link,
+  .price-details,
+  .pack-explore-link,
+  .index-return,
+  .signup-text-link,
+  .faq-answer a,
+  .faq-contact-actions>a:not(.button),
+  .inquiry-policy a,
+  .guide-article-page a:not(.button),
+  .experience-reset,
+  .faq-reset,
+  .news-main .acts a:nth-child(3)
+),
+.security-page main a:not(.button),
+.guide-article-page main a:not(.button){
+  color:var(--navy,#1F3A5F);
+  text-decoration-color:currentColor;
+  transition:color .18s ease,text-decoration-color .18s ease;
+}
+:is(.subpage,.pricing-page,.contact-page,.signup-page,.news-page) main :is(
+  .breadcrumbs a,
+  .signup-crumbs a,
+  .crumbs a,
+  p a:not(.button):not(.contact-button):not(.btn),
+  .detail-page-index a,
+  .detail-shared-use .feature-link,
+  .detail-final .text-link,
+  .price-details,
+  .pack-explore-link,
+  .index-return,
+  .signup-text-link,
+  .faq-answer a,
+  .faq-contact-actions>a:not(.button),
+  .inquiry-policy a,
+  .guide-article-page a:not(.button),
+  .experience-reset,
+  .faq-reset,
+  .news-main .acts a:nth-child(3)
+):is(:hover,:focus-visible),
+.security-page main a:not(.button):is(:hover,:focus-visible),
+.guide-article-page main a:not(.button):is(:hover,:focus-visible){
+  color:var(--coral-text,#B43C30);
+  text-decoration-color:currentColor;
+  text-decoration-thickness:2px;
+}
+
+/* These underlines belong to the text inside a larger linked card. */
+.industry-page .industry-choice-action,
+.guide-page .guide-read{
+  color:var(--navy,#1F3A5F);
+  text-decoration-color:currentColor;
+  transition:color .18s ease,border-color .18s ease,text-decoration-color .18s ease;
+}
+.industry-page .industry-choice:is(:hover,:focus-visible) .industry-choice-action,
+.guide-page .guide-card:is(:hover,:focus-visible) .guide-read{
+  color:var(--coral-text,#B43C30);
+  text-decoration-color:currentColor;
+}
+.guide-page .guide-card:is(:hover,:focus-visible) .guide-read{border-bottom-color:currentColor}
+
+/* Keep the approved white footer text; orange remains legible on navy. */
+:is(.subpage,.pricing-page,.contact-page,.signup-page,.news-page) .site-footer .footer-contact a{
+  text-decoration-color:currentColor;
+  transition:color .18s ease,text-decoration-color .18s ease;
+}
+:is(.subpage,.pricing-page,.contact-page,.signup-page,.news-page) .site-footer .footer-contact a:is(:hover,:focus-visible){
+  color:#FF6B5B;
+  text-decoration-color:currentColor;
+  text-decoration-thickness:2px;
+}

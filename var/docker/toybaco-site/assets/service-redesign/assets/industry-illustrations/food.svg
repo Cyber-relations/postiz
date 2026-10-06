@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 128" fill="none">
+ <defs><linearGradient id="blue" x1="34" y1="28" x2="126" y2="107" gradientUnits="userSpaceOnUse"><stop stop-color="#b9cedf"/><stop offset="1" stop-color="#7c9cb6"/></linearGradient><linearGradient id="coral" x1="42" y1="30" x2="117" y2="98" gradientUnits="userSpaceOnUse"><stop stop-color="#ffb294"/><stop offset="1" stop-color="#ff6b5b"/></linearGradient></defs>
+ <ellipse cx="86" cy="114" rx="60" ry="6" fill="#1f3a5f" opacity=".07"/>
+ <path d="M103 20h27l10 10v47a4 4 0 0 1-4 4h-33a4 4 0 0 1-4-4V24a4 4 0 0 1 4-4Z" fill="#f3f6f8" stroke="#d6e2e9" stroke-width="1.5"/>
+ <path d="M130 20v10h10" stroke="#d6e2e9" stroke-width="1.5"/>
+ <path d="M106 41h25m-25 8h18m-18 8h22" stroke="#d6e2e9" stroke-width="2" stroke-linecap="round"/>
+ <g stroke-linecap="round" stroke-linejoin="round"><ellipse cx="79" cy="74" rx="42" ry="29" fill="#bacad7"/><ellipse cx="79" cy="69" rx="42" ry="29" fill="#fff" stroke="#d1dce5" stroke-width="2"/><ellipse cx="79" cy="69" rx="28" ry="19" fill="#fff0e8"/><path d="M58 76c3-20 34-24 42-8-8 12-31 16-42 8Z" fill="url(#coral)"/><path d="m65 65 4 12m7-16 5 13m5-13 5 10" stroke="#ffe1d3" stroke-width="2"/><path d="m56 53 5-8m5 7 6-10m17 9 5-8" stroke="#60a88c" stroke-width="4"/><path d="M30 34v25m-6-25v14q6 12 12 0V34M30 59v39" stroke="#526b86" stroke-width="4"/><path d="M121 34q-9 11-8 26h10v38" fill="#d6e1e8" stroke="#526b86" stroke-width="3"/></g></svg>
