@@ -44,10 +44,11 @@ USER root
 
 # These optional modules are not loaded by the application Nginx configuration.
 # Keep fonts and Sharp bundled codecs; remove the unused OS GD/HEIF dependency group.
+# Node and Nginx use their own HTTP transports; keep curl libraries out of runtime.
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
  && DEBIAN_FRONTEND=noninteractive apt-get purge -y --no-auto-remove \
-      nginx-module-image-filter nginx-module-njs nginx-module-xslt libxml2 libxslt1.1 libgd3 libheif1 libheif-plugin-dav1d libheif-plugin-libde265 \
+      nginx-module-image-filter nginx-module-njs nginx-module-xslt libxml2 libxslt1.1 libgd3 libheif1 libheif-plugin-dav1d libheif-plugin-libde265 curl libcurl4t64 libnghttp2-14 \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       tini \
  && rm -rf /var/lib/apt/lists/*
