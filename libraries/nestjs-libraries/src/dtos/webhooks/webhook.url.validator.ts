@@ -9,50 +9,29 @@ import { URL } from 'node:url';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 
+// Node's native CIDR matcher also normalizes IPv4-mapped IPv6 addresses.
+const blockedAddresses = new net.BlockList();
+for (const [address, prefix] of [
+  ['0.0.0.0', 8], ['10.0.0.0', 8], ['127.0.0.0', 8],
+  ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.168.0.0', 16],
+  ['100.64.0.0', 10], ['198.18.0.0', 15], ['224.0.0.0', 3],
+] as const) blockedAddresses.addSubnet(address, prefix, 'ipv4');
+for (const [address, prefix] of [
+  ['::', 128], ['::1', 128], ['fe80::', 10], ['fc00::', 7], ['ff00::', 8],
+] as const) blockedAddresses.addSubnet(address, prefix, 'ipv6');
+
 export function isBlockedIPv4(ip: string): boolean {
-  const [a, b] = ip.split('.').map(Number);
-
-  if ([a, b].some((n) => Number.isNaN(n))) return true;
-
-  return (
-    a === 0 ||                       // 0.0.0.0/8
-    a === 10 ||                      // 10.0.0.0/8
-    a === 127 ||                     // 127.0.0.0/8
-    (a === 169 && b === 254) ||      // 169.254.0.0/16
-    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
-    (a === 192 && b === 168) ||      // 192.168.0.0/16
-    (a === 100 && b >= 64 && b <= 127) || // 100.64.0.0/10
-    (a === 198 && (b === 18 || b === 19)) || // 198.18.0.0/15
-    a >= 224                         // multicast/reserved
-  );
+  return net.isIP(ip) !== 4 || blockedAddresses.check(ip, 'ipv4');
 }
 
 export function isBlockedIPv6(ip: string): boolean {
-  const normalized = ip.toLowerCase();
-
-  return (
-    normalized === '::1' ||          // loopback
-    normalized === '::' ||           // unspecified
-    normalized.startsWith('fe80:') || // link-local
-    normalized.startsWith('fc') ||   // unique local fc00::/7
-    normalized.startsWith('fd') ||   // unique local fd00::/7
-    normalized.startsWith('ff')      // multicast
-  );
+  return net.isIP(ip) !== 6 || blockedAddresses.check(ip, 'ipv6');
 }
 
 export function isBlockedIp(ip: string): boolean {
   const version = net.isIP(ip);
-  if (version === 4) {
-    return isBlockedIPv4(ip);
-  }
-  if (version === 6) {
-    // IPv4-mapped IPv6 (::ffff:a.b.c.d) — extract and check as IPv4
-    const mapped = ip.toLowerCase().match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (mapped) {
-      return isBlockedIPv4(mapped[1]);
-    }
-    return isBlockedIPv6(ip);
-  }
+  if (version === 4) return isBlockedIPv4(ip);
+  if (version === 6) return isBlockedIPv6(ip);
   return true;
 }
 

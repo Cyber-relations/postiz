@@ -4,6 +4,7 @@ import dns from 'node:dns';
 import net from 'node:net';
 import http from 'node:http';
 import https from 'node:https';
+import tls from 'node:tls';
 import { isBlockedIp } from './webhook.url.validator';
 
 // Pins DNS resolution: every resolved IP is checked with `isBlockedIp` and
@@ -45,7 +46,35 @@ function ssrfSafeLookup(
   });
 }
 
-export const ssrfSafeDispatcher = new Agent({
+// Socket clients can skip DNS lookup for literal addresses. Check origins before
+// dispatch/socket creation too, including every automatic redirect's new origin.
+function assertPublicLiteral(hostname: string) {
+  const host = hostname.replace(/^\[|\]$/g, '');
+  if (net.isIP(host) && isBlockedIp(host)) throw new Error('Blocked IP');
+}
+
+class SsrfSafeUndiciAgent extends Agent {
+  dispatch(options: any, handler: any): boolean {
+    assertPublicLiteral(new URL(String(options.origin)).hostname);
+    return super.dispatch(options, handler);
+  }
+}
+
+class SsrfSafeHttpAgent extends http.Agent {
+  createConnection(options: any, callback: any): any {
+    assertPublicLiteral(String(options.hostname || options.host || ''));
+    return net.createConnection(options, callback);
+  }
+}
+
+class SsrfSafeHttpsAgent extends https.Agent {
+  createConnection(options: any, callback: any): any {
+    assertPublicLiteral(String(options.hostname || options.host || ''));
+    return tls.connect(options, callback);
+  }
+}
+
+export const ssrfSafeDispatcher = new SsrfSafeUndiciAgent({
   connect: {
     lookup: ssrfSafeLookup,
   },
@@ -55,8 +84,8 @@ export const ssrfSafeDispatcher = new Agent({
 // same `lookup` hook, so axios requests (providers that need form-data /
 // stream uploads) get the identical pinned-DNS guard as `this.fetch`.
 const ssrfSafeAxios = axios.create({
-  httpAgent: new http.Agent({ lookup: ssrfSafeLookup } as http.AgentOptions),
-  httpsAgent: new https.Agent({
+  httpAgent: new SsrfSafeHttpAgent({ lookup: ssrfSafeLookup } as http.AgentOptions),
+  httpsAgent: new SsrfSafeHttpsAgent({
     lookup: ssrfSafeLookup,
   } as https.AgentOptions),
 });
