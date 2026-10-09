@@ -14,6 +14,10 @@ async function main(sourceRoot) {
   const root = fs.realpathSync(sourceRoot);
   const result = applyAndVerify(root, true);
   const rootRequire = createRequire(path.join(root, 'package.json'));
+  const handlebars = rootRequire('handlebars');
+  assert.equal(handlebars.VERSION, '4.7.10', 'Fixed Handlebars must be exactly 4.7.10');
+  assert.equal(handlebars.compile('{{value}}')({ value: '<script>&' }), '&lt;script&gt;&amp;');
+  assert.equal(handlebars.compile('{{#each values}}{{this}}{{/each}}')({ values: new Set(['a', 'b']) }), 'ab');
   const next = path.dirname(rootRequire.resolve('next/package.json'));
   const vendor = path.join(next, 'dist/compiled/shell-quote');
   const vendorRequire = createRequire(path.join(vendor, 'index.js'));
@@ -26,7 +30,7 @@ async function main(sourceRoot) {
   const hash = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
   let cases = 0;
   try {
-    const kinds = ['next-version', 'metadata', 'vendor-bytes', 'vendor-symlink', 'fixed-version', 'fixed-outside-root'];
+    const kinds = ['next-version', 'next-old-affected', 'metadata', 'vendor-bytes', 'vendor-symlink', 'fixed-version', 'fixed-outside-root'];
     for (const kind of kinds) {
       const fixture = path.join(temporary, kind);
       const moduleRoot = path.join(fixture, 'node_modules/next');
@@ -40,9 +44,9 @@ async function main(sourceRoot) {
       const api = path.join(fixture, 'node_modules/shell-quote');
       fs.cpSync(fixed, api, { recursive: true, dereference: true });
       const entry = path.join(compiled, 'index.js');
-      if (kind === 'next-version') {
+      if (kind === 'next-version' || kind === 'next-old-affected') {
         const manifest = JSON.parse(fs.readFileSync(path.join(moduleRoot, 'package.json')));
-        manifest.version = '16.4.0';
+        manifest.version = kind === 'next-version' ? '16.4.0' : '16.3.6';
         fs.writeFileSync(path.join(moduleRoot, 'package.json'), JSON.stringify(manifest));
       }
       if (kind === 'metadata') fs.appendFileSync(path.join(compiled, 'package.json'), ' ');
@@ -71,6 +75,7 @@ async function main(sourceRoot) {
   }
   console.log(JSON.stringify({ ...result, cases, check: 'installed-next-shell-quote-delegation',
     fixture_removed: true, commonjs_and_esm_binding: true,
+    handlebars: handlebars.VERSION, template_escape_and_set_iteration: true,
     shell_commands_or_application_server_executed: false }));
 }
 

@@ -1,6 +1,6 @@
 'use strict';
 
-// Next 16.3.6 ships a versionless ncc copy of shell-quote 1.7.3. An ordinary
+// Next 16.3.8 ships a versionless ncc copy of shell-quote 1.7.3. An ordinary
 // pnpm override does not replace it. Delegate that exact reviewed copy to the
 // installed production package; retain the original package metadata/license.
 const assert = require('node:assert/strict');
@@ -29,7 +29,7 @@ function applyAndVerify(sourceRoot, checkOnly = false) {
   const rootRequire = createRequire(path.join(root, 'package.json'));
   const nextManifestPath = rootRequire.resolve('next/package.json');
   regular(nextManifestPath);
-  assert.equal(JSON.parse(fs.readFileSync(nextManifestPath)).version, '16.3.6', 'Unreviewed Next version');
+  assert.equal(JSON.parse(fs.readFileSync(nextManifestPath)).version, '16.3.8', 'Unreviewed Next version');
   const vendor = path.join(path.dirname(nextManifestPath), 'dist/compiled/shell-quote/index.js');
   const stat = regular(vendor);
   assert.ok(fs.realpathSync(vendor).startsWith(root + path.sep), 'Next vendor must belong to this install');
@@ -69,7 +69,7 @@ function applyAndVerify(sourceRoot, checkOnly = false) {
   assert.deepEqual(delegated.parse(delegated.quote(values)), values, 'Literal argument round trip');
   assert.deepEqual(delegated.parse('echo "$FIXTURE_VALUE"', { FIXTURE_VALUE: 'two words' }), ['echo', 'two words']);
   assert.equal(hash(fs.readFileSync(metadata)), METADATA_SHA256, 'Vendor metadata must remain unchanged');
-  return { check: 'next-vendored-shell-quote-binding', status: 'PASS', next: '16.3.6',
+  return { check: 'next-vendored-shell-quote-binding', status: 'PASS', next: '16.3.8',
     resolved_shell_quote: '1.11.0', delegate_sha256: hash(DELEGATE),
     original_vendor_metadata_unchanged: true, store_hardlink_not_modified: true,
     mode: checkOnly ? 'verify' : 'apply-and-verify' };
