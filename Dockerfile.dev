@@ -15,13 +15,17 @@ RUN npm --no-update-notifier --no-fund --global install pnpm@10.6.1
 
 WORKDIR /app
 COPY . /app
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile \
+ && node var/docker/toybaco-fix-next-shell-quote.cjs --apply /app \
+ && node var/docker/toybaco-verify-next-shell-quote.cjs /app
 RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
 
 # Reconcile the hoisted workspace against production dependencies after building.
 # Keep generated Prisma/native files; never reinstall or run lifecycle scripts at startup.
 FROM build AS production
-RUN CI=true pnpm install --prod --frozen-lockfile --offline --ignore-scripts
+RUN CI=true pnpm install --prod --frozen-lockfile --offline --ignore-scripts \
+ && node var/docker/toybaco-fix-next-shell-quote.cjs --apply /app \
+ && node var/docker/toybaco-verify-next-shell-quote.cjs /app
 RUN test ! -e node_modules/vitest \
  && test ! -e node_modules/ts-jest \
  && test ! -e node_modules/happy-dom \
@@ -66,6 +70,7 @@ COPY --from=build /app/var/docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build --chmod=0555 /app/var/docker/toybaco-entrypoint.sh /usr/local/bin/toybaco-entrypoint
 
 USER www
+RUN node /app/var/docker/toybaco-verify-next-shell-quote.cjs /app
 STOPSIGNAL SIGTERM
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 CMD ["/usr/local/bin/toybaco-entrypoint"]
