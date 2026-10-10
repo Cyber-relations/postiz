@@ -330,6 +330,7 @@
       "react-dom": "19.2.4",
       "@types/react": "19.1.8",
       "@types/react-dom": "19.1.6",
+      "handlebars@>=4 <5": "4.7.10",
       "@modelcontextprotocol/sdk@>=1 <2": "1.31.0",
       "@graphql-tools/utils@>=10 <13": "12.0.1",
       "compression@>=1 <2": "1.8.2",
@@ -422,8 +423,7 @@
       "@nestjs/microservices": "11.2.7",
       "@nestjs/platform-express": "11.2.7",
       "@nestjs/testing": "11.2.7",
-      "nodemailer": "10.0.6",
-      "handlebars@>=4 <5": "4.7.10"
+      "nodemailer": "10.0.6"
     },
     "onlyBuiltDependencies": [
       "bcrypt"
