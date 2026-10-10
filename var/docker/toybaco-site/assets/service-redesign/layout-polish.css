@@ -266,3 +266,14 @@ body:not(.service-detail):not([class*="-page"]) main .section{padding-block:88px
   .posting-detail #functions .feature-figure:has(>.diagram-date)>.diagram-date{grid-template-columns:26px minmax(0,1fr)}
   .posting-detail #functions .feature-figure:has(>.diagram-date)>.diagram-date>.diagram-tag{grid-column:2}
 }
+
+/* Keep the fixed CTA clear of the existing 64px consultation launcher. */
+body:is(.service-detail,.security-page) .detail-floating-cta{
+  right:104px;
+}
+@media(max-width:760px){
+  body:is(.service-detail,.security-page) .detail-floating-cta{
+    right:10px;
+    bottom:calc(96px + env(safe-area-inset-bottom,0px));
+  }
+}
