@@ -2,7 +2,7 @@
 
 import React, { ReactNode, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Logo } from '@gitroom/frontend/components/new-layout/logo';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 const ModeComponent = dynamic(
   () => import('@gitroom/frontend/components/layout/mode.component'),
   {
@@ -47,10 +47,12 @@ import { FirstBillingComponent } from '@gitroom/frontend/components/billing/firs
 import { TrialTracker } from '@gitroom/frontend/components/layout/gtm.component';
 import { setSentryUser } from '@gitroom/react/sentry/initialize.sentry.client';
 
-const jakartaSans = Plus_Jakarta_Sans({
-  weight: ['600', '500', '700'],
-  style: ['normal', 'italic'],
-  subsets: ['latin'],
+const jakartaSans = localFont({
+  src: [
+    { path: '../../fonts/plus-jakarta-sans/PlusJakartaSans-Regular.ttf', weight: '500 700', style: 'normal' },
+    { path: '../../fonts/plus-jakarta-sans/PlusJakartaSans-Italic.ttf', weight: '500 700', style: 'italic' },
+  ],
+  display: 'swap',
 });
 
 export const LayoutComponent = ({ children }: { children: ReactNode }) => {

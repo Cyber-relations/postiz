@@ -40,7 +40,7 @@
         {
           "name": "production build",
           "shell": "bash",
-          "run": "set -Eeuo pipefail\nCI=true NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS='--max-old-space-size=4096' pnpm run build"
+          "run": "set -Eeuo pipefail\nnode var/docker/toybaco-verify-local-fonts.cjs .\nCI=true NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS='--max-old-space-size=4096' pnpm run build\nnode var/docker/toybaco-verify-local-fonts.cjs --built ."
         },
         {
           "name": "frontend・backend・orchestrator typecheck",
