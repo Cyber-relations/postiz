@@ -19,7 +19,7 @@ document.querySelectorAll('.mk').forEach(el => {
 });
 
 const siteHeader = document.querySelector('header.site');
-addEventListener('scroll', () => {
+if (siteHeader) addEventListener('scroll', () => {
   siteHeader.classList.toggle('scrolled', scrollY > 8);
 }, { passive:true });
 
