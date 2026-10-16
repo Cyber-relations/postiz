@@ -43,8 +43,10 @@ const toybacoMemoryUploadOptions: MulterOptions & {
     fieldArrayIndexLimit: 0,
     fileSize: 10 * 1024 * 1024,
     files: 1,
-    fields: 4,
-    parts: 5,
+    // STORAGE_PROVIDER=local(開発環境)ではUppy XHRUploadがmeta 5 field + fileを送る。
+    // 本番のcloudflare(S3 multipart)と未設定は従来どおりfields 4 / parts 5。
+    fields: process.env.STORAGE_PROVIDER === 'local' ? 5 : 4,
+    parts: process.env.STORAGE_PROVIDER === 'local' ? 6 : 5,
     fieldNameSize: 100,
     fieldSize: 1024,
     headerPairs: 64,
