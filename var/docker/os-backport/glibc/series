@@ -1,0 +1,6 @@
+0000-resolv-declare-p-class-type-syms.patch
+0001-resolv-ns_sprintrrf-class-type.patch
+0002-resolv-ns_sprintrrf-unknown-records.patch
+0003-resolv-ns_sprintrrf-inet_ntop-failure.patch
+0004-resolv-ns_sprintrrf-cve-2026-5435.patch
+0005-stdlib-strfmon-cve-2026-19499.patch
