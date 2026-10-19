@@ -6,6 +6,9 @@
 // is complete only when every declared root is present, at least one ELF was read,
 // no DT_NEEDED was omitted from the output, and every PT_DYNAMIC was resolved (the
 // program headers, not the optional section headers, are the source of record).
+// Changed on 2026-10-19 for two false positives on the real image: a symlink whose target
+// does not exist is counted in dangling_symlinks, not as an error, and a SysV hash with no
+// bucket and only the null symbol (a static-pie) is resolved with 0 symbols.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -195,11 +198,13 @@ export function elfInventory(buffer) {
       if (fromSegment.neededUnresolved) unresolved = true;
     }
     const word = at => buffer.readUInt32LE(at);
-    // DT_HASH: every bucket and chain entry must index a symbol below nchain.
+    // DT_HASH: every bucket and chain entry must index a symbol below nchain. No bucket
+    // (nbucket 0) is valid only with nchain 1, the null symbol alone: nothing can be looked
+    // up (a static-pie such as sentry-cli); the cross-checks below must agree with 1 entry.
     const sysvCount = () => {
       const head = resolve(tags.hash, 8); if (head === null) return null;
       const nbucket = word(head); const nchain = word(head + 4);
-      if (nbucket === 0 || nbucket > 1048576 || nchain === 0 || nchain > 500000) return null; // index 0 always exists
+      if ((nbucket === 0 && nchain !== 1) || nbucket > 1048576 || nchain === 0 || nchain > 500000) return null; // index 0 always exists
       const at = resolve(tags.hash, 8 + 4 * (nbucket + nchain)); if (at === null) return null;
       for (let index = 0; index < nbucket + nchain; index += 1) {
         const value = word(at + 8 + 4 * index); if (value !== 0 && value >= nchain) return null;
@@ -344,6 +349,7 @@ export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   const maxBytes = 4 * 1024 * 1024 * 1024; const started = Date.now();
   const visitedDirectories = new Set(); const visitedFiles = new Set(); const rows = []; const errors = new Map();
   let files = 0; let bytes = 0; let elfs = 0; let symlinksOutside = 0; let boundStopped = false; let neededOmitted = 0; let dynamicUnresolved = 0; let lowerBoundRows = 0;
+  let danglingSymlinks = 0;
   const error = code => errors.set(code, (errors.get(code) || 0) + 1);
   // Symlinks are followed anywhere inside the app (pnpm workspace links, .pnpm store);
   // a target outside the app is counted and makes the inventory incomplete.
@@ -352,15 +358,72 @@ export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   const bound = () => {
     if (files >= maxFiles || elfs >= maxElfs || bytes >= maxBytes || Date.now() - started > 45000) { boundStopped = true; throw new Error('INVENTORY_BOUND'); }
   };
+  // A path that realpath could not find (ENOENT) is a dangling symlink only when lstat
+  // shows a link, readlink reads it and its target, resolved component by component as the
+  // kernel does (a link component replaced by its target, at most 40 links; '..' taken from
+  // the real directory reached so far), stops at a missing component (ENOENT) inside the app
+  // with no '..' after it: 'inside'. 'outside' as soon as a component reached lies outside
+  // the app (an ancestor of the app root is only walked through, as by an absolute target).
+  // Anything else (not a link, another error, a component that is not a directory, a target
+  // that exists after all) is null and stays PATH_UNREADABLE. Every link target is read as
+  // bytes and must be valid UTF-8: decoded, an invalid name becomes another one (U+FFFD)
+  // whose lstat fails although the real target exists, so such a link is never classified.
+  // The components looked up are then those bytes exactly.
+  const danglingTarget = item => {
+    try {
+      if (!fs.lstatSync(item).isSymbolicLink()) return null;
+      let base = fs.realpathSync(path.dirname(item)); let links = 1;
+      const follow = link => {
+        const bytes = fs.readlinkSync(link, { encoding: 'buffer' }); const target = bytes.toString('utf8');
+        if (!Buffer.from(target, 'utf8').equals(bytes)) throw new Error('LINK_TARGET_NOT_UTF8'); // caught below: null
+        if (target.startsWith('/')) base = '/';
+        return target.split('/');
+      };
+      let parts = follow(item);
+      while (parts.length) {
+        const part = parts.shift();
+        if (part === '' || part === '.') continue;
+        if (part === '..') { base = path.dirname(base); continue; }
+        const next = path.join(base, part);
+        if (!allowed(next) && !appRoot.startsWith(next + '/')) return 'outside';
+        let stat;
+        try { stat = fs.lstatSync(next); } catch (failure) {
+          return failure.code === 'ENOENT' && allowed(next) && !parts.includes('..') ? 'inside' : null;
+        }
+        if (stat.isSymbolicLink()) { links += 1; if (links > 40) return null; parts = [...follow(next), ...parts]; continue; }
+        if (!stat.isDirectory() && parts.some(rest => rest !== '' && rest !== '.')) return null;
+        base = next;
+      }
+      return null;
+    } catch { return null; }
+  };
   const visit = item => {
     bound(); let resolved; let stat;
-    try { resolved = fs.realpathSync(item); if (!allowed(resolved)) { symlinksOutside += 1; return; } stat = fs.statSync(resolved); }
+    try { resolved = fs.realpathSync(item); } catch (failure) {
+      // A dangling symlink has nothing behind it to read and cannot hide a library: it is
+      // counted apart, not as an error. One whose target lies outside the app is counted
+      // as outside, as a resolved one would be.
+      const dangling = failure && failure.code === 'ENOENT' ? danglingTarget(item) : null;
+      if (dangling === 'inside') danglingSymlinks += 1;
+      else if (dangling === 'outside') symlinksOutside += 1;
+      else error('PATH_UNREADABLE');
+      return;
+    }
+    try { if (!allowed(resolved)) { symlinksOutside += 1; return; } stat = fs.statSync(resolved); }
     catch { error('PATH_UNREADABLE'); return; }
     const identity = stat.dev + ':' + stat.ino;
     if (stat.isDirectory()) {
       if (visitedDirectories.has(identity)) return; visitedDirectories.add(identity);
-      let entries; try { entries = fs.readdirSync(resolved).sort(); } catch { error('DIRECTORY_UNREADABLE'); return; }
-      for (const name of entries) visit(path.join(resolved, name));
+      let entries; try { entries = fs.readdirSync(resolved, { encoding: 'buffer' }); } catch { error('DIRECTORY_UNREADABLE'); return; }
+      // Names are read as bytes. One that is not valid UTF-8 has no exact string path: decoded,
+      // it becomes another name (U+FFFD), possibly a sibling's. It is counted as unreadable and
+      // never visited under the decoded name; the valid names are visited in the same order.
+      const names = [];
+      for (const bytes of entries) {
+        const name = bytes.toString('utf8');
+        if (Buffer.from(name, 'utf8').equals(bytes)) names.push(name); else error('PATH_UNREADABLE');
+      }
+      for (const name of names.sort()) visit(path.join(resolved, name));
       return;
     }
     if (!stat.isFile() || visitedFiles.has(identity)) return;
@@ -394,7 +457,7 @@ export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   // Complete only when the observation itself is whole: every declared root present,
   // at least one ELF read (the Postiz image always carries native addons), nothing
   // unreadable, bounded or outside the app, no DT_NEEDED omitted from the rows, and
-  // every PT_DYNAMIC resolved.
+  // every PT_DYNAMIC resolved. Dangling symlinks inside the app are counted, not errors.
   const missing = roots.filter(root => !present.includes(root));
   const incomplete = [];
   if (missing.length) incomplete.push('ROOT_MISSING');
@@ -411,8 +474,9 @@ export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   if (neededOmitted) limitations.push(`DT_NEEDED entries that are not plain library names were omitted from ${neededOmitted} row(s); those dependencies are not recorded`);
   if (lowerBoundRows) limitations.push(`The dynamic symbol count of ${lowerBoundRows} row(s) has no .dynsym section to confirm it; the hash tables and relocations give a lower bound, read in full`);
   if (dynamicUnresolved) limitations.push(`The PT_DYNAMIC table of ${dynamicUnresolved} row(s) could not be resolved; their needed libraries and symbols may be missing`);
+  if (danglingSymlinks) limitations.push(`${danglingSymlinks} symlink(s) inside the app point to a path that does not exist; nothing was read behind them, and a file created there later is not in this inventory`);
   return { scope: 'POSTIZ_APP_ELF_DYNAMIC_INVENTORY_ONLY', roots_declared: [...roots], roots_present: present, roots_missing: missing,
-    files_observed: files, elfs_observed: elfs, bytes_read: bytes, symlinks_outside_scope: symlinksOutside,
+    files_observed: files, elfs_observed: elfs, bytes_read: bytes, symlinks_outside_scope: symlinksOutside, dangling_symlinks: danglingSymlinks,
     needed_omitted_rows: neededOmitted, dynamic_unresolved_rows: dynamicUnresolved, symbol_lower_bound_rows: lowerBoundRows, errors: Object.fromEntries(errors), incomplete_reasons: incomplete,
     complete_in_declared_scope: complete, rows, limitations, paid_resource_or_role_created: false };
 }
