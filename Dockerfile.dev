@@ -42,6 +42,34 @@ RUN test ! -e node_modules/vitest \
  && test -f node_modules/prisma/build/index.js \
  && test -f node_modules/.prisma/client/index.js
 
+# Rebuild Debian zlib1g from checksum-pinned source with the reviewed CVE-2026-85091
+# source backport (same ABI and architecture) and prove the fix with the native
+# reproducer. Only the rebuilt .deb and its build stamp leave this stage.
+FROM node:22.23.2-trixie-slim@sha256:7b8a0c89c54499bee567618f96578e1a12a800f062fbdbfd1fb6a443fa6f6284 AS zlib-backport
+COPY var/docker/os-backport/zlib /toybaco/os-backport/zlib
+RUN bash /toybaco/os-backport/zlib/build-zlib1g-backport.sh /toybaco/os-backport/zlib /toybaco/os-backport/out
+
+# Rebuild Debian glibc (libc6, libc-bin) from checksum-pinned source with the
+# official 2.41 stable-branch backports for CVE-2026-5435 and CVE-2026-19499 (same
+# ABI and architecture). Only the rebuilt .debs and the build stamp leave this stage.
+FROM node:22.23.2-trixie-slim@sha256:7b8a0c89c54499bee567618f96578e1a12a800f062fbdbfd1fb6a443fa6f6284 AS glibc-backport
+COPY var/docker/os-backport/glibc /toybaco/os-backport/glibc
+RUN bash /toybaco/os-backport/glibc/build-glibc-backport.sh /toybaco/os-backport/glibc /toybaco/os-backport/out
+
+# Build Node.js 22.23.2 from the exact release source (SHASUMS256.txt signature and
+# SHA-256 pins checked) with --shared-zlib against the reviewed zlib1g source backport,
+# so the runtime binary links the system libz.so.1 and carries no gz* of its own. The
+# read-only glibc-backport mount orders the two all-CPU native builds (glibc, then
+# Node); make -j is bounded by memory and the cgroup quota inside the script. Only the
+# node binary, its LICENSE and the build stamp leave this stage.
+FROM node:22.23.2-trixie-slim@sha256:7b8a0c89c54499bee567618f96578e1a12a800f062fbdbfd1fb6a443fa6f6284 AS node-source
+COPY var/docker/os-backport/node /toybaco/os-backport/node
+ARG TOYBACO_NODE_BUILD_DEADLINE_EPOCH
+RUN --mount=type=bind,from=zlib-backport,source=/toybaco/os-backport/out,target=/toybaco/os-backport/zlib-out \
+    --mount=type=bind,from=glibc-backport,source=/toybaco/os-backport/out,target=/toybaco/os-backport/glibc-out \
+    --mount=type=bind,source=var/docker/os-backport/zlib,target=/toybaco/os-backport/zlib-src \
+    bash /toybaco/os-backport/node/build-node-shared-zlib.sh /toybaco/os-backport/node /toybaco/os-backport/zlib-out /toybaco/os-backport/glibc-out /toybaco/os-backport/zlib-src /toybaco/os-backport/node-out
+
 FROM nginx:1.30.4@sha256:09cc2702709e6388d979d8030e3ab4eb1ceb699b2dced26d7543e872a822e823 AS runtime
 ARG NEXT_PUBLIC_VERSION
 ARG TOYBACO_SOURCE_COMMIT
@@ -75,20 +103,29 @@ RUN groupadd --system --gid 10001 www \
  && chown -R www:www /www /uploads /var/cache/nginx
 
 WORKDIR /app
-COPY --from=build /usr/local/bin/node /usr/local/bin/node
-COPY --from=build /usr/local/LICENSE /usr/local/share/licenses/node/LICENSE
+COPY --from=node-source /toybaco/os-backport/node-out/node /usr/local/bin/node
+COPY --from=node-source /toybaco/os-backport/node-out/LICENSE /usr/local/share/licenses/node/LICENSE
+COPY --from=node-source /toybaco/os-backport/node-out/build-stamp.json /usr/local/share/toybaco/node/build-stamp.json
 COPY --from=production --chown=www:www /app /app
 COPY --from=build /app/var/docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build --chmod=0555 /app/var/docker/toybaco-entrypoint.sh /usr/local/bin/toybaco-entrypoint
 RUN node /app/var/docker/toybaco-verify-rds-public-ca.cjs --install-system-trust /app
+# Replace the base zlib1g and glibc with the reviewed source backports.
+RUN --mount=type=bind,from=zlib-backport,source=/toybaco/os-backport/out,target=/tmp/toybaco-zlib-backport \
+    node /app/var/docker/toybaco-verify-os-backport.cjs --install /tmp/toybaco-zlib-backport /app/var/docker/os-backport/postiz-os-backport.json
+RUN --mount=type=bind,from=glibc-backport,source=/toybaco/os-backport/out,target=/tmp/toybaco-glibc-backport \
+    node /app/var/docker/toybaco-verify-os-backport.cjs --install /tmp/toybaco-glibc-backport /app/var/docker/os-backport/postiz-os-backport.json
 
 USER www
 RUN node /app/var/docker/toybaco-verify-os-runtime.cjs /app
+RUN node /app/var/docker/toybaco-verify-os-backport.cjs verify /app/var/docker/os-backport/postiz-os-backport.json
+RUN node /app/var/docker/toybaco-verify-node-shared-zlib.cjs verify /usr/local/share/toybaco/node/build-stamp.json
 RUN node /app/var/docker/toybaco-verify-rds-public-ca.cjs /app
 RUN node /app/var/docker/toybaco-verify-rds-public-ca.cjs --verify-system-trust /app
 RUN node /app/var/docker/toybaco-verify-local-fonts.cjs --built /app
 RUN node /app/var/docker/toybaco-verify-next-shell-quote.cjs /app \
  && node /app/var/docker/toybaco-verify-ssrf-origin.cjs /app
+RUN node /app/var/docker/toybaco-verify-node-shared-zlib.cjs native-modules /app
 STOPSIGNAL SIGTERM
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 CMD ["/usr/local/bin/toybaco-entrypoint"]
