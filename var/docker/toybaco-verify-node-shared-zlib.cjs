@@ -29,10 +29,10 @@ const { spawnSync } = require('node:child_process');
 
 const EXPECTED = Object.freeze({
   node_path: '/usr/local/bin/node',
-  node_version: '22.23.2',
-  tarball_sha256: 'bbe768df8d5815d7fa76124052985332452e0a4742d39f32027550d1aab8f6fb',
-  shasums_sha256: '778ac5b2fcdbd68d9c0ae9f4310674faa3af0910bd0d18e7f6597787c40a3e39',
-  signer_fingerprint: 'CC68F5A3106FF448322E48ED27F5E38D5B0A215F',
+  node_version: '22.23.4',
+  tarball_sha256: '7b9adc82d612d0a2a863d96c46de2292552e250cee51956ebbe0146c42aacae9',
+  shasums_sha256: 'c90c3f1478fda8308b22cc1a1b0dc536169196444e67ee8b5c582fd351d02bce',
+  signer_fingerprint: '5BE8A3F6C8A5C01D106C0AD820B1A390B168D356',
   zlib_version: '1.3.1',
   zlib_fixed: '1:1.3.dfsg+really1.3.1-1+toybaco1',
   libz_path: '/usr/lib/x86_64-linux-gnu/libz.so.1.3.1',

@@ -39,7 +39,7 @@ async function main(root) {
   for (const file of ['/usr/sbin/nginx', path.join(root, 'node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node'), path.join(root, 'node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x')]) {
     assert.ok(!command('ldd', [file]).includes('not found'), 'required ELF library missing');
   }
-  assert.equal(process.version, 'v22.23.2');
+  assert.equal(process.version, 'v22.23.4');
   command('nginx', ['-v']);
   command(path.join(root, 'node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x'), ['--version']);
   console.log('TOYBACO_OS_RUNTIME=PASS removed14 retained7 nativeSharp6 fonts Nginx Prisma');

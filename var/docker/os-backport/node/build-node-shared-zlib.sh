@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Node.js 22.23.2 from the exact release source with --shared-zlib, linked
+# Build Node.js 22.23.4 from the exact release source with --shared-zlib, linked
 # against the reviewed zlib1g source backport (+toybaco1), so the binary carries no
 # zlib copy of its own for gz* and resolves zlib through the system libz.so.1.
 #
@@ -53,7 +53,7 @@
 # build fails closed unless the estimated time fits before it; when unset, the stamp
 # records that no deadline was checked.
 # Intended for a Debian trixie amd64 builder stage based on the pinned official
-# node:22.23.2-trixie-slim image (its /usr/local/bin/node is the reference binary).
+# node:22.23.4-trixie-slim image (its /usr/local/bin/node is the reference binary).
 set -Eeuo pipefail
 IFS=$'\n\t'
 export LC_ALL=C.UTF-8 DEBIAN_FRONTEND=noninteractive
@@ -69,16 +69,16 @@ mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd -P)"
 
 # Exact Node release source.
-NODE_VERSION='22.23.2'
+NODE_VERSION='22.23.4'
 NODE_DIST="https://nodejs.org/dist/v$NODE_VERSION"
 NODE_TARBALL="node-v$NODE_VERSION.tar.xz"
-NODE_TARBALL_SHA256='bbe768df8d5815d7fa76124052985332452e0a4742d39f32027550d1aab8f6fb'
-SHASUMS_SHA256='778ac5b2fcdbd68d9c0ae9f4310674faa3af0910bd0d18e7f6597787c40a3e39'
+NODE_TARBALL_SHA256='7b9adc82d612d0a2a863d96c46de2292552e250cee51956ebbe0146c42aacae9'
+SHASUMS_SHA256='c90c3f1478fda8308b22cc1a1b0dc536169196444e67ee8b5c582fd351d02bce'
 # Node release key (README "Release keys", nodejs/release-keys keys/<fpr>.asc).
-RELEASE_KEY_FPR='CC68F5A3106FF448322E48ED27F5E38D5B0A215F'
+RELEASE_KEY_FPR='5BE8A3F6C8A5C01D106C0AD820B1A390B168D356'
 RELEASE_KEY_FILE="nodejs-release-key-$RELEASE_KEY_FPR.asc"
-RELEASE_KEY_SHA256='e31e1aa40a8331f01d753cef475f7b9eab934fc25f5f0b36995bfd80bd66ad27'
-RELEASE_KEYRING_SHA256='f678918aff78be1eecac10681ed4e0ee47bd61b173ce43c85a94729d551eb12d'
+RELEASE_KEY_SHA256='5115095e2f8010c75da052ecb1cfb3af630e084f0f8daa93a863557b01b0f90a'
+RELEASE_KEYRING_SHA256='067260a186848e8e35937eb8b1a3d5649d204f0153274b5f844b762dc5cea77a'
 # deps/zlib/gzwrite.c of the release (upstream zlib 1.3.1); not compiled with --shared-zlib.
 BUNDLED_GZWRITE_SHA256='469b1e58932ea11bdda2a153f6655f7b3c13254240fae157181b49ed1bc93b47'
 
@@ -107,7 +107,7 @@ GLIBC_FIXED='2.41-12+deb13u4+toybaco1'
 
 # make -j: min(nproc, cgroup cpu.max quota, (usable memory - reserve) / per job, cap).
 # Usable memory is MemAvailable, lowered to cgroup memory.max - memory.current when the
-# container has a limit. Node's BUILDING.md (v22.23.2): "at least 8GB of RAM is typically
+# container has a limit. Node's BUILDING.md (v22.23.4): "at least 8GB of RAM is typically
 # required when compiling with 4 parallel jobs (make -j4)", i.e. 2 GiB per job including
 # the link. The reserve keeps 1 GiB for the test runner and the stage's other processes.
 # Measured in private CI run 38799690924 (2 CPUs, 7 GB runner, -j2, no OOM): make took
