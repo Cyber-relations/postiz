@@ -16,14 +16,19 @@
 //                        libc-bin): FAIL until reviewed.
 //   unreviewed_unfixed   an unfixed row on a package nobody has reviewed yet:
 //                        counted and listed; FAIL only when STRICT_UNREVIEWED.
+//   risk_accepted        a fixed row that exactly matches a time-boxed owner risk
+//                        acceptance (RISK_ACCEPTANCES: advisory ID, npm package, exact
+//                        installed version and purl) before its expiry; once expired it
+//                        is fixed_unapplied again.
 //
 // The backport set is pinned in code (BACKPORTS); widening it needs a review here,
 // not only in the config. The pinned push-gate Trivy (--ignore-unfixed=true) is a
-// separate step and is not changed by this classification.
+// separate step and is not changed by this classification; its only ignore file is
+// renderTrivyIgnore(RISK_ACCEPTANCES), byte for byte.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const IMAGE = '951034765053.dkr.ecr.ap-northeast-1.amazonaws.com/toybaco/postiz';
@@ -68,6 +73,26 @@ const SMOKE_OUTPUT = /^glibc-smoke OK strfmon=\d+ getaddrinfo=0$/;
 // the reachability review of the 9 open advisories (45 rows measured on 2026-10-15)
 // and their deferral entries; see docs/postiz-os-backport-policy.md.
 export const STRICT_UNREVIEWED = false;
+// Time-boxed risk acceptances, pinned in code like BACKPORTS (owner D ruling,
+// owner-D-pz-zod3-time-boxed-risk-acceptance-ruling-20261025.json). zod has no 3.x release
+// fixing CVE-2023-54404; 3.22.4 and 3.25.76 are the versions of production e911653c. The
+// entry is accepted until 00:00 UTC of `expires`, the boundary of Trivy's expired_at, and
+// may never be extended past RISK_ACCEPTANCE_LIMIT without changing this code.
+export const RISK_ACCEPTANCE_LIMIT = '2026-11-30';
+export const RISK_ACCEPTANCE_FILE = 'postiz-trivy-risk-acceptance.yaml';
+export const RISK_ACCEPTANCES = Object.freeze([
+  Object.freeze({
+    vulnerability: 'CVE-2023-54404',
+    ecosystem: 'npm',
+    package: 'zod',
+    versions: Object.freeze(['3.22.4', '3.25.76']),
+    expires: '2026-11-30',
+    receipt: 'owner-D-pz-zod3-time-boxed-risk-acceptance-ruling-20261025.json',
+    statement: 'zod 3.x has no release fixing CVE-2023-54404 (fixed only in 4.6.6); these are the'
+      + ' production e911653c versions. Remove the unused providers and the legacy AI paths and move'
+      + ' the root zod to 4.x before the expiry.',
+  }),
+]);
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const canonical = value => JSON.stringify(sort(value));
@@ -196,8 +221,59 @@ export function validateScannerArgs(args) {
   equal(array(args), SCANNER_ARGS, 'exact raw scanner arguments (unfixed included, no filtering flags)');
 }
 
+// The reviewed acceptance set: one advisory on exact npm versions with an expiry no later
+// than RISK_ACCEPTANCE_LIMIT. Anything wider is a code change reviewed here.
+export function validateRiskAcceptances(entries) {
+  assert.equal(array(entries).length, 1, 'exactly one time-boxed risk acceptance');
+  const [entry] = entries;
+  equal(Object.keys(entry).sort(), ['ecosystem', 'expires', 'package', 'receipt', 'statement', 'versions', 'vulnerability'],
+    'risk acceptance fields');
+  assert.equal(entry.vulnerability, 'CVE-2023-54404', 'risk acceptance advisory');
+  assert.equal(entry.ecosystem, 'npm', 'risk acceptance ecosystem');
+  assert.equal(entry.package, 'zod', 'risk acceptance package');
+  equal(array(entry.versions), ['3.22.4', '3.25.76'], 'risk acceptance exact versions');
+  assert.match(entry.expires, /^\d{4}-\d{2}-\d{2}$/, 'risk acceptance expiry date');
+  assert.ok(!Number.isNaN(Date.parse(`${entry.expires}T00:00:00Z`)), 'risk acceptance expiry date');
+  assert.ok(entry.expires <= RISK_ACCEPTANCE_LIMIT, `risk acceptance expiry later than ${RISK_ACCEPTANCE_LIMIT}`);
+  assert.match(entry.receipt, /^owner-D-[a-z0-9-]+\.json$/, 'risk acceptance receipt');
+  assert.match(entry.statement, /^[^"\\\n]{20,400}$/, 'risk acceptance statement');
+  return entries;
+}
+
+export const riskAcceptancePurl = (entry, version) => `pkg:${entry.ecosystem}/${entry.package}@${version}`;
+const riskAcceptanceActive = (entry, now) => now.getTime() < Date.parse(`${entry.expires}T00:00:00Z`);
+
+// The YAML ignore file of the push-time Trivy gate, derived from the same pinned entries.
+export function renderTrivyIgnore(entries = RISK_ACCEPTANCES) {
+  validateRiskAcceptances(entries);
+  return ['# Time-boxed risk acceptance of the pinned push-time Trivy gate (--ignorefile).',
+    '# Generated from RISK_ACCEPTANCES in scripts/verify-postiz-os-backport-classification.mjs;',
+    '# its SHA-256 is pinned in the public publisher workflow. Owner ruling in the statement.',
+    'vulnerabilities:',
+    ...entries.flatMap(entry => [
+      `  - id: ${entry.vulnerability}`,
+      '    purls:',
+      ...entry.versions.map(version => `      - "${riskAcceptancePurl(entry, version)}"`),
+      `    expired_at: ${entry.expires}`,
+      `    statement: "${entry.statement} Receipt: ${entry.receipt}"`,
+    ]), ''].join('\n');
+}
+
+export function validateTrivyIgnoreText(text, entries = RISK_ACCEPTANCES) {
+  assert.equal(text, renderTrivyIgnore(entries), 'Trivy ignore file must be exactly the pinned risk acceptances');
+}
+
+// The acceptance covering a fixed language-package row, matched exactly: advisory ID,
+// npm package, installed version and the scanner's purl.
+function riskAcceptanceFor(result, finding, entries) {
+  if (result.Class !== 'lang-pkgs' || result.Type !== 'node-pkg') return undefined;
+  return entries.find(entry => entry.vulnerability === finding.VulnerabilityID
+    && entry.package === finding.PkgName && entry.versions.includes(finding.InstalledVersion)
+    && finding.PkgIdentifier?.PURL === riskAcceptancePurl(entry, finding.InstalledVersion));
+}
+
 // Classifies every Critical/High row of the unaltered raw report.
-export function classifyRawReport(report, exitStatus, config) {
+export function classifyRawReport(report, exitStatus, config, { now = new Date(), riskAcceptances = RISK_ACCEPTANCES } = {}) {
   assert.equal(report.SchemaVersion, 2);
   assert.equal(report.Metadata.OS.Family, DEBIAN_FAMILY);
   assert.match(String(report.Metadata.OS.Name), DEBIAN_RELEASE, 'Debian trixie (13.x) runtime');
@@ -230,8 +306,13 @@ export function classifyRawReport(report, exitStatus, config) {
         status: finding.Status || '', installed_version: finding.InstalledVersion,
         fixed_version: finding.FixedVersion || '', class: result.Class, target: result.Target };
       const backport = result.Class === 'os-pkgs' ? backportFor(finding.VulnerabilityID, finding.PkgName) : undefined;
-      if (fixAvailable(finding)) {
+      const acceptance = fixAvailable(finding) ? riskAcceptanceFor(result, finding, riskAcceptances) : undefined;
+      if (acceptance && riskAcceptanceActive(acceptance, now)) {
+        row.disposition = 'risk_accepted';
+        row.risk_acceptance = { expires: acceptance.expires, receipt: acceptance.receipt };
+      } else if (fixAvailable(finding)) {
         row.disposition = 'fixed_unapplied';
+        if (acceptance) row.risk_acceptance_expired = acceptance.expires;
       } else if (backport && finding.InstalledVersion === fixedBySource[backport.source]) {
         row.disposition = 'backported';
         row.source_package = backport.source;
@@ -247,20 +328,25 @@ export function classifyRawReport(report, exitStatus, config) {
   return rows;
 }
 
-const ORDER = ['fixed_unapplied', 'reviewed_unexpected', 'unreviewed_unfixed', 'backported'];
+const ORDER = ['fixed_unapplied', 'reviewed_unexpected', 'unreviewed_unfixed', 'risk_accepted', 'backported'];
 
-export function evaluate(input, { strictUnreviewed = STRICT_UNREVIEWED } = {}) {
+// `now` is the evaluation time (the run's clock in the publisher; fixed by the tests).
+export function evaluate(input, { strictUnreviewed = STRICT_UNREVIEWED, now = new Date(),
+  riskAcceptances = RISK_ACCEPTANCES } = {}) {
   const { config, configSha, context, proof, raw, rawExit, scannerArgs } = input;
+  assert.ok(now instanceof Date && !Number.isNaN(now.getTime()), 'evaluation time');
+  validateRiskAcceptances(riskAcceptances);
   validateConfig(config);
   validateProof(proof, config, configSha, context);
   validateScannerArgs(scannerArgs);
-  const rows = classifyRawReport(raw, rawExit, config)
+  const rows = classifyRawReport(raw, rawExit, config, { now, riskAcceptances })
     .sort((a, b) => ORDER.indexOf(a.disposition) - ORDER.indexOf(b.disposition)
       || a.package.localeCompare(b.package) || a.vulnerability.localeCompare(b.vulnerability));
   const of = disposition => rows.filter(r => r.disposition === disposition);
   const bySeverity = (list, severity) => list.filter(r => r.severity === severity).length;
   const unreviewed = of('unreviewed_unfixed');
   const backported = of('backported');
+  const accepted = of('risk_accepted');
   const reasons = [];
   if (of('fixed_unapplied').length) reasons.push('fixed_unapplied');
   if (of('reviewed_unexpected').length) reasons.push('reviewed_package_unexpected');
@@ -277,6 +363,7 @@ export function evaluate(input, { strictUnreviewed = STRICT_UNREVIEWED } = {}) {
     evaluation_kind: 'independent_os_raw_scan_classification',
     scanner_vex_filtering: false,
     image: IMAGE,
+    evaluated_at: now.toISOString(),
     source: { commit: context.source_commit, ref: context.source_ref },
     scanner: { arguments: [...SCANNER_ARGS], exit_status: rawExit },
     counts: {
@@ -286,7 +373,12 @@ export function evaluate(input, { strictUnreviewed = STRICT_UNREVIEWED } = {}) {
       reviewed_unexpected: of('reviewed_unexpected').length,
       unreviewed_unfixed_rows: unreviewed.length,
       unreviewed_unique: new Set(unreviewed.map(r => r.vulnerability)).size,
+      risk_accepted: accepted.length,
     },
+    risk_acceptances: riskAcceptances.map(entry => ({ vulnerability: entry.vulnerability,
+      package: entry.package, versions: [...entry.versions], expires: entry.expires, receipt: entry.receipt,
+      active: riskAcceptanceActive(entry, now),
+      accepted_rows: accepted.filter(r => r.vulnerability === entry.vulnerability && r.package === entry.package).length })),
     rows,
     backported_cves_observed: [...backportedCves].sort(),
     backported_cves_not_observed: [...expectedCves].filter(c => !backportedCves.has(c)).sort(),
@@ -304,12 +396,15 @@ export function summary(result) {
     + ` backported=${c.backported} unreviewed_unfixed_rows=${c.unreviewed_unfixed_rows}`
     + ` unreviewed_unique=${c.unreviewed_unique} fixed_unapplied=${c.fixed_unapplied}`
     + ` reviewed_unexpected=${c.reviewed_unexpected} raw_critical=${c.raw_critical} raw_high=${c.raw_high}`
-    + ` strict_unreviewed=${result.strict_unreviewed}`
+    + ` risk_accepted=${c.risk_accepted} strict_unreviewed=${result.strict_unreviewed}`
     + ` backported_cves=${result.backported_cves_observed.join(',') || '-'}`
     + ` not_observed=${result.backported_cves_not_observed.join(',') || '-'}`;
   return [head, ...result.rows.map(r => `PZ_OS_CVE_ROW ${r.disposition} ${r.package} ${r.vulnerability}`
     + ` ${r.severity} status=${r.status || '-'} installed=${r.installed_version}`
-    + ` fixed=${r.fixed_version || '-'}`)].join('\n');
+    + ` fixed=${r.fixed_version || '-'}`),
+  ...result.risk_acceptances.map(a => `PZ_OS_CVE_RISK_ACCEPTANCE ${a.vulnerability} ${a.package}`
+    + ` versions=${a.versions.join(',')} expires=${a.expires} active=${a.active}`
+    + ` accepted_rows=${a.accepted_rows} receipt=${a.receipt}`)].join('\n');
 }
 
 function regular(path) {
@@ -323,6 +418,8 @@ function main() {
   const [dir, configPath] = process.argv.slice(2);
   assert.ok(dir && configPath, 'usage: verify-postiz-os-backport-classification.mjs <evidence-dir> <config>');
   const configBytes = regular(resolve(configPath));
+  // The push gate's ignore file sits next to the config; it must be the pinned acceptances.
+  validateTrivyIgnoreText(regular(join(dirname(resolve(configPath)), RISK_ACCEPTANCE_FILE)).toString('utf8'));
   const result = evaluate({
     config: JSON.parse(configBytes),
     configSha: sha(configBytes),

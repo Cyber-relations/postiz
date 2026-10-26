@@ -46,7 +46,7 @@ async function main(sourceRoot) {
       const entry = path.join(compiled, 'index.js');
       if (kind === 'next-version' || kind === 'next-old-affected') {
         const manifest = JSON.parse(fs.readFileSync(path.join(moduleRoot, 'package.json')));
-        manifest.version = kind === 'next-version' ? '16.4.0' : '16.3.6';
+        manifest.version = kind === 'next-version' ? '16.4.0' : '16.3.8';
         fs.writeFileSync(path.join(moduleRoot, 'package.json'), JSON.stringify(manifest));
       }
       if (kind === 'metadata') fs.appendFileSync(path.join(compiled, 'package.json'), ' ');
