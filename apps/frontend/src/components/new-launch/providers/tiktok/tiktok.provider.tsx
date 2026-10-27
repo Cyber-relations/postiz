@@ -4,6 +4,7 @@ import {
   FC,
   useMemo,
   useEffect,
+  useLayoutEffect,
   useState,
   useRef,
 } from 'react';
@@ -13,6 +14,8 @@ import {
 } from '@gitroom/frontend/components/new-launch/providers/high.order.provider';
 import { TikTokDto, TikTokContentPostingDto, TikTokCreatorInfo, parseTikTokCreatorInfo } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/tiktok.dto';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
+import { toybacoTikTokDisclosureReason, TIKTOK_BRANDED_PRIVATE_REASON } from './tiktok.publish.guard';
 import { useSettings } from '@gitroom/frontend/components/launches/helpers/use.values';
 import { Select } from '@gitroom/react/form/select';
 import { Checkbox } from '@gitroom/react/form/checkbox';
@@ -47,6 +50,16 @@ export const TikTokContentPostingSettings: FC = () => {
   const disclose = watch('disclose') === true;
   const branded = watch('brand_content_toggle') === true;
   const organic = watch('brand_organic_toggle') === true;
+  const setPublishGuard = useLaunchStore((state) => state.setTikTokPublishGuard);
+  const publishContext = useMemo(() => ({ identity, upload, privacy, disclose, organic, branded, lease: Symbol('tiktok-disclosure') }), [identity, upload, privacy, disclose, organic, branded]);
+  const publishLease = publishContext.lease;
+  const publishReason = toybacoTikTokDisclosureReason(publishContext);
+  useLayoutEffect(() => {
+    if (!identity) return;
+    const lease = publishLease;
+    setPublishGuard(identity, lease, publishReason);
+    return () => setPublishGuard(identity, lease, null);
+  }, [identity, publishReason, setPublishGuard, publishLease]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -154,10 +167,11 @@ export const TikTokContentPostingSettings: FC = () => {
   const labels: Record<TikTokDto['privacy_level'], string> = {
     PUBLIC_TO_EVERYONE: '全員', MUTUAL_FOLLOW_FRIENDS: '相互フォローの友達', FOLLOWER_OF_CREATOR: 'フォロワー', SELF_ONLY: '自分のみ',
   };
-  const checkbox = (field: string, label: string, disabled = false) => (
-    <label className={clsx('flex items-center gap-2', disabled && 'opacity-50')}>
-      <input type="checkbox" {...register(field)} checked={watch(field) === true} disabled={disabled}
+  const checkbox = (field: string, label: string, disabled = false, reason = '') => (
+    <label title={reason || undefined} className={clsx('flex flex-wrap items-center gap-2', disabled && 'opacity-50')}>
+      <input type="checkbox" {...register(field)} checked={watch(field) === true} disabled={disabled} aria-describedby={reason ? `tiktok-${identity}-${field}-reason` : undefined}
         onChange={(event) => setValue(field, event.target.checked)} />{label}
+      {reason && <span id={`tiktok-${identity}-${field}-reason`} className="w-full text-sm">{reason}</span>}
     </label>
   );
 
@@ -179,7 +193,7 @@ export const TikTokContentPostingSettings: FC = () => {
         <select className="bg-newBgColorInner h-[42px] border border-newTableBorder rounded-[8px] text-textColor px-3" {...register('privacy_level')} value={privacy ?? ''} disabled={!creator || loading}
           onChange={(event) => setValue('privacy_level', event.target.value)}>
           <option value="" disabled>公開範囲を選択してください</option>
-          {creator?.privacy_level_options.map((option) => <option key={option} value={option} disabled={branded && option === 'SELF_ONLY'}>{labels[option]}</option>)}
+          {creator?.privacy_level_options.map((option) => <option key={option} value={option} disabled={branded && option === 'SELF_ONLY'} title={branded && option === 'SELF_ONLY' ? TIKTOK_BRANDED_PRIVATE_REASON : undefined}>{labels[option]}</option>)}
         </select>
       </label>
       {checkbox('comment', 'コメントを許可', loading || !creator || creator.comment_disabled)}
@@ -188,7 +202,7 @@ export const TikTokContentPostingSettings: FC = () => {
       {checkbox('disclose', 'ブランド・商品・サービスを宣伝する投稿')}
       {disclose && <div className="flex flex-col gap-2">
         <p>該当する項目を1つ以上選択してください。</p>
-        {checkbox('brand_organic_toggle', '自分のブランドを宣伝')}{checkbox('brand_content_toggle', '第三者のブランドを宣伝（有償パートナーシップ）')}
+        {checkbox('brand_organic_toggle', '自分のブランドを宣伝')}{checkbox('brand_content_toggle', '第三者のブランドを宣伝（有償パートナーシップ）', privacy === 'SELF_ONLY' && !branded, privacy === 'SELF_ONLY' ? TIKTOK_BRANDED_PRIVATE_REASON : '')}
         {(organic || branded) && <p>{branded ? '「有償パートナーシップ」と表示されます。' : '「プロモーションコンテンツ」と表示されます。'}</p>}
         {branded && <p>第三者のブランドを宣伝する投稿では「自分のみ」を選択できません。</p>}
       </div>}

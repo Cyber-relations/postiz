@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { toybacoUpdateTikTokGuard, type TikTokPublishGuards } from './providers/tiktok/tiktok.publish.guard';
 import dayjs from 'dayjs';
 import { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
 import { createRef, RefObject } from 'react';
@@ -40,6 +41,8 @@ interface StoreState {
   current: string;
   comments: boolean | 'no-media';
   locked: boolean;
+  tiktokPublishGuards: TikTokPublishGuards;
+  setTikTokPublishGuard: (id: string, lease: symbol, reason: string | null) => void;
   hide: boolean;
   setLocked: (locked: boolean) => void;
   integrations: Integrations[];
@@ -149,6 +152,7 @@ const initialState = {
   isCreateSet: false,
   current: 'global',
   locked: false,
+  tiktokPublishGuards: {} as TikTokPublishGuards,
   hide: false,
   integrations: [] as Integrations[],
   selectedIntegrations: [] as SelectedIntegrations[],
@@ -521,6 +525,10 @@ export const useLaunchStore = create<StoreState>()((set) => ({
     set((state) => ({
       tab: tab,
     })),
+  setTikTokPublishGuard: (id, lease, reason) => set((state) => {
+    const guards = toybacoUpdateTikTokGuard(state.tiktokPublishGuards, id, lease, reason);
+    return guards === state.tiktokPublishGuards ? state : { tiktokPublishGuards: guards };
+  }),
   setLocked: (locked: boolean) =>
     set((state) => ({
       locked: locked,

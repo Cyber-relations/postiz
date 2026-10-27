@@ -19,6 +19,7 @@ import { SelectCurrent } from '@gitroom/frontend/components/new-launch/select.cu
 import { ShowAllProviders } from '@gitroom/frontend/components/new-launch/providers/show.all.providers';
 import { ToybacoPostingFailureNotice, useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
+import { toybacoTikTokPublishReason } from './providers/tiktok/tiktok.publish.guard';
 import { DatePicker } from '@gitroom/frontend/components/launches/helpers/date.picker';
 import { useShallow } from 'zustand/react/shallow';
 import { RepeatComponent } from '@gitroom/frontend/components/launches/repeat.component';
@@ -527,6 +528,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     );
   }, [current]);
 
+  const tiktokPublishGuards = useLaunchStore((state) => state.tiktokPublishGuards);
+  const toybacoTikTokReason = !dummy && !addEditSets
+    ? toybacoTikTokPublishReason(selectedIntegrations, tiktokPublishGuards) : '';
+
   const changeCustomer = useCallback(
     (customer: string) => {
       const neededIntegrations = integrations.filter(
@@ -611,6 +616,11 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       if (toybacoSaving.current) return;
       if (toybacoConnectionError) return;
       if (toybacoSavedResult) return;
+      const tikTokOperationGuards = useLaunchStore.getState().tiktokPublishGuards;
+      if (!dummy && !addEditSets && type !== 'draft') {
+        const reason = toybacoTikTokPublishReason(selectedIntegrations, useLaunchStore.getState().tiktokPublishGuards, tikTokOperationGuards);
+        if (reason) { setToybacoSaveError(reason); return; }
+      }
       if (!dummy && !addEditSets && type !== 'draft' && toybacoAuthorityState !== 'ready') {
         setToybacoSaveError(toybacoAuthorityState === 'loading' ? '投稿先の状態を確認しています。少し待ってから予約してください。' : '投稿先の再開状態を確認できません。入力内容は残しています。投稿先を再確認し、投稿先と日時を確認してください。');
         return;
@@ -874,6 +884,11 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         setLoading(false);
       }
 
+      // An awaited confirmation/validation must not send with a stale gate.
+      if (!dummy && !addEditSets && type !== 'draft') {
+        const reason = toybacoTikTokPublishReason(selectedIntegrations, useLaunchStore.getState().tiktokPublishGuards, tikTokOperationGuards);
+        if (reason) { setToybacoSaveError(reason); return; }
+      }
       if (!dummy) {
         addEditSets
           ? addEditSets(data)
@@ -1107,7 +1122,8 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
             </div>
           </div>
         </div>
-        <div data-toybaco-composer-footer="" aria-busy={loading} style={(toybacoConnectionError||toybacoSaveError||toybacoAuthorityState==='error') ? { height: 'auto', flexWrap: 'wrap', maxHeight: '40dvh', overflowY: 'auto' } : undefined} className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
+        <div data-toybaco-composer-footer="" aria-busy={loading} style={(toybacoConnectionError||toybacoSaveError||toybacoTikTokReason||toybacoAuthorityState==='error') ? { height: 'auto', flexWrap: 'wrap', maxHeight: '40dvh', overflowY: 'auto' } : undefined} className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
+          {toybacoTikTokReason && <p id="toybaco-tiktok-publish-block" data-toybaco-tiktok-publish-block="" role="status" style={{ flexBasis: '100%', padding: '8px 16px' }}>{toybacoTikTokReason}</p>}
           {toybacoSaveError && !toybacoConnectionError && <p data-toybaco-save-error="" role="alert">{toybacoSaveError}{toybacoSavedResult && <button type="button" className="block mt-[8px] underline" onClick={() => { void askClose(); }}>カレンダーで保存済み投稿を確認</button>}</p>}
           {!toybacoConnectionError&&(toybacoAuthorityState==='error'||toybacoSaveError)&&!toybacoSavedResult&&(
             <div data-toybaco-authority-recovery="" style={{flexBasis:'100%',padding:'8px 16px'}}>
@@ -1201,11 +1217,19 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
             )}
             {!addEditSets && (dummy || toybacoCanPublish) && (
               <>
+                <span
+                  data-toybaco-tiktok-publish-hint=""
+                  className="inline-flex"
+                  title={toybacoTikTokReason || undefined}
+                  tabIndex={toybacoTikTokReason ? 0 : undefined}
+                  aria-describedby={toybacoTikTokReason ? 'toybaco-tiktok-publish-block' : undefined}
+                >
                 <button
                   type="button"
                   data-toybaco-schedule=""
+                  aria-describedby={toybacoTikTokReason ? "toybaco-tiktok-publish-block" : undefined}
                   disabled={
-                    selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
+                    selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult || !!toybacoTikTokReason
                   }
                   onClick={schedule('schedule')}
                   className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#1F3A5F] ps-[20px] pe-[16px]"
@@ -1232,19 +1256,29 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
                       : t('update', 'Update')}
                   </div>
                 </button>
+                </span>
 
                 {!dummy && (
+                  <span
+                    data-toybaco-tiktok-publish-hint=""
+                    className="inline-flex"
+                    title={toybacoTikTokReason || undefined}
+                    tabIndex={toybacoTikTokReason ? 0 : undefined}
+                    aria-describedby={toybacoTikTokReason ? 'toybaco-tiktok-publish-block' : undefined}
+                  >
                   <button
                     type="button"
                     data-toybaco-post-now=""
                     onClick={schedule('now')}
+                    aria-describedby={toybacoTikTokReason ? "toybaco-tiktok-publish-block" : undefined}
                     disabled={
-                      selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult
+                      selectedIntegrations.length === 0 || loading || locked || !toybacoCanEditDraft || !!toybacoConnectionError || toybacoSavedResult || !!toybacoTikTokReason
                     }
                     className="inline-flex min-h-[44px] items-center justify-center rounded-[8px] border border-newBorder bg-newBgColorInner px-[16px] text-[15px] font-[600] text-textColor hover:bg-newBgLineColor disabled:cursor-not-allowed disabled:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-textColor"
                   >
                     {t('post_now', 'Post Now')}
                   </button>
+                  </span>
                 )}
               </>
             )}
