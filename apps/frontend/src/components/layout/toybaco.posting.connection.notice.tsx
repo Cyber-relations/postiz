@@ -19,7 +19,7 @@ export function ToybacoPostingConnectionNotice({ placement = 'shell' }: { placem
           className="flex min-h-[44px] items-center rounded-lg border border-newTextColor/20 px-4 py-2 font-semibold">別タブで再接続</a>
       )}
       {!posting.renewing && <button type="button" disabled={verifying} className="min-h-[44px] rounded-lg border border-newTextColor/20 px-4 py-2 font-semibold disabled:opacity-50"
-        onClick={async () => { setVerifying(true); try { await toybacoVerifyPostingIdentity(backendUrl); } finally { setVerifying(false); } }}>
+        onClick={async () => { setVerifying(true); try { await toybacoVerifyPostingIdentity(backendUrl, true); } finally { setVerifying(false); } }}>
         {verifying ? '確認中…' : '接続を確認'}
       </button>}
     </div>

@@ -70,7 +70,7 @@ RUN --mount=type=bind,from=zlib-backport,source=/toybaco/os-backport/out,target=
     --mount=type=bind,source=var/docker/os-backport/zlib,target=/toybaco/os-backport/zlib-src \
     bash /toybaco/os-backport/node/build-node-shared-zlib.sh /toybaco/os-backport/node /toybaco/os-backport/zlib-out /toybaco/os-backport/glibc-out /toybaco/os-backport/zlib-src /toybaco/os-backport/node-out
 
-FROM nginx:1.30.4@sha256:09cc2702709e6388d979d8030e3ab4eb1ceb699b2dced26d7543e872a822e823 AS runtime
+FROM nginx:1.30.6@sha256:eb1c896deef834f4e056829fd6dadac8305501f16cc71ba65fb252c8d0aa168e AS runtime
 ARG NEXT_PUBLIC_VERSION
 ARG TOYBACO_SOURCE_COMMIT
 ARG TOYBACO_SOURCE_TREE
