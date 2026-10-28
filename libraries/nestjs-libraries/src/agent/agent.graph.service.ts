@@ -64,10 +64,14 @@ const contentZod = (
 ) => {
   const content = z.object({
     content: z.string().describe('Content for the new post'),
+    // toybaco_website_required: zod 4 の JSON schema 変換(@langchain/openai 1.4.3)は
+    // optional の website を required から外す。strict の構造化出力では、required に
+    // 無い項目を持つ schema は拒否されうる。zod 3 の変換と同じく required に戻し、
+    // 返ってこなかったときは null として受け取る。
     website: z
       .string()
       .nullable()
-      .optional()
+      .default(null)
       .describe(
         "Website for the new post if exists, If one of the post present a brand, website link must be to the root domain of the brand or don't include it, website url should contain the brand name"
       ),

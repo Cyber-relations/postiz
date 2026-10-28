@@ -149,20 +149,23 @@ const LoadMessages: FC<{ id: string }> = ({ id }) => {
 };
 
 const Message: FC<UserMessageProps> = (props) => {
+  // toybaco_zod4_message_types: zod 4 では、CopilotKit 1.10.6 の message の型(@ag-ui/core
+  // 0.0.37 が zod 3 の型で書いた z.infer)が any になり、replace の callback の引数が暗黙の
+  // any として型検査で落ちる。実行は変わらないので、引数の型だけを明示する。
   const convertContentToImagesAndVideo = useMemo(() => {
     return (props.message?.content || '')
-      .replace(/Video: (http.*mp4\n)/g, (match, p1) => {
+      .replace(/Video: (http.*mp4\n)/g, (match: string, p1: string) => {
         return `<video controls class="h-[150px] w-[150px] rounded-[8px] mb-[10px]"><source src="${p1.trim()}" type="video/mp4">Your browser does not support the video tag.</video>`;
       })
-      .replace(/Image: (http.*\n)/g, (match, p1) => {
+      .replace(/Image: (http.*\n)/g, (match: string, p1: string) => {
         return `<img src="${p1.trim()}" class="h-[150px] w-[150px] max-w-full border border-newBgColorInner" />`;
       })
-      .replace(/\[\-\-Media\-\-\](.*)\[\-\-Media\-\-\]/g, (match, p1) => {
+      .replace(/\[\-\-Media\-\-\](.*)\[\-\-Media\-\-\]/g, (match: string, p1: string) => {
         return `<div class="flex justify-center mt-[20px]">${p1}</div>`;
       })
       .replace(
         /(\[--integrations--\][\s\S]*?\[--integrations--\])/g,
-        (match, p1) => {
+        (match: string, p1: string) => {
           return ``;
         }
       );

@@ -3,8 +3,8 @@
   "policy": "toybaco-postiz-os-source-backport-v1",
   "image": "951034765053.dkr.ecr.ap-northeast-1.amazonaws.com/toybaco/postiz",
   "runtime_base": {
-    "image": "nginx:1.30.4",
-    "digest": "sha256:09cc2702709e6388d979d8030e3ab4eb1ceb699b2dced26d7543e872a822e823",
+    "image": "nginx:1.30.6",
+    "digest": "sha256:eb1c896deef834f4e056829fd6dadac8305501f16cc71ba65fb252c8d0aa168e",
     "debian_release": "trixie",
     "architecture": "amd64"
   },

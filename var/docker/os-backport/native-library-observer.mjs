@@ -355,8 +355,10 @@ export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   // a target outside the app is counted and makes the inventory incomplete.
   const allowed = resolved => resolved === appRoot || resolved.startsWith(appRoot + '/');
   const scopeOf = resolved => roots.find(root => resolved === root || resolved.startsWith(root + '/')) || appRoot;
+  // The wall clock only stops a runaway walk. Hosted publisher runs take 29-46 s
+  // (one stopped at 46 s under 45 s); the count and byte bounds stay as they were.
   const bound = () => {
-    if (files >= maxFiles || elfs >= maxElfs || bytes >= maxBytes || Date.now() - started > 45000) { boundStopped = true; throw new Error('INVENTORY_BOUND'); }
+    if (files >= maxFiles || elfs >= maxElfs || bytes >= maxBytes || Date.now() - started > 120000) { boundStopped = true; throw new Error('INVENTORY_BOUND'); }
   };
   // A path that realpath could not find (ENOENT) is a dangling symlink only when lstat
   // shows a link, readlink reads it and its target, resolved component by component as the

@@ -67,9 +67,18 @@ export const customFetch = (
       requestHeaders.set('impersonate', authNonSecuredImpersonate);
     }
 
+    // A caller-owned final check runs after every beforeRequest await, session
+    // renewal included, and right before the native send. A throw sends nothing.
+    // It is read from the caller's options, so new beforeRequest options cannot
+    // drop it, and it never reaches the native request.
+    const toybacoBeforeSend = (options as RequestInit & { toybacoBeforeSend?: () => void }).toybacoBeforeSend;
+    const nativeOptions: RequestInit & { toybacoBeforeSend?: () => void } = { ...requestOptions };
+    delete nativeOptions.toybacoBeforeSend;
+    toybacoBeforeSend?.();
+
     const fetchRequest = await fetch(params.baseUrl + url, {
       ...(secured ? { credentials: 'include' } : {}),
-      ...(newRequestObject || options),
+      ...nativeOptions,
       headers: requestHeaders,
       // @ts-ignore
       ...(!options.next && options.cache !== 'force-cache'

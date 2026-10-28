@@ -13,8 +13,6 @@ import { OauthProvider } from '@gitroom/frontend/components/auth/providers/oauth
 import { GoogleProvider } from '@gitroom/frontend/components/auth/providers/google.provider';
 import { AppleProvider } from '@gitroom/frontend/components/auth/providers/apple.provider';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import { FarcasterProvider } from '@gitroom/frontend/components/auth/providers/farcaster.provider';
-import WalletProvider from '@gitroom/frontend/components/auth/providers/wallet.provider';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 type Inputs = {
   email: string;
@@ -28,9 +26,7 @@ export function Login() {
   const [notActivated, setNotActivated] = useState(false);
   const {
     isGeneral,
-    neynarClientId,
     appleClientId,
-    billingEnabled,
     genericOauth,
   } = useVariables();
   // トイバコ: OIDC が有効なら『トイバコIDでログイン』だけを見せる
@@ -92,8 +88,6 @@ export function Login() {
               <div className="gap-[8px] flex">
                 <GoogleProvider />
                 {!!appleClientId && <AppleProvider />}
-                {!!neynarClientId && <FarcasterProvider />}
-                {billingEnabled && <WalletProvider />}
               </div>
             )}
             {!toybacoOidcOnly && (

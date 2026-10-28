@@ -29,7 +29,7 @@ const requestVersions = new WeakMap<RequestInit, number>();
 const copilotForwards = new WeakMap<RequestInit, PostingState>();
 let releaseCopilot: (() => void) | undefined;
 const changedMessage = '利用者または店舗が変わっています。入力はこの画面に残っています。元の利用者・店舗で再接続してください。';
-const expiredMessage = '接続を確認できません。入力はこの画面に残っています。別タブで再接続した後、接続を確認してください。';
+const expiredMessage = '接続を確認できません。入力はこの画面に残っています。「接続を確認」を押すと再接続します。戻らない場合は、別タブで再接続してから、もう一度押してください。';
 
 function update(next: PostingState) {
   state = next;
@@ -106,6 +106,9 @@ export function toybacoDenyPosting(reason: 'account-mismatch' | 'context-unavail
   if (reason !== 'context-unavailable') {
     hardDenial += 1;
     pendingRenewal?.finish(false);
+  } else if (state.owner && state.reason && state.reason !== 'context-unavailable') {
+    // A later 401 never turns an owner change or revocation into a renewable expiry.
+    reason = state.reason;
   }
   update({ ...state, phase: state.owner ? 'blocked' : 'denied', reason, message: reason === 'context-unavailable' ? expiredMessage : reason === 'revoked' ? 'この店舗を利用する権限を確認できません。管理者に確認してください。入力はこの画面に残っています。' : changedMessage });
 }
@@ -119,6 +122,13 @@ function headersFor(ticket: PostingState, verification = false): Record<string, 
     'x-toybaco-composer-role': state.owner.role,
   };
 }
+// Only an explicit backend expiry/missing-cookie classification of the current
+// session version may renew. A stale request or a mismatched echo never does.
+function renewableExpiry(response: ResponseStatus, version: number) {
+  const echoed = response.headers.get('x-toybaco-session-version');
+  return version === sessionVersion && (echoed === null || echoed === String(sessionVersion)) &&
+    response.status === 401 && ['expired', 'missing'].includes(response.headers.get('x-toybaco-session') || '');
+}
 function observeResponse(response: ResponseStatus, ticket: PostingState, version = sessionVersion) {
   if (!current(ticket)) return false;
   const echoed = response.headers.get('x-toybaco-session-version');
@@ -127,9 +137,8 @@ function observeResponse(response: ResponseStatus, ticket: PostingState, version
   if (response.status !== 401 && !response.headers.get('logout') && !changed) return false;
   const session = response.headers.get('x-toybaco-session');
   toybacoDenyPosting(changed ? 'session-changed' : session === 'revoked' ? 'revoked' : 'context-unavailable', ticket);
-  // Only an explicit backend expiry/missing-cookie classification may renew.
   // The failed operation itself is returned untouched and is never replayed.
-  if (!changed && response.status === 401 && ['expired', 'missing'].includes(session || '')) void renewPosting();
+  if (renewableExpiry(response, version)) void renewPosting();
   return true;
 }
 export async function toybacoPostingBeforeRequest(url: string, options: RequestInit, ticket = state): Promise<RequestInit> {
@@ -265,13 +274,16 @@ export async function toybacoLoadPostingIdentity(
     throw error;
   }
 }
-export async function toybacoVerifyPostingIdentity(backendUrl: string) {
+// renewExpired is the banner action only. It may start one parent renewal for
+// this press, after the backend classifies this tab's cookie as expired/missing.
+export async function toybacoVerifyPostingIdentity(backendUrl: string, renewExpired = false) {
   const ticket = state;
   const denial = hardDenial;
   const version = sessionVersion;
   if (!ticket.owner) return false;
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let renewable = false;
   try {
     // Both response headers and the streamed body share the same deadline.
     // The losing read never updates identity, even if abort is ignored.
@@ -280,7 +292,11 @@ export async function toybacoVerifyPostingIdentity(backendUrl: string) {
         credentials: 'include', cache: 'no-store', headers: headersFor(ticket, true), signal: controller.signal,
       });
       if (!current(ticket) || denial !== hardDenial || version !== sessionVersion) throw new Error('TOYBACO_POSTING_STALE_RESPONSE');
-      if (!response.ok) { observeResponse(response, ticket, version); throw new Error('TOYBACO_POSTING_IDENTITY_UNAVAILABLE'); }
+      if (!response.ok) {
+        renewable = renewableExpiry(response, version);
+        observeResponse(response, ticket, version);
+        throw new Error('TOYBACO_POSTING_IDENTITY_UNAVAILABLE');
+      }
       return { user: await response.json(), response };
     })();
     const result = await Promise.race([read, new Promise<never>((_, reject) => {
@@ -296,7 +312,11 @@ export async function toybacoVerifyPostingIdentity(backendUrl: string) {
     acceptSessionExpiry(result.response, backendUrl);
     return true;
   } catch {
-    if (current(ticket) && denial === hardDenial && version === sessionVersion && (!state.reason || state.reason === 'context-unavailable')) toybacoDenyPosting('context-unavailable', ticket);
+    if (current(ticket) && denial === hardDenial && version === sessionVersion && (!state.reason || state.reason === 'context-unavailable')) {
+      // A pending renewal owns the blocked state and settles it.
+      if (!pendingRenewal) toybacoDenyPosting('context-unavailable', ticket);
+      if (renewExpired && renewable) return renewPosting(true);
+    }
     return false;
   } finally {
     if (timer !== undefined) clearTimeout(timer);
@@ -304,8 +324,9 @@ export async function toybacoVerifyPostingIdentity(backendUrl: string) {
 }
 
 // Renewal changes the HttpOnly credential, never the mounted document or draft.
-// One attempt per accepted session; only a fresh same-owner verification enables
-// another scheduled attempt. Failed requests and uploads are never replayed.
+// One scheduled attempt per accepted session; only a fresh same-owner verification
+// enables another. A banner press may add one attempt of its own, never a loop.
+// Failed requests and uploads are never replayed.
 let sessionVersion = 0;
 let sessionExpiresAt = 0;
 let renewalBackend = '';
@@ -366,12 +387,12 @@ function acceptSessionExpiry(response: ResponseStatus, backendUrl: string) {
   expiryTimer = setTimeout(visibleRenew, Math.max(0, expiry * 1000 - Date.now() - 60000));
 }
 
-async function renewPosting(): Promise<boolean> {
+async function renewPosting(userAction = false): Promise<boolean> {
   if (pendingRenewal) return pendingRenewal.promise;
   const ticket = state;
   if (!renewalBackend || !ticket.owner || !ticket.context || !ticket.appOrigin ||
       !['ready', 'blocked'].includes(ticket.phase) ||
-      (ticket.reason && ticket.reason !== 'context-unavailable') || attemptedVersion === sessionVersion) return false;
+      (ticket.reason && ticket.reason !== 'context-unavailable') || (!userAction && attemptedVersion === sessionVersion)) return false;
   attemptedVersion = sessionVersion;
   const version = sessionVersion;
   const requestId = toybacoPostingDocumentId();

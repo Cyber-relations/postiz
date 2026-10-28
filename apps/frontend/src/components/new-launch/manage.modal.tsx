@@ -889,6 +889,12 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         const reason = toybacoTikTokPublishReason(selectedIntegrations, useLaunchStore.getState().tiktokPublishGuards, tikTokOperationGuards);
         if (reason) { setToybacoSaveError(reason); return; }
       }
+      // The send itself may still wait for a session renewal. The transport runs
+      // this operation-lease check after that wait, right before the request.
+      const toybacoBeforeSend = !dummy && !addEditSets && type !== 'draft' ? () => {
+        const reason = toybacoTikTokPublishReason(selectedIntegrations, useLaunchStore.getState().tiktokPublishGuards, tikTokOperationGuards);
+        if (reason) throw Object.assign(new Error('TOYBACO_TIKTOK_PUBLISH_BLOCKED'), { toybacoReason: reason });
+      } : undefined;
       if (!dummy) {
         addEditSets
           ? addEditSets(data)
@@ -901,6 +907,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 // composer starts a new logical save operation.
                 toybacoRequestId: toybacoSaveRequestId.current ||= crypto.randomUUID(),
               }),
+              ...(toybacoBeforeSend ? { toybacoBeforeSend } : {}),
             });
 
         if (!addEditSets) {
@@ -923,6 +930,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       }
       } catch (error) {
         const code = error instanceof Error ? error.message : '';
+        // Stopped before the native send: the outcome is known, nothing was saved.
+        if (code === 'TOYBACO_TIKTOK_PUBLISH_BLOCKED') { setToybacoSaveError((error as Error & { toybacoReason: string }).toybacoReason); return; }
         setToybacoAuthorityRefreshAllowed(toybacoAuthorityRefreshAfterFailure(code,toybacoSaveOutcomeUnknown));
         const saved = code === 'TOYBACO_POST_SAVE_ALREADY_COMMITTED' || code === 'TOYBACO_POST_SAVE_REQUEST_CHANGED';
         if (saved) {
