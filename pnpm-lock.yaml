@@ -16,6 +16,7 @@ overrides:
   handlebars@>=4 <5: 4.7.10
   '@modelcontextprotocol/sdk@>=1 <2': 1.32.0
   '@graphql-tools/utils@>=10 <13': 12.0.2
+  graphql-scalars@<2.0.1: 2.0.1
   body-parser@>=1 <2: 1.20.9
   body-parser@>=2 <3: 2.4.0
   dompurify@>=3 <4: 3.4.17
@@ -69,14 +70,14 @@ overrides:
   '@langchain/community>@browserbasehq/stagehand': '-'
   langchain@0.3>@langchain/openai: '-'
   '@opentelemetry/api@^1.9.1': 1.9.1
-  '@temporalio/activity': 1.22.0
-  '@temporalio/client': 1.22.0
-  '@temporalio/common': 1.22.0
-  '@temporalio/core-bridge': 1.22.0
-  '@temporalio/nexus': 1.22.0
-  '@temporalio/proto': 1.22.0
-  '@temporalio/worker': 1.22.0
-  '@temporalio/workflow': 1.22.0
+  '@temporalio/activity': 1.25.0
+  '@temporalio/client': 1.25.0
+  '@temporalio/common': 1.25.0
+  '@temporalio/core-bridge': 1.25.0
+  '@temporalio/nexus': 1.25.0
+  '@temporalio/proto': 1.25.0
+  '@temporalio/worker': 1.25.0
+  '@temporalio/workflow': 1.25.0
   '@tiptap/core': 3.30.5
   '@tiptap/extension-blockquote': 3.30.5
   '@tiptap/extension-bold': 3.30.5
@@ -259,20 +260,20 @@ importers:
         specifier: ^4.1.7
         version: 4.2.1
       '@temporalio/activity':
-        specifier: 1.22.0
-        version: 1.22.0
+        specifier: 1.25.0
+        version: 1.25.0(long@5.3.2)(protobufjs@8.8.1)
       '@temporalio/client':
-        specifier: 1.22.0
-        version: 1.22.0
+        specifier: 1.25.0
+        version: 1.25.0(long@5.3.2)(protobufjs@8.8.1)
       '@temporalio/common':
-        specifier: 1.22.0
-        version: 1.22.0
+        specifier: 1.25.0
+        version: 1.25.0(long@5.3.2)(protobufjs@8.8.1)
       '@temporalio/worker':
-        specifier: 1.22.0
-        version: 1.22.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1)
+        specifier: 1.25.0
+        version: 1.25.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(long@5.3.2)(postcss@8.5.26)(protobufjs@8.8.1)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1)
       '@temporalio/workflow':
-        specifier: 1.22.0
-        version: 1.22.0
+        specifier: 1.25.0
+        version: 1.25.0(long@5.3.2)(protobufjs@8.8.1)
       '@tiptap/extension-bold':
         specifier: 3.30.5
         version: 3.30.5(@tiptap/core@3.30.5(@tiptap/pm@3.30.5))
@@ -545,7 +546,7 @@ importers:
         version: 3.0.1(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))
       nestjs-temporal-core:
         specifier: ^3.2.0
-        version: 3.2.3(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.7)(@temporalio/client@1.22.0)(@temporalio/common@1.22.0)(@temporalio/worker@1.22.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1))(@temporalio/workflow@1.22.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+        version: 3.2.3(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.7)(@temporalio/client@1.25.0(long@5.3.2)(protobufjs@8.8.1))(@temporalio/common@1.25.0(long@5.3.2)(protobufjs@8.8.1))(@temporalio/worker@1.25.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(long@5.3.2)(postcss@8.5.26)(protobufjs@8.8.1)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1))(@temporalio/workflow@1.25.0(long@5.3.2)(protobufjs@8.8.1))(reflect-metadata@0.2.2)(rxjs@7.8.2)
       next:
         specifier: 16.4.1
         version: 16.4.1(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.58.2)(@types/node@18.16.9)(babel-plugin-macros@3.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(sass@1.97.3)
@@ -6837,37 +6838,58 @@ packages:
   '@tanstack/virtual-core@3.13.21':
     resolution: {integrity: sha512-ww+fmLHyCbPSf7JNbWZP3g7wl6SdNo3ah5Aiw+0e9FDErkVHLKprYUrwTm7dF646FtEkN/KkAKPYezxpmvOjxw==}
 
-  '@temporalio/activity@1.22.0':
-    resolution: {integrity: sha512-hrPeELIMloFWVrwmDfG1lh3uFNkaYp1ZHpcpWmJniTeSyxqCqLdil4lBOv11FByb6HeKxE6rsvOOUohulyVhRg==}
+  '@temporalio/activity@1.25.0':
+    resolution: {integrity: sha512-IBz6/pqfwlZpZcw2KBFSQa5iu7B9gH6/RUCI/VCqywP9gfj0KVs6rGVAQj1/48oY63eIU5WcAllWdbaRDWY1+A==}
+    engines: {node: '>= 20.3.0'}
+    peerDependencies:
+      long: ^5.3.2
+      protobufjs: ^8.7.1
+
+  '@temporalio/client@1.25.0':
+    resolution: {integrity: sha512-IbWlxzQiQg2fuIum+d2PkQWOGPVPyeN294sKdBCylKxVsGc1IoixXjWjEZ0dxVuYNFZq+16Vn9Fh2UNVDfXePA==}
+    engines: {node: '>= 20.3.0'}
+    peerDependencies:
+      long: ^5.3.2
+      protobufjs: ^8.7.1
+
+  '@temporalio/common@1.25.0':
+    resolution: {integrity: sha512-R9q/5wJZLi47kktJ3GfGh+eMO2HleRxKQGDysCvoObdVjK7Q+F+Vq0M1EeMu4EMHQZdT9A4vgN5rQ9L8cTgU8w==}
+    engines: {node: '>= 20.3.0'}
+    peerDependencies:
+      long: ^5.3.2
+      protobufjs: ^8.7.1
+
+  '@temporalio/core-bridge@1.25.0':
+    resolution: {integrity: sha512-4C7lOpBXo9nTTwuEZwlPWGEZy3dchSbEgp+HeX87EbovC4QlPf1Th9iWz7jcce0C9l/O3kaXfA34uPMGRu15DA==}
+    engines: {node: '>= 20.3.0'}
+    peerDependencies:
+      long: ^5.3.2
+      protobufjs: ^8.7.1
+
+  '@temporalio/nexus@1.25.0':
+    resolution: {integrity: sha512-uUq7FK0WdCQcwj57Tt1wIeLc51fn8FgAPN6+hiFD1A/o+EDpao7YZ2A/holuJ9cjFZk4c9lswKJaNZYTznE2fw==}
+    engines: {node: '>= 20.3.0'}
+    peerDependencies:
+      long: ^5.3.2
+      protobufjs: ^8.7.1
+
+  '@temporalio/proto@1.25.0':
+    resolution: {integrity: sha512-cZF6C1F4ZHWrVwrDNW6hTB7HvBi1sofqPWxQrqJq0b9hPE21y5IU5rTNEUx3Ju6G03xqdpwdH0LECAul0KAi2Q==}
     engines: {node: '>= 20.3.0'}
 
-  '@temporalio/client@1.22.0':
-    resolution: {integrity: sha512-b02ty0uDly6/ZRKlbavs5GjXVTry/GB4tkq0v1NH4H7x+nTo/OK0u5Ms8Nni8D+aar3xff9lzIpXNwu/Dp3P3w==}
+  '@temporalio/worker@1.25.0':
+    resolution: {integrity: sha512-I4b/OwhDb/UhyoHLJDCnuKqROSlT95xHACRxOsg0UjH6qgcYCusch+9mLol1IN7ml2cNkSbnm+5hvzpVuywP3Q==}
     engines: {node: '>= 20.3.0'}
+    peerDependencies:
+      long: ^5.3.2
+      protobufjs: ^8.7.1
 
-  '@temporalio/common@1.22.0':
-    resolution: {integrity: sha512-1NpQpo/y6XU1ULbo/bXgBEhl6qQnOeB79NrsSJdjI38/hfXPom2IYGJcIxOFfsQICQ0zePEKzB9Yyo31KNpIxA==}
+  '@temporalio/workflow@1.25.0':
+    resolution: {integrity: sha512-2Z5BvOtsfOHL3Dy+4cewXEHDu9NeseEn4FeaaitNwn704POgEfshz0zxyZB8ofxbna2P0wsC5l3rnYHkOvtX9A==}
     engines: {node: '>= 20.3.0'}
-
-  '@temporalio/core-bridge@1.22.0':
-    resolution: {integrity: sha512-mJ5agqtfW+GBPYl+ivYLrBpKJ3oFOw8ogcoizNrxYCzwJeprGFiEgHDb/jzyvECR4HAy5s9zQFJYNyTruXXFMw==}
-    engines: {node: '>= 20.3.0'}
-
-  '@temporalio/nexus@1.22.0':
-    resolution: {integrity: sha512-4S1ZZdSNjrO9IUyhWxweIidvNn1X/ihEl+P2fOn/Ky38YRx9G+8wtV6g6lqG8zUrtEv//uqFw+HsRMziE2y4tg==}
-    engines: {node: '>= 20.3.0'}
-
-  '@temporalio/proto@1.22.0':
-    resolution: {integrity: sha512-X7NVa0Z6HK3l9irZR48FKwZ9w9YXetCdF2z2KCIRr0W7Kul64Wt9o5hwvSXShAtrZuCEEHH8WO/ffHTXxJieLg==}
-    engines: {node: '>= 20.3.0'}
-
-  '@temporalio/worker@1.22.0':
-    resolution: {integrity: sha512-axRHhUsovFlqDtXZxUnhRLV7WmC6qOMUCij13lw4glT5yRH62k8wIZqcT3naEfvLSzoDxjt2xM7me3VvTRSaow==}
-    engines: {node: '>= 20.3.0'}
-
-  '@temporalio/workflow@1.22.0':
-    resolution: {integrity: sha512-31Ax529+TvfH2RCexOhiCyM3lARJJoVzrnRUS1gX+jl+mka+pRRnEUx4B572mZz0oOlCCxbiztHZF72wwwWZDA==}
-    engines: {node: '>= 20.3.0'}
+    peerDependencies:
+      long: ^5.3.2
+      protobufjs: ^8.7.1
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -10437,11 +10459,11 @@ packages:
     peerDependencies:
       graphql: 14 - 16
 
-  graphql-scalars@1.25.0:
-    resolution: {integrity: sha512-b0xyXZeRFkne4Eq7NAnL400gStGqG/Sx9VqX0A05nHyEbv57UJnWKsjNnrpVqv5e/8N1MUxkt0wwcRXbiyKcFg==}
+  graphql-scalars@2.0.1:
+    resolution: {integrity: sha512-/BkY0J5/1L9e+mTfCTzmpV78mNh95ZpiJWfAkaIYHE5B7hrvgRpB5//rXVTFD1aaKGcRUCHj/vpNcgtrenwZNA==}
     engines: {node: '>=10'}
     peerDependencies:
-      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+      graphql: ^16.0.0 || ^17.0.0
 
   graphql-yoga@5.18.0:
     resolution: {integrity: sha512-xFt1DVXS1BZ3AvjnawAGc5OYieSe56WuQuyk3iEpBwJ3QDZJWQGLmU9z/L5NUZ+pUcyprsz/bOwkYIV96fXt/g==}
@@ -12474,9 +12496,9 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  ms@3.0.0-canary.1:
-    resolution: {integrity: sha512-kh8ARjh8rMN7Du2igDRO9QJnqCb2xYTJxyQYK7vJJS4TvLLmsbyhiKpSW+t+y26gyOyMd0riphX0GeWKU3ky5g==}
-    engines: {node: '>=12.13'}
+  ms@3.0.0-canary.202508261828:
+    resolution: {integrity: sha512-NotsCoUCIUkojWCzQff4ttdCfIPoA1UGZsyQbi7KmqkNRfKCrvga8JJi2PknHymHOuor0cJSn/ylj52Cbt2IrQ==}
+    engines: {node: '>=18'}
 
   multer@2.5.0:
     resolution: {integrity: sha512-BsqOzYGVq49JcW2IzoSAxeKYRevb+dGGPPWleOR8Lrlk4igwxu1/9pwSXlByhCb7MVZDrNJFC0IBP5/O5nLYRw==}
@@ -12571,10 +12593,10 @@ packages:
     peerDependencies:
       '@nestjs/common': 11.2.7
       '@nestjs/core': 11.2.7
-      '@temporalio/client': 1.22.0
-      '@temporalio/common': 1.22.0
-      '@temporalio/worker': 1.22.0
-      '@temporalio/workflow': 1.22.0
+      '@temporalio/client': 1.25.0
+      '@temporalio/common': 1.25.0
+      '@temporalio/worker': 1.25.0
+      '@temporalio/workflow': 1.25.0
       reflect-metadata: ^0.2.2
       rxjs: ^7.8.0
 
@@ -12610,8 +12632,8 @@ packages:
       sass:
         optional: true
 
-  nexus-rpc@0.0.2:
-    resolution: {integrity: sha512-IWjIExdVYlmwXuzHdY/Q3lXCv1gbqoAXPazQhy2w4Xgtgha3H0OOujEESVPQcFUFMWm+pAk2gKnb57g8S41JZg==}
+  nexus-rpc@0.0.3:
+    resolution: {integrity: sha512-ksIBeYHDv6FHAR1h3Vwk0kQ6REhdo1STqDHXMzu/yn/VN/XzgOor2IUjewG6paoA7IgxlIPZoOU/PD78PC6HTg==}
     engines: {node: '>= 20.0.0'}
 
   nice-grpc-client-middleware-retry@3.1.13:
@@ -13486,12 +13508,12 @@ packages:
   proto-list@1.2.4:
     resolution: {integrity: sha512-vtK/94akxsTMhe0/cbfpR+syPuszcuwhqVjJq26CuNDgFGj682oRBXOP5MJpv2r7JtE8MsiepGIqvvOTBwn2vA==}
 
-  proto3-json-serializer@2.0.2:
-    resolution: {integrity: sha512-SAzp/O4Yh02jGdRc+uIrGoe87dkN/XtwxfZ4ZyafJHymd79ozp5VG5nyZ7ygqPM5+cpLDjjGnYFUkngonyDPOQ==}
-    engines: {node: '>=14.0.0'}
-
   protobufjs@7.6.4:
     resolution: {integrity: sha512-RJJPTTpvFfHcWLkIa2JFWK4XvtSzS0yEWDmunqHXli1h3JlkbcQZXDZdcWxv+JK3Xsl5/UFDPZ0iGm7DAengYw==}
+    engines: {node: '>=12.0.0'}
+
+  protobufjs@8.8.1:
+    resolution: {integrity: sha512-d9e9179bjXSJdpJ3+R9fP8hzXsnKLyxTjHLG1dUzje8a27pPyXCe6PrcRtgx2rjoM3IZzHd2vAs+6J/BsO1k7Q==}
     engines: {node: '>=12.0.0'}
 
   proxy-addr@2.0.8:
@@ -15189,7 +15211,7 @@ packages:
     peerDependencies:
       class-validator: '>=0.14.0'
       graphql: ^16.8.1
-      graphql-scalars: ^1.22.4
+      graphql-scalars: 2.0.1
     peerDependenciesMeta:
       class-validator:
         optional: true
@@ -17880,7 +17902,7 @@ snapshots:
       class-validator: 0.14.4
       express: 4.22.1
       graphql: 16.13.1
-      graphql-scalars: 1.25.0(graphql@16.13.1)
+      graphql-scalars: 2.0.1(graphql@16.13.1)
       graphql-yoga: 5.18.0(graphql@16.13.1)
       groq-sdk: 0.5.0
       langchain: 0.3.37(2b7ca2d6158441223562cc7c52facf38)
@@ -17890,7 +17912,7 @@ snapshots:
       pino-pretty: 11.3.0
       reflect-metadata: 0.2.2
       rxjs: 7.8.1
-      type-graphql: 2.0.0-rc.1(class-validator@0.14.4)(graphql-scalars@1.25.0(graphql@16.13.1))(graphql@16.13.1)
+      type-graphql: 2.0.0-rc.1(class-validator@0.14.4)(graphql-scalars@2.0.1(graphql@16.13.1))(graphql@16.13.1)
       zod: 4.6.6
     transitivePeerDependencies:
       - '@arcjet/redact'
@@ -18876,7 +18898,7 @@ snapshots:
   '@inquirer/external-editor@1.0.3(@types/node@18.16.9)':
     dependencies:
       chardet: 2.1.1
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
     optionalDependencies:
       '@types/node': 18.16.9
 
@@ -22767,62 +22789,68 @@ snapshots:
 
   '@tanstack/virtual-core@3.13.21': {}
 
-  '@temporalio/activity@1.22.0':
+  '@temporalio/activity@1.25.0(long@5.3.2)(protobufjs@8.8.1)':
     dependencies:
-      '@temporalio/client': 1.22.0
-      '@temporalio/common': 1.22.0
+      '@temporalio/client': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/common': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      long: 5.3.2
+      protobufjs: 8.8.1
 
-  '@temporalio/client@1.22.0':
+  '@temporalio/client@1.25.0(long@5.3.2)(protobufjs@8.8.1)':
     dependencies:
       '@grpc/grpc-js': 1.14.5
-      '@temporalio/common': 1.22.0
-      '@temporalio/proto': 1.22.0
-      abort-controller: 3.0.0
+      '@temporalio/common': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/proto': 1.25.0
       long: 5.3.2
-      nexus-rpc: 0.0.2
+      nexus-rpc: 0.0.3
+      protobufjs: 8.8.1
       uuid: 11.1.0
 
-  '@temporalio/common@1.22.0':
+  '@temporalio/common@1.25.0(long@5.3.2)(protobufjs@8.8.1)':
     dependencies:
-      '@temporalio/proto': 1.22.0
+      '@temporalio/proto': 1.25.0
       long: 5.3.2
-      ms: 3.0.0-canary.1
-      nexus-rpc: 0.0.2
-      proto3-json-serializer: 2.0.2
+      ms: 3.0.0-canary.202508261828
+      nexus-rpc: 0.0.3
+      protobufjs: 8.8.1
 
-  '@temporalio/core-bridge@1.22.0':
+  '@temporalio/core-bridge@1.25.0(long@5.3.2)(protobufjs@8.8.1)':
     dependencies:
       '@grpc/grpc-js': 1.14.5
-      '@temporalio/common': 1.22.0
-
-  '@temporalio/nexus@1.22.0':
-    dependencies:
-      '@temporalio/client': 1.22.0
-      '@temporalio/common': 1.22.0
-      '@temporalio/proto': 1.22.0
+      '@temporalio/common': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
       long: 5.3.2
-      nexus-rpc: 0.0.2
+      protobufjs: 8.8.1
 
-  '@temporalio/proto@1.22.0':
+  '@temporalio/nexus@1.25.0(long@5.3.2)(protobufjs@8.8.1)':
+    dependencies:
+      '@temporalio/client': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/common': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/proto': 1.25.0
+      long: 5.3.2
+      nexus-rpc: 0.0.3
+      protobufjs: 8.8.1
+
+  '@temporalio/proto@1.25.0':
     dependencies:
       long: 5.3.2
-      protobufjs: 7.6.4
+      protobufjs: 8.8.1
 
-  '@temporalio/worker@1.22.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1)':
+  '@temporalio/worker@1.25.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(long@5.3.2)(postcss@8.5.26)(protobufjs@8.8.1)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1)':
     dependencies:
       '@grpc/grpc-js': 1.14.5
       '@swc/core': 1.5.7(@swc/helpers@0.5.13)
-      '@temporalio/activity': 1.22.0
-      '@temporalio/client': 1.22.0
-      '@temporalio/common': 1.22.0
-      '@temporalio/core-bridge': 1.22.0
-      '@temporalio/nexus': 1.22.0
-      '@temporalio/proto': 1.22.0
-      '@temporalio/workflow': 1.22.0
+      '@temporalio/activity': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/client': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/common': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/core-bridge': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/nexus': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/proto': 1.25.0
+      '@temporalio/workflow': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
       heap-js: 2.7.1
+      long: 5.3.2
       memfs: 4.56.11(tslib@2.8.1)
-      nexus-rpc: 0.0.2
-      protobufjs: 7.6.4
+      nexus-rpc: 0.0.3
+      protobufjs: 8.8.1
       rxjs: 7.8.2
       source-map: 0.7.6
       source-map-loader: 5.0.0(webpack@5.110.3(@swc/core@1.5.7(@swc/helpers@0.5.13))(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9)))
@@ -22850,11 +22878,13 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@temporalio/workflow@1.22.0':
+  '@temporalio/workflow@1.25.0(long@5.3.2)(protobufjs@8.8.1)':
     dependencies:
-      '@temporalio/common': 1.22.0
-      '@temporalio/proto': 1.22.0
-      nexus-rpc: 0.0.2
+      '@temporalio/common': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/proto': 1.25.0
+      long: 5.3.2
+      nexus-rpc: 0.0.3
+      protobufjs: 8.8.1
 
   '@testing-library/dom@10.4.1':
     dependencies:
@@ -23187,12 +23217,12 @@ snapshots:
 
   '@types/eslint@9.6.1':
     dependencies:
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
       '@types/json-schema': 7.0.15
 
   '@types/estree-jsx@1.0.5':
     dependencies:
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
 
   '@types/estree@1.0.8': {}
 
@@ -27227,7 +27257,7 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  graphql-scalars@1.25.0(graphql@16.13.1):
+  graphql-scalars@2.0.1(graphql@16.13.1):
     dependencies:
       graphql: 16.13.1
       tslib: 2.8.1
@@ -29821,7 +29851,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  ms@3.0.0-canary.1: {}
+  ms@3.0.0-canary.202508261828: {}
 
   multer@2.5.0:
     dependencies:
@@ -29904,14 +29934,14 @@ snapshots:
       '@nestjs/common': 11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@supercharge/request-ip': 1.2.0
 
-  nestjs-temporal-core@3.2.3(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.7)(@temporalio/client@1.22.0)(@temporalio/common@1.22.0)(@temporalio/worker@1.22.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1))(@temporalio/workflow@1.22.0)(reflect-metadata@0.2.2)(rxjs@7.8.2):
+  nestjs-temporal-core@3.2.3(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.7)(@temporalio/client@1.25.0(long@5.3.2)(protobufjs@8.8.1))(@temporalio/common@1.25.0(long@5.3.2)(protobufjs@8.8.1))(@temporalio/worker@1.25.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(long@5.3.2)(postcss@8.5.26)(protobufjs@8.8.1)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1))(@temporalio/workflow@1.25.0(long@5.3.2)(protobufjs@8.8.1))(reflect-metadata@0.2.2)(rxjs@7.8.2):
     dependencies:
       '@nestjs/common': 11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 11.2.7(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/microservices@11.2.7)(@nestjs/platform-express@11.2.7)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@temporalio/client': 1.22.0
-      '@temporalio/common': 1.22.0
-      '@temporalio/worker': 1.22.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1)
-      '@temporalio/workflow': 1.22.0
+      '@temporalio/client': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/common': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
+      '@temporalio/worker': 1.25.0(@swc/helpers@0.5.13)(esbuild@0.27.7)(lightningcss@1.33.0)(long@5.3.2)(postcss@8.5.26)(protobufjs@8.8.1)(sharp@0.35.5(@types/node@18.16.9))(tslib@2.8.1)
+      '@temporalio/workflow': 1.25.0(long@5.3.2)(protobufjs@8.8.1)
       ms: 2.1.3
       reflect-metadata: 0.2.2
       rxjs: 7.8.2
@@ -29952,7 +29982,7 @@ snapshots:
       - '@types/node'
       - babel-plugin-macros
 
-  nexus-rpc@0.0.2: {}
+  nexus-rpc@0.0.3: {}
 
   nice-grpc-client-middleware-retry@3.1.13:
     dependencies:
@@ -30941,10 +30971,6 @@ snapshots:
 
   proto-list@1.2.4: {}
 
-  proto3-json-serializer@2.0.2:
-    dependencies:
-      protobufjs: 7.6.4
-
   protobufjs@7.6.4:
     dependencies:
       '@protobufjs/aspromise': 1.1.2
@@ -30957,6 +30983,10 @@ snapshots:
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.2
       '@types/node': 18.16.9
+      long: 5.3.2
+
+  protobufjs@8.8.1:
+    dependencies:
       long: 5.3.2
 
   proxy-addr@2.0.8:
@@ -33009,14 +33039,14 @@ snapshots:
 
   type-fest@4.41.0: {}
 
-  type-graphql@2.0.0-rc.1(class-validator@0.14.4)(graphql-scalars@1.25.0(graphql@16.13.1))(graphql@16.13.1):
+  type-graphql@2.0.0-rc.1(class-validator@0.14.4)(graphql-scalars@2.0.1(graphql@16.13.1))(graphql@16.13.1):
     dependencies:
       '@graphql-yoga/subscription': 5.0.5
       '@types/node': 18.16.9
       '@types/semver': 7.7.1
       graphql: 16.13.1
       graphql-query-complexity: 0.12.0(graphql@16.13.1)
-      graphql-scalars: 1.25.0(graphql@16.13.1)
+      graphql-scalars: 2.0.1(graphql@16.13.1)
       semver: 7.7.4
       tslib: 2.8.1
     optionalDependencies:
@@ -33661,7 +33691,7 @@ snapshots:
 
   webpack@5.110.3(@swc/core@1.5.7(@swc/helpers@0.5.13))(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9)):
     dependencies:
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
       '@types/json-schema': 7.0.15
       '@webassemblyjs/ast': 1.14.1
       '@webassemblyjs/wasm-edit': 1.14.1
@@ -33677,7 +33707,7 @@ snapshots:
       minimizer-webpack-plugin: 5.9.0(@swc/core@1.5.7(@swc/helpers@0.5.13))(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9))(webpack@5.110.3(@swc/core@1.5.7(@swc/helpers@0.5.13))(esbuild@0.27.7)(lightningcss@1.33.0)(postcss@8.5.26)(sharp@0.35.5(@types/node@18.16.9)))
       neo-async: 2.6.2
       schema-utils: 4.3.3
-      tapable: 2.3.0
+      tapable: 2.3.3
       watchpack: 2.5.2
       webpack-sources: 3.5.1
     transitivePeerDependencies:
