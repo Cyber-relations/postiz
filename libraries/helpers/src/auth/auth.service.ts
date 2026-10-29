@@ -46,11 +46,16 @@ export class AuthService {
     return verify(token, process.env.JWT_SECRET!);
   }
 
-  static fixedEncryption(value: string) {
-    return encrypt_legacy_using_IV(value);
+  // toybaco_csprng_ids_v1: AES-256-CBC with a fixed IV and no MAC. No
+  // Toybaco route reaches these (their callers are blocked APIs and providers
+  // outside TOYBACO_ALLOWED_PROVIDERS), so fail closed instead.
+  static fixedEncryption(value: string): string {
+    void value;
+    throw new Error('legacy encryption disabled');
   }
 
-  static fixedDecryption(hash: string) {
-    return decrypt_legacy_using_IV(hash);
+  static fixedDecryption(hash: string): string {
+    void hash;
+    throw new Error('legacy encryption disabled');
   }
 }

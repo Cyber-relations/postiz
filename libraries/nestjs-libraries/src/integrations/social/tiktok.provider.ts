@@ -23,6 +23,7 @@ import { isSafePublicHttpsUrl } from '@gitroom/nestjs-libraries/dtos/webhooks/we
 import { getSsrfSafeDispatcher } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
+import { randomBytes } from 'node:crypto';
 
 @Rules(
   [
@@ -323,7 +324,9 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
   }
 
   async generateAuthUrl() {
-    const state = Math.random().toString(36).substring(2);
+    // toybaco_csprng_ids_v1: state and code_verifier are separate 32-byte
+    // CSPRNG values. The verifier is stored server-side only.
+    const state = randomBytes(32).toString('base64url');
 
     return {
       url:
@@ -339,7 +342,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
         `&state=${state}` +
         `&response_type=code` +
         `&scope=${encodeURIComponent(this.scopes.join(','))}`,
-      codeVerifier: state,
+      codeVerifier: randomBytes(32).toString('base64url'),
       state,
     };
   }

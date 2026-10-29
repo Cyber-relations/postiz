@@ -111,6 +111,18 @@ export function toybacoDenyPosting(reason: 'account-mismatch' | 'context-unavail
     reason = state.reason;
   }
   update({ ...state, phase: state.owner ? 'blocked' : 'denied', reason, message: reason === 'context-unavailable' ? expiredMessage : reason === 'revoked' ? 'この店舗を利用する権限を確認できません。管理者に確認してください。入力はこの画面に残っています。' : changedMessage });
+  // toybaco_logout_storage_cleanup_v1: an accepted revocation of the current
+  // posting session clears the same values as the logout button. Stale
+  // responses never reach here, and a renewable expiry is not a revocation.
+  if (reason === 'revoked') {
+    try {
+      for (const key of ['utm', 'landingUrl', 'referrer', 'returnUrl']) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Nothing to clear when the browser blocks storage.
+    }
+  }
 }
 function headersFor(ticket: PostingState, verification = false): Record<string, string> {
   if (!current(ticket) || !state.owner || (state.phase !== 'ready' && !(verification && state.phase === 'blocked'))) {
@@ -169,7 +181,15 @@ export function toybacoPostingAfterResponse(url: string, options: RequestInit, r
   // An old response must not invoke global logout behavior in a newer shell.
   if (!current(ticket)) return true;
   if (url === '/user/self' && !state.owner && [401, 403, 409].includes(response.status)) {
-    toybacoDenyPosting('context-unavailable', ticket);
+    // toybaco_logout_storage_cleanup_v1: an explicit revocation of the current
+    // session version stays a revocation before an owner is pinned, so it
+    // clears the same values. Anything else remains a recoverable failure.
+    const version = requestVersions.get(options);
+    const echoed = response.headers.get('x-toybaco-session-version');
+    const revoked = response.status === 401 &&
+      response.headers.get('x-toybaco-session') === 'revoked' &&
+      version === sessionVersion && (echoed === null || echoed === String(sessionVersion));
+    toybacoDenyPosting(revoked ? 'revoked' : 'context-unavailable', ticket);
     return true;
   }
   return observeResponse(response, ticket, requestVersions.get(options));
