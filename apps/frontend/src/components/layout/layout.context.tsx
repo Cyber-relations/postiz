@@ -136,6 +136,15 @@ function LayoutContextInner(params: { children: ReactNode; postingTicket?: Retur
         setCookie('auth', '', -10);
         setCookie('showorg', '', -10);
         setCookie('impersonate', '', -10);
+        // toybaco_logout_storage_cleanup_v1: a sign-out the server asks for
+        // clears the same values as the logout button.
+        try {
+          for (const key of ['utm', 'landingUrl', 'referrer', 'returnUrl']) {
+            window.localStorage.removeItem(key);
+          }
+        } catch {
+          // Nothing to clear when the browser blocks storage.
+        }
         window.location.href = '/';
         return true;
       }
@@ -166,6 +175,15 @@ function LayoutContextInner(params: { children: ReactNode; postingTicket?: Retur
           setCookie('auth', '', -10);
           setCookie('showorg', '', -10);
           setCookie('impersonate', '', -10);
+        }
+        // toybaco_logout_storage_cleanup_v1: an expired or revoked session (401)
+        // clears the same values as the logout button.
+        try {
+          for (const key of ['utm', 'landingUrl', 'referrer', 'returnUrl']) {
+            window.localStorage.removeItem(key);
+          }
+        } catch {
+          // Nothing to clear when the browser blocks storage.
         }
         window.location.href = '/';
       }

@@ -222,7 +222,9 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
   }
 
   async generateAuthUrl() {
-    const state = makeId(7);
+    // toybaco_csprng_ids_v1: 32 CSPRNG characters (about 190 bits) so a
+    // pending connection cannot be guessed and bound to another store.
+    const state = makeId(32);
     const { client } = clientAndGmb();
     return {
       url: client.generateAuthUrl({

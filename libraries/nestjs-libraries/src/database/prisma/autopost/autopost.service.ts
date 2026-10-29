@@ -20,6 +20,7 @@ import { TypedSearchAttributes } from '@temporalio/common';
 import {
   organizationId,
 } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
+import { toybacoFetchPublicText } from '@gitroom/nestjs-libraries/toybaco/public-https-fetch';
 const parser = new Parser();
 
 interface WorkflowChannelsState {
@@ -129,7 +130,11 @@ export class AutopostService {
 
   async loadXML(url: string) {
     try {
-      const { items } = await parser.parseURL(url);
+      // toybaco_autopost_ssrf_guard_v1: fetch through the public-HTTPS,
+      // pinned-DNS path and let rss-parser parse the text only.
+      const { items } = await parser.parseString(
+        await toybacoFetchPublicText(url)
+      );
       const findLast = items.reduce(
         (all: any, current: any) => {
           if (dayjs(current.pubDate).isAfter(all.pubDate)) {
@@ -179,7 +184,8 @@ export class AutopostService {
 
   async loadUrl(url: string) {
     try {
-      const loadDom = new JSDOM(await (await fetch(url)).text());
+      // toybaco_autopost_ssrf_guard_v1: article pages use the same path.
+      const loadDom = new JSDOM(await toybacoFetchPublicText(url));
       loadDom.window.document
         .querySelectorAll('script')
         .forEach((s) => s.remove());

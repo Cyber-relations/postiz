@@ -13,7 +13,6 @@ import {
   getSsrfSafeDispatcher,
 } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
 import sharp from 'sharp';
-import { createReadStream, statSync } from 'fs';
 import { Readable } from 'stream';
 
 export const stripQuery = (url: string) => {
@@ -120,6 +119,18 @@ function safeStringify(obj: any) {
     }
     return value;
   });
+}
+
+// toybaco_media_fetch_guard_v1: Toybaco media lives in S3 behind a public
+// HTTPS URL. The readers below never fall back to the local file system; a
+// non-HTTPS path is an error.
+function toybacoNonHttpsMedia(identifier: string) {
+  return new BadBody(
+    identifier,
+    '{}',
+    Buffer.from('{}'),
+    'Media must be a public HTTPS URL'
+  );
 }
 
 export abstract class SocialAbstract {
@@ -238,10 +249,10 @@ export abstract class SocialAbstract {
     return { width, height };
   }
 
-  // Resolves the total byte size of the media without loading it into memory:
-  // a HEAD request for remote URLs, statSync for local files.
+  // Resolves the total byte size of the media without loading it into memory
+  // with a HEAD request. Only public HTTPS media is read.
   protected async mediaSize(path: string, identifier = ''): Promise<number> {
-    if (path.indexOf('http') === 0) {
+    if (path.startsWith('https://')) {
       // the media path is user-influenced, keep the SSRF-safe dispatcher that
       // this.fetch applies to every other outbound request. identity encoding
       // so content-length matches the bytes a later GET actually streams
@@ -266,7 +277,7 @@ export abstract class SocialAbstract {
       return length;
     }
 
-    return statSync(path).size;
+    throw toybacoNonHttpsMedia(identifier);
   }
 
   // Reads a single [start, end] byte range into memory. Used by providers whose
@@ -278,7 +289,7 @@ export abstract class SocialAbstract {
     end: number,
     identifier = ''
   ): Promise<Buffer> {
-    if (path.indexOf('http') === 0) {
+    if (path.startsWith('https://')) {
       setHeartbeatDetails(
         `media chunk ${start}-${end} ${stripQuery(path)}`
       );
@@ -303,13 +314,7 @@ export abstract class SocialAbstract {
       return Buffer.from(await response.arrayBuffer());
     }
 
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      createReadStream(path, { start, end })
-        .on('data', (chunk) => chunks.push(chunk as Buffer))
-        .on('end', () => resolve(Buffer.concat(chunks)))
-        .on('error', reject);
-    });
+    throw toybacoNonHttpsMedia(identifier);
   }
 
   // Opens the media as a Node stream. The media path is user-influenced, so
@@ -319,8 +324,8 @@ export abstract class SocialAbstract {
     path: string,
     identifier = ''
   ): Promise<Readable> {
-    if (path.indexOf('http') !== 0) {
-      return createReadStream(path);
+    if (!path.startsWith('https://')) {
+      throw toybacoNonHttpsMedia(identifier);
     }
 
     // identity encoding so the streamed byte count matches the size mediaSize

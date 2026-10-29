@@ -115,7 +115,9 @@ export class InstagramStandaloneProvider
   }
 
   async generateAuthUrl() {
-    const state = makeId(6);
+    // toybaco_csprng_ids_v1: 32 CSPRNG characters (about 190 bits) so a
+    // pending connection cannot be guessed and bound to another store.
+    const state = makeId(32);
     return {
       url:
         `https://www.instagram.com/oauth/authorize?enable_fb_login=0&client_id=${

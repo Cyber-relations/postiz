@@ -28,6 +28,16 @@ export const LogoutComponent: FC<{ isIcon?: boolean }> = ({ isIcon }) => {
           method: 'POST',
         });
       }
+      // toybaco_logout_storage_cleanup_v1: values this browser kept for the
+      // signed-in person (landing URL, referrer, utm, return URL) must not
+      // outlive the session. Storage can be unavailable; logout still finishes.
+      try {
+        for (const key of ['utm', 'landingUrl', 'referrer', 'returnUrl']) {
+          window.localStorage.removeItem(key);
+        }
+      } catch {
+        // Nothing to clear when the browser blocks storage.
+      }
       window.location.href = '/';
     }
   }, []);

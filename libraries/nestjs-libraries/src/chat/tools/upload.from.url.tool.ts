@@ -6,7 +6,7 @@ import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/me
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { getMaxSize } from '@gitroom/nestjs-libraries/upload/custom.upload.validation';
 import { checkAuth } from '@gitroom/nestjs-libraries/chat/auth.context';
-import { ssrfSafeDispatcher } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
+import { toybacoFetchPublic } from '@gitroom/nestjs-libraries/toybaco/public-https-fetch';
 import { Readable } from 'stream';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { fileTypeFromBuffer } = require('file-type');
@@ -68,9 +68,11 @@ so the attachment passes the upload-domain validation. Returns the hosted media 
             (context?.requestContext as any)?.get('organization') as string
           );
 
-          const response = await fetch(inputData.url, {
-            // @ts-ignore — undici option, not in lib.dom fetch types
-            dispatcher: ssrfSafeDispatcher,
+          // toybaco_media_fetch_guard_v1: public HTTPS only, checked again on
+          // every redirect, through the pinned-DNS dispatcher. Videos can be
+          // large, so the deadline is long but bounded.
+          const response = await toybacoFetchPublic(inputData.url, {
+            timeoutMs: 10 * 60 * 1000,
           });
 
           if (!response.ok) {

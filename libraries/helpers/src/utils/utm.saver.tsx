@@ -21,14 +21,16 @@ const UtmSaver: FC = () => {
     }
   }, []);
 
+  // toybaco_logout_storage_cleanup_v1: the first page of a visit can be the
+  // sign-in return (/auth?...&code=...&state=...), and nothing reads these
+  // two values. Do not store them, and drop what earlier versions stored.
   useEffect(() => {
-    const landingUrl = localStorage.getItem('landingUrl');
-    if (landingUrl) {
-      return;
+    try {
+      localStorage.removeItem('landingUrl');
+      localStorage.removeItem('referrer');
+    } catch {
+      // Nothing to clear when the browser blocks storage.
     }
-
-    localStorage.setItem('landingUrl', window.location.href);
-    localStorage.setItem('referrer', document.referrer);
   }, []);
 
   useEffect(() => {
