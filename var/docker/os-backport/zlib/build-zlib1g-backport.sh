@@ -6,6 +6,9 @@
 # (checksum-pinned), applies the reviewed adapted patch, bumps the package version
 # to +toybaco1, builds the zlib1g .deb, and writes a build stamp consumed by the
 # runtime verifier and the classifier. No scanner is run or suppressed here.
+# Each source file is taken from the Debian pool, or, when the pool no longer
+# serves those exact bytes (a point release removes superseded files), from the
+# fixed snapshot.debian.org copy at the same snapshot as the glibc and Node builders.
 #
 # Usage: build-zlib1g-backport.sh <backport-dir> <out-dir>
 #   <backport-dir>  directory holding this script, the patch, the poc and backport.json
@@ -28,6 +31,8 @@ DSC_SHA256=ede2791e29c1d3b422f9208bdd7edf040c20445ea1e7453a72037576e64fa197
 ORIG_SHA256=60dd315c07f616887caa029408308a018ace66e3d142726a97db164b3b8f69fb
 DEBIAN_SHA256=9ed525955ce9fb0c1b39be8ff98f73450dbfc6305a9a27e6149c8972d38a0a9e
 BASE=https://deb.debian.org/debian/pool/main/z/zlib
+SNAPSHOT='20261015T000000Z'
+SNAPSHOT_BASE="http://snapshot.debian.org/archive/debian/$SNAPSHOT/pool/main/z/zlib"
 DSC=zlib_1.3.dfsg+really1.3.1-1.dsc
 ORIG=zlib_1.3.dfsg+really1.3.1.orig.tar.gz
 DEBIAN=zlib_1.3.dfsg+really1.3.1-1.debian.tar.xz
@@ -42,8 +47,28 @@ apt-get install -y -qq --no-install-recommends \
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 cd "$work"
-log 'fetching pinned Debian source'
-for f in "$DSC" "$ORIG" "$DEBIAN"; do curl -fsSL -o "$f" "$BASE/$f"; done
+# Keep the first candidate whose bytes match the pin; a fetch error or other bytes
+# move on to the next one, and no match fails the build.
+fetch_pinned() {
+  local name="$1" sha="$2" url
+  shift 2
+  for url in "$@"; do
+    rm -f "$name"
+    if curl -fsSL --retry 3 -o "$name" "$url" \
+        && printf '%s  %s\n' "$sha" "$name" | sha256sum -c --status -; then
+      log "source $name from $url"
+      return 0
+    fi
+    log "source $name not usable from $url"
+  done
+  rm -f "$name"
+  log "no candidate carries the pinned $name"
+  return 1
+}
+log 'fetching pinned Debian source (pool, then the fixed snapshot)'
+fetch_pinned "$DSC" "$DSC_SHA256" "$BASE/$DSC" "$SNAPSHOT_BASE/$DSC"
+fetch_pinned "$ORIG" "$ORIG_SHA256" "$BASE/$ORIG" "$SNAPSHOT_BASE/$ORIG"
+fetch_pinned "$DEBIAN" "$DEBIAN_SHA256" "$BASE/$DEBIAN" "$SNAPSHOT_BASE/$DEBIAN"
 printf '%s  %s\n%s  %s\n%s  %s\n' \
   "$DSC_SHA256" "$DSC" "$ORIG_SHA256" "$ORIG" "$DEBIAN_SHA256" "$DEBIAN" | sha256sum -c -
 

@@ -6,6 +6,36 @@ import { NodeMailerProvider } from '@gitroom/nestjs-libraries/emails/node.mailer
 import { TemporalService } from 'nestjs-temporal-core';
 import { timer } from '@gitroom/helpers/utils/timer';
 
+// トイバコ: 宛先・件名・本文・provider の応答は log へ出さない。
+// 形を確かめた分類だけを返し、provider の error がどんな形でも例外を投げない。
+function toybacoEmailErrorClass(err: any): string {
+  const closed = /^[A-Za-z][A-Za-z0-9_]{0,40}$/;
+  let name = 'Error';
+  let code = 'none';
+  let responseCode = 'none';
+  try {
+    const rawName = err?.name;
+    if (typeof rawName === 'string' && closed.test(rawName)) {
+      name = rawName;
+    }
+    const rawCode = err?.code;
+    if (typeof rawCode === 'string' && closed.test(rawCode)) {
+      code = rawCode;
+    }
+    const rawResponseCode = err?.responseCode;
+    if (
+      Number.isInteger(rawResponseCode) &&
+      rawResponseCode >= 100 &&
+      rawResponseCode <= 999
+    ) {
+      responseCode = String(rawResponseCode);
+    }
+  } catch {
+    // 読めない値は既定の分類のままにする。
+  }
+  return `name=${name} code=${code} responseCode=${responseCode}`;
+}
+
 @Injectable()
 export class EmailService {
   emailService: EmailInterface;
@@ -137,16 +167,16 @@ export class EmailService {
           process.env.EMAIL_FROM_ADDRESS,
           replyTo
         );
-        console.log(sends);
+        console.log(`TOYBACO_EMAIL_SENT attempt=${attempt + 1}/3`);
         return;
       } catch (err) {
         lastErr = err;
-        console.log(`Email attempt ${attempt + 1}/3 failed:`, err);
+        console.log(`TOYBACO_EMAIL_ATTEMPT_FAILED attempt=${attempt + 1}/3 ${toybacoEmailErrorClass(err)}`);
         if (attempt < 2) {
           await timer(700);
         }
       }
     }
-    console.log(`Email to ${to} failed after 3 attempts:`, lastErr);
+    console.log(`TOYBACO_EMAIL_FAILED attempts=3 ${toybacoEmailErrorClass(lastErr)}`);
   }
 }

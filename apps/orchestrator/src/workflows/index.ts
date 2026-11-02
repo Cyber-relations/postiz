@@ -16,3 +16,6 @@ export * from './refresh.token.workflow';
 export * from './streak.workflow';
 
 export * from './post-workflows/post.workflow.v1.0.11';
+export * from './toybaco.missing.post.workflow.v2';
+export * from './toybaco.refresh.token.workflow.v2';
+export * from './toybaco.media.purge.workflow.v1';

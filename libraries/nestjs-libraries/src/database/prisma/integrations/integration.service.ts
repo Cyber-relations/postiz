@@ -16,6 +16,7 @@ import {
 import { Integration, Organization } from '@prisma/client';
 import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
 import dayjs from 'dayjs';
+import { toybacoTokenExpiryRequiresRefresh } from '@gitroom/nestjs-libraries/toybaco/token-lifecycle';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import {
@@ -330,7 +331,9 @@ export class IntegrationService {
   async informAboutRefreshError(
     orgId: string,
     integration: Integration,
-    err = ''
+    err = '',
+    // toybaco_token_lifecycle_v2: V2 の final だけがメールの可否を渡す。上流の呼び出しは今までどおり送る。
+    toybacoSendEmail = true
   ) {
     // 再接続通知は workflow を通らないため、この service で送信直前に翻訳する。
     const notification = toybacoNotificationJa(
@@ -341,10 +344,14 @@ export class IntegrationService {
       orgId,
       notification.subject,
       notification.message,
-      true,
+      toybacoSendEmail,
       false,
       'info'
     );
+  }
+
+  toybacoTokenLifecycleCandidates(providers: string[]) {
+    return this._integrationRepository.toybacoTokenLifecycleCandidates(providers);
   }
 
   async refreshNeeded(org: string, id: string) {
@@ -533,12 +540,15 @@ export class IntegrationService {
       getIntegration.providerIdentifier
     );
 
+    // toybaco_token_lifecycle_v2: 期限の経過だけでは、更新の仕組みを持たない provider を更新しない。
     if (
-      dayjs(getIntegration?.tokenExpiration).isBefore(dayjs()) ||
-      forceRefresh
+      forceRefresh ||
+      toybacoTokenExpiryRequiresRefresh(getIntegration, Date.now())
     ) {
       const data = await this._refreshIntegrationService.refresh(
-        getIntegration
+        getIntegration,
+        '',
+        { expiryOnly: !forceRefresh }
       );
       if (!data) {
         if (getIntegration.providerIdentifier === 'gmb') {
