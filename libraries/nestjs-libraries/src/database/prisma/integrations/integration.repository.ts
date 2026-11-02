@@ -478,6 +478,21 @@ export class IntegrationRepository {
     return result.count === 1;
   }
 
+  // toybaco_token_lifecycle_v2: 更新 workflow を持つべき接続。token は読まない。
+  toybacoTokenLifecycleCandidates(providers: string[]) {
+    return this._integration.model.integration.findMany({
+      where: {
+        providerIdentifier: { in: providers },
+        type: 'social',
+        deletedAt: null,
+        inBetweenSteps: false,
+        refreshNeeded: false,
+      },
+      select: { id: true, organizationId: true, providerIdentifier: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   needsToBeRefreshed() {
     return this._integration.model.integration.findMany({
       where: {

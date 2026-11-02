@@ -346,7 +346,7 @@ const ROOTS = Object.freeze(['/app/node_modules', '/app/apps', '/app/libraries']
 // temporary trees and are never taken from the command line or the environment.
 export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   const maxFiles = 250000; const maxElfs = 4000; const maxFileBytes = 256 * 1024 * 1024;
-  const maxBytes = 4 * 1024 * 1024 * 1024; const started = Date.now();
+  const maxBytes = 4 * 1024 * 1024 * 1024; const maxMillis = 120000; const started = Date.now();
   const visitedDirectories = new Set(); const visitedFiles = new Set(); const rows = []; const errors = new Map();
   let files = 0; let bytes = 0; let elfs = 0; let symlinksOutside = 0; let boundStopped = false; let neededOmitted = 0; let dynamicUnresolved = 0; let lowerBoundRows = 0;
   let danglingSymlinks = 0;
@@ -358,7 +358,7 @@ export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   // The wall clock only stops a runaway walk. Hosted publisher runs take 29-46 s
   // (one stopped at 46 s under 45 s); the count and byte bounds stay as they were.
   const bound = () => {
-    if (files >= maxFiles || elfs >= maxElfs || bytes >= maxBytes || Date.now() - started > 120000) { boundStopped = true; throw new Error('INVENTORY_BOUND'); }
+    if (files >= maxFiles || elfs >= maxElfs || bytes >= maxBytes || Date.now() - started > maxMillis) { boundStopped = true; throw new Error('INVENTORY_BOUND'); }
   };
   // A path that realpath could not find (ENOENT) is a dangling symlink only when lstat
   // shows a link, readlink reads it and its target, resolved component by component as the
@@ -470,6 +470,9 @@ export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   if (neededOmitted) incomplete.push('NEEDED_OMITTED');
   if (dynamicUnresolved) incomplete.push('DYNAMIC_UNRESOLVED');
   const complete = incomplete.length === 0;
+  // The traversal's own wall clock and bounds, so the publisher can show the margin
+  // left before INVENTORY_BOUND (the bounds and the completeness rule are unchanged).
+  const wallClockMs = Date.now() - started;
   const limitations = ['No function execution/reachability or exploitability verdict', 'No static archives, JIT/WASM/JS dynamic caller proof',
     'No dynamic linker search-order resolution or running process maps', 'No system package tree unless copied under declared app roots',
     'Absence of a dynamic import never proves non-use or TAC acceptance'];
@@ -478,7 +481,9 @@ export function inventory(roots = ROOTS, appRoot = APP_ROOT) {
   if (dynamicUnresolved) limitations.push(`The PT_DYNAMIC table of ${dynamicUnresolved} row(s) could not be resolved; their needed libraries and symbols may be missing`);
   if (danglingSymlinks) limitations.push(`${danglingSymlinks} symlink(s) inside the app point to a path that does not exist; nothing was read behind them, and a file created there later is not in this inventory`);
   return { scope: 'POSTIZ_APP_ELF_DYNAMIC_INVENTORY_ONLY', roots_declared: [...roots], roots_present: present, roots_missing: missing,
-    files_observed: files, elfs_observed: elfs, bytes_read: bytes, symlinks_outside_scope: symlinksOutside, dangling_symlinks: danglingSymlinks,
+    files_observed: files, elfs_observed: elfs, bytes_read: bytes, wall_clock_ms: wallClockMs,
+    limits: { files: maxFiles, elfs: maxElfs, file_bytes: maxFileBytes, bytes: maxBytes, wall_clock_ms: maxMillis },
+    symlinks_outside_scope: symlinksOutside, dangling_symlinks: danglingSymlinks,
     needed_omitted_rows: neededOmitted, dynamic_unresolved_rows: dynamicUnresolved, symbol_lower_bound_rows: lowerBoundRows, errors: Object.fromEntries(errors), incomplete_reasons: incomplete,
     complete_in_declared_scope: complete, rows, limitations, paid_resource_or_role_created: false };
 }

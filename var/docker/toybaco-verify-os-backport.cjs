@@ -7,7 +7,8 @@
 //     Root-only, during the image build. Reads the builder stage's build-stamp.json
 //     in <build-out-dir>, matches it to a package entry in the config, requires the
 //     base image's binaries to be the exact reviewed prior version (a different
-//     base, for example a Debian fix, fails closed and needs a new review), checks
+//     base, for example a Debian point release or fix, fails closed with the
+//     TOYBACO_POSTIZ_OS_BACKPORT=BASE_MOVED line and needs a new review), checks
 //     the .deb bytes against the stamp, installs the rebuilt +toybaco1 package(s)
 //     with dpkg, saves the stamp under STAMP_DIR, and for glibc runs the runtime
 //     smoke against the installed libc and records the result.
@@ -338,6 +339,22 @@ function summary(proof) {
     + ` soname=${p.abi.soname} elf_soname=${p.abi.elf_soname} arch=${p.architecture}`).join('\n');
 }
 
+// Every binary of the base must be the exact reviewed prior version. Another version
+// (a Debian point release or security upload pulled by apt-get upgrade, or another base
+// image) fails closed and lists every binary's version, for a new review: rebase the
+// backport on the new Debian source, or retire it when Debian ships the fix
+// (docs/postiz-os-backport-policy.md). No other version is accepted, from a table or a
+// range, and nothing is installed over it.
+function assertReviewedBase(pkg, versionOf) {
+  const observed = pkg.binary_packages.map(name => [name, versionOf(name)]);
+  const moved = observed.filter(([, version]) => version !== pkg.installed_prior);
+  if (moved.length === 0) return observed;
+  throw new Error(`TOYBACO_POSTIZ_OS_BACKPORT=BASE_MOVED source=${pkg.source_package} `
+    + `${observed.map(([name, version]) => `${name}=${version}`).join(' ')} reviewed_prior=${pkg.installed_prior}: `
+    + `${moved.map(([name, version]) => `base ${name} is ${version}`).join(', ')}, not the reviewed ${pkg.installed_prior}; `
+    + 'review the backport before rebuilding (rebase it on the new Debian source, or retire it when Debian ships the fix)');
+}
+
 function install(outDir, configPath) {
   assert.equal(process.getuid(), 0, '--install must run as root during the image build');
   const config = validateConfig(regularFile(configPath));
@@ -346,11 +363,7 @@ function install(outDir, configPath) {
   const pkg = packageBySource(config, stamp.source_package || 'zlib');
   validateStamp(stamp, pkg);
   // Fail closed when the base no longer carries the reviewed vulnerable version.
-  for (const name of pkg.binary_packages) {
-    const prior = dpkgField(name, 'Version');
-    assert.equal(prior, pkg.installed_prior,
-      `base ${name} is ${prior}, not the reviewed ${pkg.installed_prior}; review the backport before rebuilding`);
-  }
+  assertReviewedBase(pkg, name => dpkgField(name, 'Version'));
   const debs = stampDebs(stamp);
   const debPaths = [];
   for (const name of pkg.binary_packages) {
@@ -383,7 +396,7 @@ function parseCli(args) {
 }
 
 module.exports = { POLICY, STAMP_DIR, ELF_MACHINE, stampPathFor, runtimeRecordPathFor, validateConfig,
-  validateStamp, verifyLibrary, readElf, dpkgPathFilters, excludedByDpkg, parseCli };
+  validateStamp, verifyLibrary, readElf, dpkgPathFilters, excludedByDpkg, assertReviewedBase, parseCli };
 
 if (require.main === module) {
   let cli;

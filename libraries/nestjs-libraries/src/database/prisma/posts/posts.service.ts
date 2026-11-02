@@ -14,6 +14,7 @@ import {
 import { PostsRepository, toybacoParseTerminalMarker } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
 import { CreatePostDto } from '@gitroom/nestjs-libraries/dtos/posts/create.post.dto';
 import dayjs from 'dayjs';
+import { toybacoTokenExpiryRequiresRefresh } from '@gitroom/nestjs-libraries/toybaco/token-lifecycle';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 import {
   Integration,
@@ -512,12 +513,15 @@ export class PostsService {
 
     const getIntegration = post.integration!;
 
+    // toybaco_token_lifecycle_v2: 期限の経過だけでは、更新の仕組みを持たない provider を更新しない。
     if (
-      dayjs(getIntegration?.tokenExpiration).isBefore(dayjs()) ||
-      forceRefresh
+      forceRefresh ||
+      toybacoTokenExpiryRequiresRefresh(getIntegration, Date.now())
     ) {
       const data = await this._refreshIntegrationService.refresh(
-        getIntegration
+        getIntegration,
+        '',
+        { expiryOnly: !forceRefresh }
       );
       if (!data) {
         return [];
@@ -585,12 +589,15 @@ export class PostsService {
 
     const getIntegration = post.integration!;
 
+    // toybaco_token_lifecycle_v2: 期限の経過だけでは、更新の仕組みを持たない provider を更新しない。
     if (
-      dayjs(getIntegration?.tokenExpiration).isBefore(dayjs()) ||
-      forceRefresh
+      forceRefresh ||
+      toybacoTokenExpiryRequiresRefresh(getIntegration, Date.now())
     ) {
       const data = await this._refreshIntegrationService.refresh(
-        getIntegration
+        getIntegration,
+        '',
+        { expiryOnly: !forceRefresh }
       );
       if (!data) {
         return [];
