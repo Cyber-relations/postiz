@@ -166,6 +166,35 @@ a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
   });
 }
 
+// Run on the posting origin before leaving it, including after inbox logout.
+function toybacoLogoutDocument(appOrigin: string) {
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const target = new URL('/', appOrigin).href;
+  const targetJson = JSON.stringify(target).replace(/</g, '\\u003c');
+  const targetHref = target.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const client = `(() => {
+    try {
+      for (const key of ['utm', 'landingUrl', 'referrer', 'returnUrl']) {
+        window.localStorage.removeItem(key);
+      }
+    } catch { /* Storage may be unavailable; logout still completes. */ }
+    window.location.replace(${targetJson});
+  })();`;
+  return new NextResponse(`<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<title>ログアウト | トイバコ</title></head><body>
+<p>ログアウトしました。</p><noscript><p>ブラウザーの保存情報を消すには JavaScript を有効にしてください。</p></noscript>
+<a href="${targetHref}">トイバコへ戻る</a><script nonce="${nonce}">${client}</script></body></html>`, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; frame-ancestors 'self' ${appOrigin}; base-uri 'none'; form-action 'none'`,
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
+}
+
 function toybacoSafeReturnPath(rawValue: string | undefined) {
   if (typeof rawValue !== 'string' || rawValue.length > 4096) return null;
   let value: string;
@@ -444,14 +473,14 @@ export async function proxy(request: NextRequest) {
   // Chatwoot logoutのfront-channel。host-only JWTと旧domain cookieを消し、
   // Postizのlogin画面を見せず統一Chatwoot入口へ戻す。
   if (nextUrl.pathname === '/auth/logout') {
-    const response = NextResponse.redirect(new URL('/', appOrigin));
+    const response = toybacoLogoutDocument(appOrigin);
     const legacyDomain = getCookieUrlFromDomain(process.env.FRONTEND_URL!);
     for (const name of TOYBACO_LOGOUT_COOKIES) {
       expireToybacoProxyCookie(response, name);
       expireToybacoProxyCookie(response, name, legacyDomain);
     }
     for (const { name } of request.cookies.getAll()) {
-      if (/^__Host-toybaco_oidc_[A-Za-z0-9_-]{43}$/.test(name)) {
+      if (/^__Host-toybaco_(?:oidc|connect)_[A-Za-z0-9_-]{43}$/.test(name)) {
         expireToybacoProxyCookie(response, name);
       }
     }

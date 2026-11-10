@@ -1,3 +1,4 @@
+import { lockConnectSelection, assertConnectSelectionLock, unlockConnectSelection } from '@gitroom/nestjs-libraries/toybaco/connect-browser';
 import {
   forwardRef,
   HttpException,
@@ -475,22 +476,85 @@ export class IntegrationService {
     return this._integrationRepository.checkForDeletedOnceAndUpdate(org, page);
   }
 
+  private async removeUnusedConnectPicture(uploadedPicture: string) {
+    try {
+      const local = (process.env.STORAGE_PROVIDER || 'local') === 'local';
+      const prefix = process.env.FRONTEND_URL + '/uploads';
+      if (local && (!process.env.UPLOAD_DIRECTORY || !uploadedPicture.startsWith(prefix + '/'))) {
+        throw new Error('Invalid uploaded picture');
+      }
+      // LocalStorage.removeFile takes a filesystem path; CloudflareStorage
+      // takes the public URL returned by uploadSimple and extracts its key.
+      const filePath = local
+        ? process.env.UPLOAD_DIRECTORY + uploadedPicture.slice(prefix.length)
+        : uploadedPicture;
+      await this.storage.removeFile(filePath);
+    } catch {
+      console.warn('Connect page picture cleanup failed');
+    }
+  }
+
+  async getConnectPageLocations(org: string, id: string) {
+    const current = await this._integrationRepository.getIntegrationById(org, id);
+    if (!current || current.deletedAt || current.providerIdentifier !== 'gmb' || !current.inBetweenSteps) {
+      throw new HttpException('This connection changed. Start a new connection.', 409);
+    }
+    const provider = this._integrationManager.getSocialIntegration('gmb');
+    if (!('toybacoLocations' in provider) || typeof provider.toybacoLocations !== 'function') {
+      throw new HttpException('Location lookup is unavailable', 503);
+    }
+    return provider.toybacoLocations(current.token);
+  }
+
   async saveProviderPage(org: string, id: string, data: any) {
-    const getIntegration = await this._integrationRepository.getIntegrationById(
-      org,
-      id
-    );
-    if (!getIntegration) {
-      throw new HttpException('Integration not found', HttpStatus.NOT_FOUND);
-    }
-    if (!getIntegration.inBetweenSteps) {
-      throw new HttpException('Invalid request', HttpStatus.BAD_REQUEST);
-    }
+    const readPendingSelection = async () => {
+      const getIntegration = await this._integrationRepository.getIntegrationById(
+        org,
+        id
+      );
+      if (!getIntegration) {
+        throw new HttpException('Integration not found', HttpStatus.NOT_FOUND);
+      }
+      // Match the exact provider selection against persisted state. Recovery
+      // must not call the provider or perform a second database write.
+      const choice = getIntegration.providerIdentifier === 'facebook' &&
+        ['string', 'number'].includes(typeof data?.page) ? String(data.page) :
+        getIntegration.providerIdentifier === 'gmb' &&
+        typeof data?.accountName === 'string' && /^accounts\/[a-zA-Z0-9_-]+$/.test(data.accountName) &&
+        typeof data?.locationName === 'string' && /^locations\/[a-zA-Z0-9_-]+$/.test(data.locationName) &&
+        data.id === `${data.accountName}/${data.locationName}` ? data.id : undefined;
+      if (getIntegration.deletedAt) {
+        // A merge retires the original ticket's pending id. Resolve only its
+        // transactionally stored outcome, never a guessed replacement channel.
+        let outcome: { version?: number; sourceIntegrationId?: string;
+          integrationId?: string; selection?: string } | undefined;
+        try {
+          outcome = JSON.parse(getIntegration.additionalSettings || 'null')?.toybacoConnectMerge;
+        } catch { /* Missing/invalid receipts remain a conflict. */ }
+        if (!getIntegration.inBetweenSteps && choice && outcome?.version === 1 &&
+            outcome.sourceIntegrationId === id && outcome.selection === choice &&
+            typeof outcome.integrationId === 'string' && outcome.integrationId !== id) {
+          const survivor = await this._integrationRepository.getIntegrationById(org, outcome.integrationId);
+          if (survivor && !survivor.deletedAt && !survivor.inBetweenSteps &&
+              survivor.providerIdentifier === getIntegration.providerIdentifier && survivor.internalId === choice) {
+            return null;
+          }
+        }
+        throw new HttpException('This connection is no longer available. Start a new connection.', 409);
+      }
+      if (!getIntegration.inBetweenSteps) {
+        if (choice && choice === getIntegration.internalId) return null;
+        throw new HttpException({ code: 'TOYBACO_CONNECT_SELECTION_CONFLICT', message: 'This connection already selected a different page. Start a new connection.' }, 409);
+      }
 
+      return getIntegration;
+    };
+
+    const pending = await readPendingSelection();
+    if (!pending) return { success: true };
     const provider = this._integrationManager.getSocialIntegration(
-      getIntegration.providerIdentifier
+      pending.providerIdentifier
     );
-
     if (!provider.fetchPageInformation) {
       throw new HttpException(
         'Provider does not support page selection',
@@ -498,26 +562,60 @@ export class IntegrationService {
       );
     }
 
-    const getIntegrationInformation = await provider.fetchPageInformation(
-      getIntegration.token,
-      data
-    );
-
-    await this.checkForDeletedOnceAndUpdate(
-      org,
-      String(getIntegrationInformation.id)
-    );
-    await this._integrationRepository.updateIntegration(id, {
-      picture: getIntegrationInformation.picture,
-      internalId: String(getIntegrationInformation.id),
-      organizationId: org,
-      name: getIntegrationInformation.name,
-      inBetweenSteps: false,
-      token: getIntegrationInformation.access_token,
-      profile: getIntegrationInformation.username,
-    });
-
-    return { success: true };
+    // Provider traversal and picture storage may outlast the short Redis lease.
+    // Finish all external I/O before locking, then revalidate the pending row.
+    const getIntegrationInformation = await provider.fetchPageInformation(pending.token, data);
+    const providerPicture = getIntegrationInformation.picture;
+    const storedPicture = [process.env.CLOUDFLARE_BUCKET_URL, process.env.FRONTEND_URL]
+      .some(base => base && providerPicture?.startsWith(base.replace(/\/$/, '') + '/'));
+    const uploadedPicture = providerPicture && !storedPicture
+      ? await this.storage.uploadSimple(providerPicture)
+      : undefined;
+    const picture = uploadedPicture ?? providerPicture;
+    let pictureCleanupSafe = true;
+    try {
+      const owner = await lockConnectSelection(id);
+      try {
+        const getIntegration = await readPendingSelection();
+        if (!getIntegration) return { success: true };
+        if (getIntegration.token !== pending.token || getIntegration.internalId !== pending.internalId ||
+            getIntegration.providerIdentifier !== pending.providerIdentifier) {
+          throw new HttpException({ code: 'TOYBACO_CONNECT_SELECTION_CONFLICT', message: 'This connection changed or already selected a page. Start a new connection.' }, 409);
+        }
+        await assertConnectSelectionLock(id, owner);
+        // A rejected acknowledgement may still follow a committed transaction.
+        // Retain the upload unless our transaction fence proves rollback.
+        pictureCleanupSafe = false;
+        try {
+          return await this._integrationRepository.selectConnectPage(getIntegration, {
+            picture,
+            internalId: String(getIntegrationInformation.id),
+            organizationId: org,
+            name: getIntegrationInformation.name,
+            inBetweenSteps: false,
+            token: getIntegrationInformation.access_token,
+            profile: getIntegrationInformation.username,
+          });
+        } catch (error) {
+          const response = error instanceof HttpException ? error.getResponse() : null;
+          pictureCleanupSafe = error instanceof HttpException && error.getStatus() === 409 &&
+            typeof response === 'object' && response !== null && 'code' in response &&
+            response.code === 'TOYBACO_CONNECT_SELECTION_CONFLICT';
+          if (!pictureCleanupSafe) {
+            console.warn('Connect page picture retained after uncertain save');
+          }
+          throw error;
+        }
+      } finally {
+        await unlockConnectSelection(id, owner);
+      }
+    } finally {
+      // Delete only uploads whose save was never attempted or certainly rolled
+      // back. Successful and uncertain saves may reference them after unlock.
+      if (uploadedPicture && pictureCleanupSafe) {
+        await this.removeUnusedConnectPicture(uploadedPicture);
+      }
+    }
   }
 
   async checkAnalytics(

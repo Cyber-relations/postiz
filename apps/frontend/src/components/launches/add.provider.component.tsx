@@ -646,6 +646,7 @@ export const AddProviderComponent: FC<{
           const params = [
             `externalUrl=${encodeURIComponent(externalUrl)}`,
             onboardingParam,
+            invite ? 'invite=true' : '',
             isMobile
               ? `redirectUrl=${encodeURIComponent('postiz://integrations')}`
               : '',

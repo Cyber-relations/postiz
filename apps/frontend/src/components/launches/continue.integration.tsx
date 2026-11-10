@@ -22,6 +22,7 @@ interface TwoStepState {
   pagesError?: unknown;
   pagesWarnings?: string[];
   returnURL?: string;
+  invitation?: boolean;
 }
 
 type ConnectionOutcome = 'connected' | 'precondition' | 'review';
@@ -46,15 +47,16 @@ export const ContinueIntegration: FC<{
   const [twoStepState, setTwoStepState] = useState<TwoStepState | null>(null);
   const [successState, setSuccessState] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectionError, setSelectionError] = useState(false);
 
   // Helper to handle navigation - redirects if logged or returnURL exists, otherwise shows inline
   const navigateOrShow = useCallback(
-    (path: string, returnURL: string | undefined, outcome: ConnectionOutcome) => {
-      if (returnURL) {
-        // If returnURL exists, always redirect to it with the path params
+    (path: string, returnURL: string | undefined, outcome: ConnectionOutcome, invitation = false) => {
+      if (returnURL === 'postiz://integrations') {
+        // Recheck persisted/older responses at the navigation boundary.
         const params = path.includes('?') ? path.split('?')[1] : '';
         push(params ? `${returnURL}?${params}` : returnURL);
-      } else if (logged) {
+      } else if (logged && !invitation) {
         // If logged in without returnURL, use normal navigation
         push(path);
       } else {
@@ -183,6 +185,7 @@ export const ContinueIntegration: FC<{
         inBetweenSteps,
         id,
         onboarding: resOnboarding,
+        invitation,
         pages,
         pagesError,
         pagesWarnings,
@@ -220,6 +223,7 @@ export const ContinueIntegration: FC<{
       if (inBetweenSteps && !searchParams.refresh) {
         setTwoStepState({
           integrationId: id,
+          invitation: invitation === true,
           onboarding,
           pages: pages || [],
           ...(provider === 'gmb' ? { pagesError, pagesWarnings } : {}),
@@ -231,7 +235,8 @@ export const ContinueIntegration: FC<{
       navigateOrShow(
         `/launches?added=${provider}${onboarding ? '&onboarding=true' : ''}`,
         returnURL,
-        'connected'
+        'connected',
+        invitation === true
       );
     })().catch(() => { if (active) setError(true); });
     return () => { active = false; controller.abort(); cancel?.(); if (timer !== undefined) clearTimeout(timer); };
@@ -242,10 +247,11 @@ export const ContinueIntegration: FC<{
       if (!twoStepState) return;
 
       setIsSaving(true);
+      setSelectionError(false);
 
       try {
         // Use public or authenticated endpoint based on the flow
-        const endpoint = logged
+        const endpoint = logged && !modifiedParams.state
           ? `/integrations/provider/${twoStepState.integrationId}/connect`
           : `/integrations/public/provider/${twoStepState.integrationId}/connect`;
 
@@ -264,8 +270,7 @@ export const ContinueIntegration: FC<{
         ) {
           // API・連携先の生エラーは顧客画面へ出さない。
           await response.json().catch(() => ({}));
-          setError(true);
-          return;
+          throw new Error('PAGE_SELECTION_NOT_SAVED');
         }
 
         navigateOrShow(
@@ -273,8 +278,14 @@ export const ContinueIntegration: FC<{
             twoStepState.onboarding ? '&onboarding=true' : ''
           }`,
           twoStepState.returnURL,
-          'connected'
+          'connected',
+          twoStepState.invitation
         );
+      } catch (error) {
+        // GBP renders its typed lookup/save errors inside the selection form.
+        if (provider === 'gmb') throw error;
+        // Keep the page and popup for the browser-bound ticket's explicit retry.
+        setSelectionError(true);
       } finally {
         setIsSaving(false);
       }
@@ -344,6 +355,11 @@ export const ContinueIntegration: FC<{
               </p>
             </div>
 
+            {selectionError && (
+              <p role="alert" className="text-[16px] text-newTextColor">
+                {connectionMessage({ outcome: 'failed', reason: 'unavailable' })}
+              </p>
+            )}
             <IntegrationContext.Provider
               value={{
                 date: newDayjs(),
@@ -373,9 +389,10 @@ export const ContinueIntegration: FC<{
                 {...(provider === 'gmb' ? {
                   initialError: twoStepState.pagesError,
                   initialWarnings: twoStepState.pagesWarnings,
-                  allowLookup: logged,
-                  checkExisting: logged,
-                  onClose: logged ? () => push('/launches?connection=setup-pending') : undefined,
+                  allowLookup: !!modifiedParams.state || (logged && !twoStepState.invitation),
+                  selectionState: modifiedParams.state,
+                  checkExisting: logged && !twoStepState.invitation,
+                  onClose: logged && !twoStepState.invitation ? () => push('/launches?connection=setup-pending') : undefined,
                   returnToAppUrl: props.appOrigin ? `${props.appOrigin}/app` : '/launches',
                 } : {})}
               />

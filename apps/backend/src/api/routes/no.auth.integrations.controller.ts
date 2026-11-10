@@ -1,3 +1,6 @@
+import { consumeConnectBrowser, clearConnectBrowser, allowConnectPages, readConnectPages, reserveConnectPages, releaseConnectPages, completeConnectPages, readConnectInvitation, renderConnectInvitation, consumeConnectInvitation } from '@gitroom/nestjs-libraries/toybaco/connect-browser';
+import { startConnectBrowser } from '@gitroom/nestjs-libraries/toybaco/connect-browser';
+import type { Request, Response } from 'express';
 import { ToybacoGmbLookupError } from '@gitroom/nestjs-libraries/integrations/social/gmb.provider';
 import {
   Body,
@@ -6,6 +9,9 @@ import {
   HttpException,
   Param,
   Post,
+  Req,
+  Query,
+  Res,
   UseFilters,
 } from '@nestjs/common';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
@@ -41,12 +47,77 @@ export class NoAuthIntegrationsController {
     return this._integrationManager.getAllIntegrations();
   }
 
+  @Post('/public/provider/:id/locations')
+  async connectPageLocations(
+    @Param('id') id: string,
+    @Body() body: { state: string },
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const ticket = await readConnectPages(body.state, id, request);
+    response.set({ 'Cache-Control': 'no-store' });
+    return this._integrationService.getConnectPageLocations(ticket.organization, id);
+  }
+
+  @Get('/connect-invitation')
+  async connectionInvitation(
+    @Query('ticket') ticket: string,
+    @Res() response: Response
+  ) {
+    const invitation = await readConnectInvitation(ticket);
+    if (!this._integrationManager.getAllowedSocialsIntegrations().includes(invitation.provider)) {
+      throw new HttpException('Integration not allowed', 400);
+    }
+    const org = await this._organizationService.getOrgById(invitation.organization);
+    if (!org) throw new HttpException('Invitation organization not found', 404);
+    return renderConnectInvitation(ticket, invitation, org.name, response);
+  }
+
+  @Post('/connect-invitation')
+  async acceptConnectionInvitation(
+    @Query('ticket') ticket: string,
+    @Body() body: { confirmation?: string },
+    @Req() request: Request,
+    @Res() response: Response
+  ) {
+    if (typeof body?.confirmation !== 'string') throw new HttpException('Confirm the destination organization first', 400);
+    const invitation = await readConnectInvitation(ticket);
+    const organization = await consumeConnectBrowser(body.confirmation, 'invite:' + ticket, request);
+    if (organization !== invitation.organization) throw new HttpException('Invalid connection invitation', 400);
+    const org = await this._organizationService.getOrgById(organization);
+    if (!org) throw new HttpException('Invitation organization not found', 404);
+    if (!this._integrationManager.getAllowedSocialsIntegrations().includes(invitation.provider)) {
+      throw new HttpException('Integration not allowed', 400);
+    }
+    const provider = this._integrationManager.getSocialIntegration(invitation.provider);
+    if (provider.externalUrl || provider.customFields) {
+      throw new HttpException('This provider does not support connection invitations', 400);
+    }
+    // Only an explicit confirmation in this browser can claim the invitation.
+    await consumeConnectInvitation(ticket, invitation);
+    clearConnectBrowser(body.confirmation, response);
+    response.set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+    try {
+      const { state, codeVerifier, url } = await provider.generateAuthUrl();
+      await ioRedis.set('provider:' + state, invitation.provider, 'EX', 3600);
+      await ioRedis.set('organization:' + state, organization, 'EX', 3600);
+      await ioRedis.set('login:' + state, codeVerifier, 'EX', 3600);
+      await ioRedis.set('connect-invited:' + state, 'true', 'EX', 3600);
+      await startConnectBrowser(state, invitation.provider, organization, response);
+      return response.redirect(303, url);
+    } catch {
+      throw new HttpException('接続を開始できませんでした。招待リンクを作り直してください。', 502);
+    }
+  }
+
   @Post('/social-connect/:integration')
   @CheckPolicies([AuthorizationActions.Create, Sections.CHANNEL])
   @UseFilters(new NotEnoughScopesFilter())
   async connectSocialMedia(
     @Param('integration') integration: string,
-    @Body() body: ConnectIntegrationDto
+    @Body() body: ConnectIntegrationDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response
   ) {
     if (
       !this._integrationManager
@@ -61,6 +132,7 @@ export class NoAuthIntegrationsController {
     if (!stateProvider || stateProvider !== integration) {
       throw new Error('Invalid state');
     }
+    const boundOrganization = await consumeConnectBrowser(body.state, integration, request);
     await ioRedis.del('provider:' + body.state);
 
     const integrationProvider =
@@ -74,11 +146,11 @@ export class NoAuthIntegrationsController {
     }
 
     const organization = await ioRedis.get(`organization:${body.state}`);
-    if (!organization) {
+    if (!organization || organization !== boundOrganization) {
       throw new Error('Organization not found');
     }
 
-    const org = await this._organizationService.getOrgById(organization);
+    const org = await this._organizationService.getOrgById(boundOrganization);
 
     if (!integrationProvider.customFields) {
       await ioRedis.del(`login:${body.state}`);
@@ -366,6 +438,12 @@ export class NoAuthIntegrationsController {
         })
       : undefined;
 
+    if (integrationProvider.isBetweenSteps && !refresh) {
+      await allowConnectPages(body.state, createUpdate.id, org.id, request);
+    } else {
+      clearConnectBrowser(body.state, response);
+    }
+
     // Never leak stored credentials (signed/encrypted secrets) back to the
     // caller. These columns hold the integration access token, refresh token
     // and encrypted custom instance details and must stay server-side.
@@ -376,30 +454,44 @@ export class NoAuthIntegrationsController {
       ...safeIntegration
     } = createUpdate as any;
 
+    const invitation = await ioRedis.get('connect-invited:' + body.state) === 'true';
+    await ioRedis.del('connect-invited:' + body.state);
     return {
       ...safeIntegration,
+      invitation,
       onboarding: onboarding === 'true',
       pages,
       ...(integration === 'gmb' ? { pagesError, pagesWarnings } : {}),
-      ...(returnURL ? { returnURL } : {}),
+      ...(returnURL === 'postiz://integrations' ? { returnURL } : {}),
       ...(extensionToken ? { extensionToken } : {}),
     };
   }
 
   @Post('/public/provider/:id/connect')
-  async saveProviderPage(@Param('id') id: string, @Body() body: any) {
-    if (!body.state) {
-      throw new Error('Invalid state');
+  async saveProviderPage(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Req() request: Request
+  ) {
+    const ticket = await reserveConnectPages(body.state, id, body, request);
+    if (ticket.status === 'complete') return ticket.result;
+    let result: { success: boolean };
+    try {
+      result = await this._integrationService.saveProviderPage(ticket.organization, id, body);
+    } catch (error) {
+      // Provider/persistence errors leave the cookie and original ticket usable.
+      // A busy retry must not release the first request's ticket reservation.
+      if (ticket.status === 'reserved') {
+        await releaseConnectPages(body.state, id, ticket.reservation, request);
+      }
+      throw error;
     }
-
-    const organization = await ioRedis.get(`organization:${body.state}`);
-    if (!organization) {
-      throw new Error('Organization not found');
-    }
-
-    const org = await this._organizationService.getOrgById(organization);
-
-    return this._integrationService.saveProviderPage(org.id, id, body);
+    // On completion failure keep the browser binding. A retry compares the
+    // persisted choice under the integration lock and succeeds without a write.
+    await completeConnectPages(body.state, id, ticket.reservation, result, request);
+    // Keep the binding cookie until expiry so a lost successful response can be
+    // replayed from the recorded result. It cannot run the selection again.
+    return result;
   }
 
   @Post('/extension-refresh')

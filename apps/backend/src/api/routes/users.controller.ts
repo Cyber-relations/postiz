@@ -389,7 +389,7 @@ export class UsersController {
       response.cookie(name, '', { ...options, domain: legacyDomain });
     }
     for (const name of Object.keys(req.cookies || {})) {
-      if (!/^__Host-toybaco_oidc_[A-Za-z0-9_-]{43}$/.test(name)) continue;
+      if (!/^__Host-toybaco_(?:oidc|connect)_[A-Za-z0-9_-]{43}$/.test(name)) continue;
       response.cookie(name, '', {
         path: '/', secure: true, httpOnly: true, sameSite: 'lax',
         maxAge: -1, expires: new Date(0),
