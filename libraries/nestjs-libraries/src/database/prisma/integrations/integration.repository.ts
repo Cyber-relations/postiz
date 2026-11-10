@@ -2,7 +2,7 @@ import {
   PrismaRepository,
   PrismaTransaction,
 } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, HttpException, Injectable } from '@nestjs/common';
 import {
   toybacoMarkerIsClaimed,
   toybacoParsePublishMarker,
@@ -156,6 +156,45 @@ export class IntegrationRepository {
           },
         },
       },
+    });
+  }
+
+  async selectConnectPage(current: Integration, params: Partial<Integration>) {
+    return this._transaction.model.$transaction(async tx => {
+      // Recheck the pending row inside the transaction as a final fence if a
+      // Redis lease expires during slow I/O. No new schema is required.
+      const claimed = await tx.integration.updateMany({
+        where: { id: current.id, organizationId: current.organizationId, deletedAt: null,
+          inBetweenSteps: true, internalId: current.internalId, token: current.token },
+        data: { inBetweenSteps: false },
+      });
+      if (claimed.count !== 1) {
+        throw new HttpException({ code: 'TOYBACO_CONNECT_SELECTION_CONFLICT', message: 'This connection changed or already selected a page. Start a new connection.' }, 409);
+      }
+      await tx.integration.updateMany({
+        where: { organizationId: current.organizationId, internalId: params.internalId, deletedAt: { not: null } },
+        data: { internalId: makeId(10) },
+      });
+      const existing = await tx.integration.findUnique({
+        where: { organizationId_internalId: { organizationId: current.organizationId, internalId: params.internalId! } },
+      });
+      const target = existing && existing.id !== current.id ? existing : null;
+      if (target) {
+        await tx.post.updateMany({ where: { integrationId: current.id }, data: { deletedAt: new Date() } });
+        await tx.integration.update({ where: { id: current.id }, data: {
+          internalId: `deleted_${params.internalId}_${makeId(10)}`, deletedAt: new Date(),
+          // Only this retired pending row stores the merge receipt. Commit it
+          // with the survivor update so Redis completion can be retried safely.
+          additionalSettings: JSON.stringify({ toybacoConnectMerge: {
+            version: 1, sourceIntegrationId: current.id,
+            integrationId: target.id, selection: params.internalId,
+          } }),
+        } });
+      }
+      await tx.integration.update({ where: { id: target?.id || current.id }, data: {
+        ...params, inBetweenSteps: false, disabled: false, deletedAt: null,
+      } });
+      return { success: true };
     });
   }
 

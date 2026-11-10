@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import { useIntegration } from '@gitroom/frontend/components/launches/helpers/use.integration';
+import { escapePreviewText } from '@gitroom/helpers/utils/escape.preview.text';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { textSlicer } from '@gitroom/helpers/utils/count.length';
 import { VideoOrImage } from '@gitroom/react/helpers/video.or.image';
@@ -30,13 +31,12 @@ export const PinterestPreview: FC<{
     );
 
     const finalValue =
-      newContent
-        .slice(start, end)
+      escapePreviewText(newContent.slice(start, end))
         .replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
           return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
         }) +
       `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="This text will be cropped">` +
-      newContent.slice(end).replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
+      escapePreviewText(newContent.slice(end)).replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
         return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
       }) +
       `</mark>`;

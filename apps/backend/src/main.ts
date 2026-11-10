@@ -182,7 +182,10 @@ async function start() {
   app.useGlobalFilters(new PostValidationExceptionFilter());
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  loadSwagger(app);
+  // API documentation is a development surface, never a production route.
+  if (process.env.NODE_ENV !== 'production') {
+    loadSwagger(app);
+  }
 
   const port = process.env.PORT || 3000;
 

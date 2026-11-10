@@ -16,6 +16,10 @@ interface GmbItem {
 }
 
 const LOOKUP_MESSAGES = {
+  'selection-changed': {
+    title: '別の接続操作で店舗の設定が更新されました',
+    description: 'この画面からは変更できません。最新の接続画面を使うか、チャンネル追加から接続をやり直してください。',
+  },
   'access-not-ready': {
     title: 'Google との接続準備が完了していません',
     description: 'Google 側の API 利用設定により、店舗一覧を取得できません。トイバコの運営側で設定を確認する必要があります。連携を削除したり、Google にログインし直す必要はありません。',
@@ -54,6 +58,9 @@ export async function readGmbResponse(response: Response) {
   let body: any;
   try { body = await response.json(); } catch { throw new GmbLookupError('unavailable'); }
   if (!response.ok) {
+    if (response.status === 409 && body?.code === 'TOYBACO_CONNECT_SELECTION_CONFLICT') {
+      throw new GmbLookupError('selection-changed');
+    }
     const reason = body?.error === 'TOYBACO_GBP_LOOKUP_FAILED' &&
       typeof body.reason === 'string' && Object.prototype.hasOwnProperty.call(LOOKUP_MESSAGES, body.reason)
       ? body.reason as LookupReason : 'unavailable';
@@ -76,11 +83,12 @@ export const GmbContinue: FC<ContinueProviderProps & {
   initialError?: unknown;
   initialWarnings?: string[];
   allowLookup?: boolean;
+  selectionState?: string;
   checkExisting?: boolean;
   returnToAppUrl?: string;
 }> = ({
   onSave, existingId, initialData, isSaving: externalSaving, onClose,
-  initialError, initialWarnings, allowLookup = true, checkExisting = false, returnToAppUrl,
+  initialError, initialWarnings, allowLookup = true, selectionState, checkExisting = false, returnToAppUrl,
 }) => {
   const { integration } = useIntegration();
   const fetch = useFetch();
@@ -107,13 +115,15 @@ export const GmbContinue: FC<ContinueProviderProps & {
       return withExisting(readLookup({ locations: initialData, warnings: initialWarnings }));
     }
     if (!allowLookup) throw new GmbLookupError('unavailable');
-    const response = await fetch('/integrations/function', {
-      method: 'POST', body: JSON.stringify({ name: 'toybacoLocations', id: integration?.id }),
+    const response = await fetch(selectionState
+      ? `/integrations/public/provider/${integration?.id}/locations` : '/integrations/function', {
+      method: 'POST', body: JSON.stringify(selectionState
+        ? { state: selectionState } : { name: 'toybacoLocations', id: integration?.id }),
     });
     return withExisting(readLookup(await readGmbResponse(response)));
-  }, [allowLookup, checkExisting, fetch, initialData, initialError, initialWarnings, integration?.id]);
+  }, [allowLookup, selectionState, checkExisting, fetch, initialData, initialError, initialWarnings, integration?.id]);
   const { data, error, isLoading, isValidating, mutate } = useSWR(
-    integration?.id || initialData ? ['toybaco-gmb-locations', integration?.id || 'preview'] : null,
+    integration?.id || initialData ? ['toybaco-gmb-locations', integration?.id || 'preview', selectionState] : null,
     load,
     { revalidateOnFocus: false, revalidateOnReconnect: false, refreshInterval: 0,
       shouldRetryOnError: false, revalidateIfStale: false, revalidateOnMount: true }
@@ -206,7 +216,7 @@ export const GmbContinue: FC<ContinueProviderProps & {
           {onClose && <button type="button" disabled={busy} onClick={onClose}
             className="min-h-[44px] rounded-lg px-4 py-2 text-sm">{allConnected ? '閉じる' : '後で設定する'}</button>}
         </div>
-        {!allowLookup && returnToAppUrl && <a href={returnToAppUrl} className="min-h-[44px] rounded-lg border border-input px-4 py-3 text-center text-sm">トイバコへ戻って設定を続ける</a>}
+        {!onClose && returnToAppUrl && <a href={returnToAppUrl} className="min-h-[44px] rounded-lg border border-input px-4 py-3 text-center text-sm">トイバコへ戻って設定を続ける</a>}
         {allowLookup && canChooseAccount && onClose && <button type="button" disabled={busy} onClick={backToAdd}
           className="min-h-[44px] text-left text-sm underline underline-offset-4">別の Google アカウントを使う：チャンネル追加に戻る</button>}
       </footer>

@@ -1,3 +1,6 @@
+import { isFrontendIntegrationFunction } from '@gitroom/nestjs-libraries/toybaco/integration-functions';
+import { startConnectBrowser } from '@gitroom/nestjs-libraries/toybaco/connect-browser';
+import type { Response } from 'express';
 import { ToybacoGmbLookupError } from '@gitroom/nestjs-libraries/integrations/social/gmb.provider';
 import {
   Body,
@@ -10,7 +13,9 @@ import {
   Post,
   Put,
   Query,
+  Res,
 } from '@nestjs/common';
+import { createConnectInvitation } from '@gitroom/nestjs-libraries/toybaco/connect-browser';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
@@ -212,7 +217,9 @@ export class IntegrationsController {
     @Query('externalUrl') externalUrl: string,
     @Query('redirectUrl') redirectUrl: string,
     @Query('onboarding') onboarding: string,
-    @GetOrgFromRequest() org: Organization
+    @GetOrgFromRequest() org: Organization,
+    @Res({ passthrough: true }) response: Response,
+    @Query('invite') invite?: string
   ) {
     if (
       !this._integrationManager
@@ -220,6 +227,14 @@ export class IntegrationsController {
         .includes(integration)
     ) {
       throw new Error('Integration not allowed');
+    }
+
+    if (invite !== undefined) {
+      if (invite !== 'true' || refresh || redirectUrl || onboarding === 'true') {
+        throw new HttpException('Invalid connection invitation', 400);
+      }
+      // No provider OAuth or browser binding is created in the sender's browser.
+      return createConnectInvitation(integration, org.id);
     }
 
     // toybaco_provider_allowlist_v1: refresh IDを別providerへ差し替えさせない。
@@ -274,7 +289,8 @@ export class IntegrationsController {
         await ioRedis.set(`onboarding:${state}`, 'true', 'EX', 3600);
       }
 
-      if (redirectUrl) {
+      // Only the mobile deep link emitted by AddProviderComponent is accepted.
+      if (redirectUrl === 'postiz://integrations') {
         await ioRedis.set(`redirect:${state}`, redirectUrl, 'EX', 3600);
       }
 
@@ -287,6 +303,7 @@ export class IntegrationsController {
         3600
       );
 
+      await startConnectBrowser(state, migrateTo || integration, org.id, response);
       return { url };
     } catch (err) {
       return { err: true };
@@ -378,8 +395,16 @@ export class IntegrationsController {
       throw new Error('Invalid provider');
     }
 
+    if (!isFrontendIntegrationFunction(
+      getIntegration.providerIdentifier,
+      body.name,
+      this._integrationManager.getAllTools()
+    )) {
+      throw new HttpException('Function not allowed', HttpStatus.BAD_REQUEST);
+    }
+
     // @ts-ignore
-    if (integrationProvider[body.name]) {
+    if (typeof integrationProvider[body.name] === 'function') {
       try {
         // @ts-ignore
         const load = await integrationProvider[body.name](
@@ -447,7 +472,7 @@ export class IntegrationsController {
         return false;
       }
     }
-    throw new Error('Function not found');
+    throw new HttpException('Function not allowed', HttpStatus.BAD_REQUEST);
   }
 
   @Post('/disable')

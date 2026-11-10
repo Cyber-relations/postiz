@@ -70,7 +70,6 @@ import { PostValidationException } from '@gitroom/backend/api/routes/posts.valid
 import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/users.service';
 import { SuperAdminGuard } from '@gitroom/backend/services/auth/super.admin.guard';
 import { timer } from '@gitroom/helpers/utils/timer';
-import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 
 // toybaco_public_upload_boundary_v1: reject sparse array indices before append-field.
 const toybacoPublicUploadOptions: MulterOptions & {
@@ -384,68 +383,12 @@ export class PublicIntegrationsController {
     @Query('refresh') refresh: string,
     @GetOrgFromRequest() org: Organization
   ) {
-    Sentry.metrics.count('public_api-request', 1);
-    if (
-      !this._integrationManager
-        .getAllowedSocialsIntegrations()
-        .includes(integration)
-    ) {
-      throw new HttpException({ msg: 'Integration not allowed' }, 400);
-    }
-
-    // toybaco_provider_allowlist_v1: public APIでもrefresh元を組織/providerへ固定。
-    if (refresh) {
-      const current = await this._integrationService.getIntegrationByInternalId(
-        org.id,
-        refresh
-      );
-      if (!current || current.providerIdentifier !== integration) {
-        throw new HttpException({ msg: 'Integration not allowed' }, 400);
-      }
-    }
-
-    // A provider migrated via MIGRATE_PROVIDERS reconnects through its target
-    // provider's OAuth: the callback lands on the target and the channel is
-    // migrated in place (see migrateIntegration).
-    const migrateTo = refresh
-      ? this._integrationManager.getMigrationTarget(integration)
-      : undefined;
-
-    const integrationProvider = this._integrationManager.getSocialIntegration(
-      migrateTo || integration
-    );
-
-    if (integrationProvider.externalUrl) {
-      throw new HttpException(
-        {
-          msg: 'This integration requires an external URL and is not supported via the public API',
-        },
-        400
-      );
-    }
-
-    try {
-      const { codeVerifier, state, url } =
-        await integrationProvider.generateAuthUrl();
-
-      await ioRedis.set(
-        'provider:' + state,
-        migrateTo || integration,
-        'EX',
-        3600
-      );
-
-      if (refresh) {
-        await ioRedis.set(`refresh:${state}`, refresh, 'EX', 3600);
-      }
-
-      await ioRedis.set(`organization:${state}`, org.id, 'EX', 3600);
-      await ioRedis.set(`login:${state}`, codeVerifier, 'EX', 3600);
-
-      return { url };
-    } catch (err) {
-      throw new HttpException({ msg: 'Failed to generate auth URL' }, 500);
-    }
+    // toybaco_provider_allowlist_v1: /public/v1 is disabled by the Toybaco product
+    // boundary; fail closed even if this controller is mounted without that middleware.
+    throw new HttpException({
+      code: 'TOYBACO_PUBLIC_CONNECT_DISABLED',
+      message: '公開APIからのチャンネル接続は利用できません。投稿画面から接続してください。',
+    }, 403);
   }
 
   @Get('/users')

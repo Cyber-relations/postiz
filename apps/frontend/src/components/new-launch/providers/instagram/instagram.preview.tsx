@@ -1,6 +1,7 @@
 import { useIntegration } from '@gitroom/frontend/components/launches/helpers/use.integration';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
+import { escapePreviewText } from '@gitroom/helpers/utils/escape.preview.text';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { textSlicer } from '@gitroom/helpers/utils/count.length';
 import { FC } from 'react';
@@ -33,14 +34,13 @@ export const InstagramPreview: FC<{
     );
 
     const finalValue =
-      `<strong class="text-[15px] font-[600]">${integration?.name} </strong>` +
-      newContent
-        .slice(start, end)
+      `<strong class="text-[15px] font-[600]">${escapePreviewText(integration?.name || '')} </strong>` +
+      escapePreviewText(newContent.slice(start, end))
         .replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
           return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
         }) +
       `<mark class="bg-red-500" data-tooltip-id="tooltip" data-tooltip-content="この部分は切り取られます">` +
-      newContent.slice(end).replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
+      escapePreviewText(newContent.slice(end)).replace(/\[\[\[([.\s\S]*?)]]]/, (match, match1) => {
         return `<span class="font-bold font-[arial]" style="color: #ae8afc">${match1}</span>`;
       }) +
       `</mark>`;
