@@ -1,54 +1,8 @@
 #!/usr/bin/env bash
-# Build Node.js 22.23.4 from the exact release source with --shared-zlib, linked
-# against the reviewed zlib1g source backport (+toybaco1), so the binary carries no
-# zlib copy of its own for gz* and resolves zlib through the system libz.so.1.
-#
-# Provenance and evidence, in order:
-#   - apt resolves the toolchain only from the fixed snapshot.debian.org index (as the
-#     glibc builder): the base image's lists are purged, "apt-get update --error-on=any"
-#     fails on any missing index, and every package apt installs or changes must have
-#     its exact version in that index; the resolved package list (name=version) and its
-#     SHA-256 go into the stamp;
-#   - the zlib-backport stage's build stamp and .deb are checked, the base zlib1g must
-#     be the reviewed prior version, and the rebuilt +toybaco1 package is installed;
-#   - the glibc-backport stage's build stamp must be present (read-only mount): the
-#     Dockerfile orders the native builds glibc -> node through that mount, so the two
-#     all-CPU builds never run at the same time; its SHA-256 goes into the stamp;
-#   - resources are checked before the long build (fail closed): disk space, memory
-#     (MemAvailable and the cgroup memory.max), the cgroup cpu.max quota and, when a
-#     deadline is given, the remaining time; make's -j comes from them (below) and every
-#     value used goes into the stamp;
-#   - the zlib headers come from the SHA-256-pinned zlib1g-dev .deb of the same Debian
-#     source (unpacked, not installed); the link directory holds only a libz.so
-#     symlink to the installed libz.so.1, so the static libz.a can never be linked;
-#   - SHASUMS256.txt is verified with gpgv against the vendored, SHA-256-pinned Node
-#     release key and must be signed by its exact primary fingerprint; the
-#     SHASUMS256.txt bytes and the source tarball are SHA-256 pinned, and the tarball
-#     line in the signed file must carry the same hash;
-#   - ./configure --shared-zlib (log kept), make, then the ELF and runtime checks:
-#     DT_NEEDED has libz.so.1, no RPATH/RUNPATH, no gz* in the dynamic symbol table,
-#     no gz_* implementation in the symbol table, and the libz the built node maps at
-#     run time is the +toybaco1 file byte for byte;
-#   - a minimal N-API addon (gzprobe.c) loaded into the built node binds gz* to the
-#     system libz.so.1 (LD_DEBUG=bindings shows gzwrite/gzprintf resolving to it, nm -D
-#     lists them as undefined imports) and runs the CVE-2026-85091 direct-write path
-#     cleanly through that libz; the OOB-vs-clean proof is the zlib stage's ASan
-#     reproducer, this shows the addon path reaches the +toybaco1 fix;
-#   - process.versions.zlib, a JS zlib interoperability check against the official
-#     binary, and Node's own test/parallel/test-zlib-* subset (a failure that the
-#     official binary does not also show fails the build).
-# No scanner is run.
-#
-# Usage: build-node-shared-zlib.sh <node-dir> <zlib-out-dir> <glibc-out-dir> \
-#          <zlib-src-dir> <out-dir>
-#   <node-dir>       this script, the vendored release key and gzprobe.c
-#   <zlib-out-dir>   the zlib-backport stage output (zlib1g .deb and build-stamp.json)
-#   <glibc-out-dir>  the glibc-backport stage output (build-stamp.json is required)
-#   <zlib-src-dir>   the reviewed zlib backport inputs (the adapted patch and the
-#                    reproducer poc_cve_2026_85091.c), checksum-pinned here; used for the
-#                    two-sided ASan reproducer (patched vs unpatched shared libz)
-#   <out-dir>        receives node, LICENSE, build-stamp.json, build-environment.txt,
-#                    configure.log and zlib-tests.tap
+# Build and test Node against the exact Debian security package used by the runtime.
+# The signed Node source release, ELF dependencies, Node zlib suite, native addon
+# and two-sided AddressSanitizer reproducer are checked before recording the build.
+# Usage: build-node-shared-zlib.sh <node-dir> <glibc-out-dir> <zlib-src-dir> <out-dir>
 # Environment: TOYBACO_NODE_BUILD_DEADLINE_EPOCH (optional, Unix seconds). When set, the
 # build fails closed unless the estimated time fits before it; when unset, the stamp
 # records that no deadline was checked.
@@ -61,10 +15,9 @@ log() { printf '[node-shared-zlib] %s\n' "$*"; }
 die() { log "$2"; exit "$1"; }
 
 NODE_DIR="$(cd "${1:?node dir}" && pwd -P)"
-ZLIB_OUT="$(cd "${2:?zlib-backport out dir}" && pwd -P)"
-GLIBC_OUT="$(cd "${3:?glibc-backport out dir}" && pwd -P)"
-ZLIB_SRC_DIR="$(cd "${4:?zlib backport source dir}" && pwd -P)"
-OUT_DIR="${5:?out dir}"
+GLIBC_OUT="$(cd "${2:?glibc-backport out dir}" && pwd -P)"
+ZLIB_SRC_DIR="$(cd "${3:?zlib backport source dir}" && pwd -P)"
+OUT_DIR="${4:?out dir}"
 mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd -P)"
 
@@ -82,26 +35,27 @@ RELEASE_KEYRING_SHA256='067260a186848e8e35937eb8b1a3d5649d204f0153274b5f844b762d
 # deps/zlib/gzwrite.c of the release (upstream zlib 1.3.1); not compiled with --shared-zlib.
 BUNDLED_GZWRITE_SHA256='469b1e58932ea11bdda2a153f6655f7b3c13254240fae157181b49ed1bc93b47'
 
-# The reviewed zlib1g source backport and the headers of the same Debian source.
+# Pinned DSA-6613-1 zlib1g and its matching Debian headers.
 ZLIB_PRIOR='1:1.3.dfsg+really1.3.1-1+b1'
-ZLIB_FIXED='1:1.3.dfsg+really1.3.1-1+toybaco1'
-ZLIB_DEB='zlib1g_1.3.dfsg+really1.3.1-1+toybaco1_amd64.deb'
+ZLIB_FIXED='1:1.3.dfsg+really1.3.1-1+deb13u1'
+ZLIB_DEB='zlib1g_1.3.dfsg+really1.3.1-1+deb13u1_amd64.deb'
+ZLIB_DEB_SHA256='8c27c342230503b73dfde629642c3b352e87b554e06d60cf58772f236a305ceb'
 ZLIB_SOFILE='libz.so.1.3.1'
 ZLIB_VERSION='1.3.1'
-ZLIB_DEV_DEB='zlib1g-dev_1.3.dfsg+really1.3.1-1+b1_amd64.deb'
-ZLIB_DEV_DEB_SHA256='76ed5c858e1aef38b7be93acce5910e457e77bd6271471b9d05fb42e78826224'
+ZLIB_DEV_DEB='zlib1g-dev_1.3.dfsg+really1.3.1-1+deb13u1_amd64.deb'
+ZLIB_DEV_DEB_SHA256='88ebb839a7a54c97dceb647e2a2bfa2451d6f440801ceef3d56f654022637eb9'
 # zlib upstream 1.3.1 source for the two-sided ASan reproducer; the orig tarball SHA-256
-# is the same pin as postiz/os-backport/zlib/build-zlib1g-backport.sh.
+# is checked before applying the Debian gzwrite patch for the positive control.
 ZLIB_ORIG='zlib_1.3.dfsg+really1.3.1.orig.tar.gz'
 ZLIB_ORIG_SHA256='60dd315c07f616887caa029408308a018ace66e3d142726a97db164b3b8f69fb'
 ZLIB_BASE='https://deb.debian.org/debian/pool/main/z/zlib'
-ADAPTED_PATCH_SHA256='2910727aea20ef7b71050e5161a6dfcac2e91788d9c69b32989a6829cfb5435a'
+DEBIAN_PATCH_SHA256='524d815463693befeb627eaa3f8b6ca173ee0a247bb787be651f7d60a5b34211'
 POC_SHA256='43231e593cb129ca032daf80a83d4d86a9f27d2c5155b42d06bd19aebd103d14'
 GZWRITE_ORIG_SHA256='469b1e58932ea11bdda2a153f6655f7b3c13254240fae157181b49ed1bc93b47'
 GZWRITE_PATCHED_SHA256='ce2da7e2567c7f3fd361cbdf56bc4354e179c1d91257ea26eeb281cbbe83e1ca'
-ZLIB_DEV_SOURCE='zlib (1:1.3.dfsg+really1.3.1-1)'
-# zlib.h of upstream 1.3.1; Debian carries no patch to it.
-ZLIB_H_SHA256='8a5579af72ea4f427ff00a4150f0ccb3fc5c1e4379f726e101133b1ab9fc600c'
+ZLIB_DEV_SOURCE='zlib'
+# Debian security headers include the crc32 documentation correction.
+ZLIB_H_SHA256='55190843e28bfeb23d0fc1afb7d067f4443462b42ad81515cc80872da71c95bf'
 
 GLIBC_FIXED='2.41-12+deb13u4+toybaco1'
 
@@ -135,30 +89,6 @@ SYSTEM_LIBZ="/usr/lib/$MULTIARCH/libz.so.1"
 
 log 'verifying the vendored release key bytes'
 printf '%s  %s\n' "$RELEASE_KEY_SHA256" "$NODE_DIR/$RELEASE_KEY_FILE" | sha256sum -c -
-
-log 'checking the zlib-backport stage output'
-"$REFERENCE_NODE" - "$ZLIB_OUT" "$ZLIB_FIXED" "$ZLIB_DEB" <<'EOF'
-const assert = require('node:assert/strict');
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
-const [dir, fixed, debName] = process.argv.slice(2);
-const stamp = JSON.parse(fs.readFileSync(path.join(dir, 'build-stamp.json'), 'utf8'));
-assert.equal(stamp.cve, 'CVE-2026-85091');
-assert.equal(stamp.binary_package, 'zlib1g');
-assert.equal(stamp.installed_fixed, fixed);
-assert.equal(stamp.architecture, 'amd64');
-assert.equal(stamp.patched_marker_present, true);
-assert.equal(stamp.reproducer.patched_exit, 0);
-assert.equal(stamp.deb, debName);
-const deb = path.join(dir, debName);
-const stat = fs.lstatSync(deb);
-assert.ok(stat.isFile() && !stat.isSymbolicLink(), 'zlib1g .deb must be a regular file');
-assert.equal(crypto.createHash('sha256').update(fs.readFileSync(deb)).digest('hex'), stamp.deb_sha256,
-  'zlib1g .deb bytes differ from the zlib-backport stamp');
-EOF
-zlib_deb_sha="$(sha256sum "$ZLIB_OUT/$ZLIB_DEB" | cut -d' ' -f1)"
-zlib_stamp_sha="$(sha256sum "$ZLIB_OUT/build-stamp.json" | cut -d' ' -f1)"
 
 log 'checking the glibc-backport stage output (native build order glibc -> node)'
 "$REFERENCE_NODE" - "$GLIBC_OUT" "$GLIBC_FIXED" <<'EOF'
@@ -232,14 +162,28 @@ if [ -s "$work/packages-outside-snapshot.txt" ]; then
 fi
 log "snapshot check: $snapshot_checked installed or changed packages are in the $APT_SNAPSHOT index"
 
-log 'replacing the base zlib1g with the reviewed source backport'
+# Select the exact binary and headers from DSA-6613-1. Preserve the binary for
+# the private CI runtime check; the public runtime gets its copy through apt.
+debian_pool='https://deb.debian.org/debian-security/pool/updates/main/z/zlib'
+security_snapshot='https://snapshot.debian.org/archive/debian-security/20261109T000000Z/pool/updates/main/z/zlib'
+fetch_deb() {
+  local name="$1" pin="$2" dest="$3" base
+  for base in "$debian_pool" "$security_snapshot"; do
+    if curl -fsSL --retry 3 -o "$dest" "$base/$name" &&
+       printf '%s  %s\n' "$pin" "$dest" | sha256sum -c --status -; then return 0; fi
+  done
+  die 3 "could not fetch verified Debian package: $name"
+}
+fetch_deb "$ZLIB_DEB" "$ZLIB_DEB_SHA256" "$OUT_DIR/$ZLIB_DEB"
+fetch_deb "$ZLIB_DEV_DEB" "$ZLIB_DEV_DEB_SHA256" "$work/$ZLIB_DEV_DEB"
+log 'installing the Debian security package in the Node builder'
 base_zlib="$(dpkg-query -W -f='${Version}' zlib1g)"
 [ "$base_zlib" = "$ZLIB_PRIOR" ] \
   || die 3 "base zlib1g is $base_zlib, not the reviewed $ZLIB_PRIOR"
-[ "$(dpkg-deb -f "$ZLIB_OUT/$ZLIB_DEB" Package)" = zlib1g ] || die 3 'backport .deb is not zlib1g'
-[ "$(dpkg-deb -f "$ZLIB_OUT/$ZLIB_DEB" Version)" = "$ZLIB_FIXED" ] || die 3 'backport .deb version mismatch'
-dpkg -i "$ZLIB_OUT/$ZLIB_DEB" >/dev/null
-[ "$(dpkg-query -W -f='${Version}' zlib1g)" = "$ZLIB_FIXED" ] || die 3 'zlib1g backport not installed'
+[ "$(dpkg-deb -f "$OUT_DIR/$ZLIB_DEB" Package)" = zlib1g ] || die 3 'Debian .deb is not zlib1g'
+[ "$(dpkg-deb -f "$OUT_DIR/$ZLIB_DEB" Version)" = "$ZLIB_FIXED" ] || die 3 'Debian .deb version mismatch'
+dpkg -i "$OUT_DIR/$ZLIB_DEB" >/dev/null
+[ "$(dpkg-query -W -f='${Version}' zlib1g)" = "$ZLIB_FIXED" ] || die 3 'Debian zlib1g not installed'
 [ "$(readlink "$SYSTEM_LIBZ")" = "$ZLIB_SOFILE" ] || die 3 "$SYSTEM_LIBZ does not point to $ZLIB_SOFILE"
 
 dpkg-query -W -f='${binary:Package}=${Version}\n' | LC_ALL=C sort > "$OUT_DIR/build-environment.txt"
@@ -251,10 +195,9 @@ export GNUPGHOME="$work/gnupg"
 mkdir -m 0700 "$GNUPGHOME"
 
 log 'unpacking the zlib headers of the same Debian source (not installed)'
-curl -fsSL -o "$work/$ZLIB_DEV_DEB" "$SNAPSHOT_DEBIAN/pool/main/z/zlib/$ZLIB_DEV_DEB" \
-  || curl -fsSL -o "$work/$ZLIB_DEV_DEB" "https://deb.debian.org/debian/pool/main/z/zlib/$ZLIB_DEV_DEB"
 printf '%s  %s\n' "$ZLIB_DEV_DEB_SHA256" "$work/$ZLIB_DEV_DEB" | sha256sum -c -
 [ "$(dpkg-deb -f "$work/$ZLIB_DEV_DEB" Source)" = "$ZLIB_DEV_SOURCE" ] || die 3 'zlib1g-dev is from another source'
+[ "$(dpkg-deb -f "$work/$ZLIB_DEV_DEB" Version)" = "$ZLIB_FIXED" ] || die 3 'wrong header version'
 dpkg-deb -x "$work/$ZLIB_DEV_DEB" "$work/zlib-dev"
 zlib_include="$work/zlib-dev/usr/include"
 [ "$(sha256sum "$zlib_include/zlib.h" | cut -d' ' -f1)" = "$ZLIB_H_SHA256" ] || die 3 'unexpected zlib.h'
@@ -419,12 +362,12 @@ console.log([...seen].join(','));
 libz_owner="$(dpkg-query -S "/usr/lib/$MULTIARCH/$ZLIB_SOFILE" | cut -d: -f1-2)"
 [ "$libz_owner" = "zlib1g:$arch" ] || die 6 "libz owner is $libz_owner"
 libz_sha="$(sha256sum "/usr/lib/$MULTIARCH/$ZLIB_SOFILE" | cut -d' ' -f1)"
-deb_libz_sha="$(dpkg-deb --fsys-tarfile "$ZLIB_OUT/$ZLIB_DEB" | tar -xO "./usr/lib/$MULTIARCH/$ZLIB_SOFILE" | sha256sum | cut -d' ' -f1)"
-[ "$libz_sha" = "$deb_libz_sha" ] || die 6 'mapped libz differs from the file in the backport .deb'
+deb_libz_sha="$(dpkg-deb --fsys-tarfile "$OUT_DIR/$ZLIB_DEB" | tar -xO "./usr/lib/$MULTIARCH/$ZLIB_SOFILE" | sha256sum | cut -d' ' -f1)"
+[ "$libz_sha" = "$deb_libz_sha" ] || die 6 'mapped libz differs from the file in the Debian .deb'
 versions_zlib="$("$built" -p process.versions.zlib)"
 [ "$versions_zlib" = "$ZLIB_VERSION" ] || die 6 "process.versions.zlib is $versions_zlib"
 [ "$("$built" -p process.versions.node)" = "$NODE_VERSION" ] || die 6 'built node version mismatch'
-printf 'NODE_LIBZ mapped=%s owner=%s version=%s sha256=%s matches_backport_deb=true\n' \
+printf 'NODE_LIBZ mapped=%s owner=%s version=%s sha256=%s matches_debian_deb=true\n' \
   "$libz_mapped" "$libz_owner" "$(dpkg-query -W -f='${Version}' zlib1g)" "$libz_sha"
 printf 'NODE_VERSIONS node=%s zlib=%s (reference bundled=%s)\n' \
   "$("$built" -p process.versions.node)" "$versions_zlib" "$("$REFERENCE_NODE" -p process.versions.zlib)"
@@ -516,7 +459,7 @@ bad_bindings="$(printf '%s\n' "$gz_bindings" | grep -vE "to [^:]*/libz\.so\.1[0-
 [ -z "$bad_bindings" ] || { printf '%s\n' "$bad_bindings" >&2; die 8 'an addon gz* symbol did not bind to the system libz'; }
 gz_to_libz="$(printf '%s\n' "$gz_bindings" | grep -cE "to [^:]*/libz\.so\.1" || true)"
 # (b) same input as the backport regression: the direct-write path runs cleanly (no
-# SIGABRT/SIGSEGV) through the +toybaco1 libz and gzwrite returns 0 on the forced failure.
+# SIGABRT/SIGSEGV) through the Debian libz and gzwrite returns 0 on the forced failure.
 poc_out="$("$built" -e \
   "const a={exports:{}};process.dlopen(a,process.argv[1]);const z=a.exports.zlibVersion();const r=a.exports.directWritePath();console.log(JSON.stringify({zlibVersion:z,gzwrite:r}))" \
   "$addon")"
@@ -531,16 +474,16 @@ printf 'NODE_GZ_ADDON_POC needed=%s gz_undefined_imports=%s gz_bindings_to_libz=
 printf '%s\n' "$gz_bindings" | sed 's/^ *//; s/^/NODE_GZ_BINDING /'
 
 log 'two-sided ASan reproducer: patched vs unpatched shared libz on the direct-write path'
-# The reproducer and the adapted patch are the shipped, pinned bytes of the zlib1g
+# The reproducer and the Debian patch are the shipped, pinned bytes of the zlib1g
 # backport; the direct-write OOB detection needs ASan-instrumented zlib code, so this
 # builds the 1.3.1 source (patched and unpatched) as ASan shared libraries and runs the
-# reproducer against each. The addon above proves the installed +toybaco1 libz is
+# reproducer against each. The addon above proves the installed Debian libz is
 # reached and the path is clean; this proves the same path is OOB unpatched / clean
 # patched, so a one-sided clean run is never the only evidence.
 poc_src="$ZLIB_SRC_DIR/poc_cve_2026_85091.c"
-adapted_patch="$ZLIB_SRC_DIR/toybaco-zlib-gzwrite-cve-2026-85091.patch"
+debian_patch="$ZLIB_SRC_DIR/Fix-buffer-overflow-bug-in-non-blocking-gzwrite.patch"
 sha256sum -c - <<EOF
-$ADAPTED_PATCH_SHA256  $adapted_patch
+$DEBIAN_PATCH_SHA256  $debian_patch
 $POC_SHA256  $poc_src
 EOF
 zwork="$work/zlib-asan"
@@ -557,7 +500,7 @@ for variant in unpatched patched; do
   gz_pre="$(sha256sum "$d/gzwrite.c" | cut -d' ' -f1)"
   [ "$gz_pre" = "$GZWRITE_ORIG_SHA256" ] || die 8 "two-sided: unexpected gzwrite.c preimage ($variant): $gz_pre"
   if [ "$variant" = patched ]; then
-    ( cd "$d" && patch -p1 -F0 < "$adapted_patch" >/dev/null )
+    ( cd "$d" && patch -p1 -F0 < "$debian_patch" >/dev/null )
     gz_post="$(sha256sum "$d/gzwrite.c" | cut -d' ' -f1)"
     [ "$gz_post" = "$GZWRITE_PATCHED_SHA256" ] || die 8 "two-sided: unexpected gzwrite.c postimage: $gz_post"
   fi
@@ -624,13 +567,13 @@ const stamp = {
   ordering: { after: 'glibc-backport', glibc_installed_fixed: '$GLIBC_FIXED', glibc_build_stamp_sha256: '$glibc_stamp_sha' },
   build_environment: { apt_snapshot: '$APT_SNAPSHOT', installed_packages_sha256: '$build_env_sha',
     installed_package_count: $build_env_count, snapshot_checked_packages: $snapshot_checked },
-  zlib_backport: { installed_fixed: '$ZLIB_FIXED', deb: '$ZLIB_DEB', deb_sha256: '$zlib_deb_sha',
-    build_stamp_sha256: '$zlib_stamp_sha', headers_deb: '$ZLIB_DEV_DEB', headers_deb_sha256: '$ZLIB_DEV_DEB_SHA256',
+  debian_zlib: { installed_fixed: '$ZLIB_FIXED', deb: '$ZLIB_DEB', deb_sha256: '$ZLIB_DEB_SHA256',
+    headers_deb: '$ZLIB_DEV_DEB', headers_deb_sha256: '$ZLIB_DEV_DEB_SHA256',
     zlib_h_sha256: '$ZLIB_H_SHA256', zconf_h_sha256: '$zconf_sha' },
   elf: { needed: '$needed'.split(','), runpath: null, gz_dynamic_symbols: $gz_dynamic,
     gz_implementation_symbols: $gz_impl, v8_private_zlib_exports: $cr_z_dynamic, v8_private_zlib_gz_symbols: $cr_z_gz },
   runtime: { libz_mapped: '$libz_mapped', libz_owner: '$libz_owner', libz_sha256: '$libz_sha',
-    libz_matches_backport_deb: true, versions_zlib: '$versions_zlib' },
+    libz_matches_debian_deb: true, versions_zlib: '$versions_zlib' },
   js_zlib_interop: 'PASS',
   gz_addon_poc: { needed_libz: true, gz_undefined_imports: $addon_gz_undef,
     gz_bindings_to_libz: $gz_to_libz, bound_elsewhere: 0, zlib_version: '$poc_zlib',

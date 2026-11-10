@@ -1,6 +1,6 @@
 'use strict';
 // Runtime installer and verifier for the OS source backports in the Postiz runtime
-// image (zlib1g and glibc). It never runs or suppresses a scanner. Driven by
+// image (glibc). It never runs or suppresses a scanner. Driven by
 // config/postiz-os-backport.json, so each package is defined in one place.
 //
 //   --install <build-out-dir> <backport-config.json>
@@ -163,31 +163,19 @@ const packageBySource = (config, sourcePackage) => {
   return pkg;
 };
 
-// zlib stamps carry {deb, deb_sha256}; multi-binary stamps carry {debs:{name:{file,sha256}}}.
-function stampDebs(stamp) {
-  if (stamp.debs) return stamp.debs;
-  return { zlib1g: { file: stamp.deb, sha256: stamp.deb_sha256 } };
-}
-
 // The build stage's record. Common fields plus package-specific evidence.
 function validateStamp(stamp, pkg) {
-  assert.equal(stamp.source_package || 'zlib', pkg.source_package, 'stamp source package differs from the config');
+  assert.equal(stamp.source_package, pkg.source_package, 'stamp source package differs from the config');
   assert.equal(stamp.installed_fixed, pkg.installed_fixed, 'stamp version differs from the config');
   assert.match(stamp.architecture, /^[a-z0-9-]+$/);
-  const debs = stampDebs(stamp);
+  const debs = stamp.debs;
   for (const name of pkg.binary_packages) {
     const entry = debs[name];
     assert.ok(entry && entry.file && HEX64.test(entry.sha256), `stamp lacks a .deb for ${name}`);
     const epochless = pkg.installed_fixed.replace(/^\d+:/, '');
     assert.equal(entry.file, `${name}_${epochless}_${stamp.architecture}.deb`, `stamp .deb name for ${name}`);
   }
-  if (pkg.source_package === 'zlib') {
-    assert.equal(stamp.patched_marker_present, true);
-    assert.notEqual(stamp.reproducer.unpatched_exit, 0);
-    assert.equal(stamp.reproducer.patched_exit, 0);
-    assert.equal(stamp.reproducer.asan_overflow_before, true);
-    assert.equal(stamp.reproducer.asan_clean_after, true);
-  } else if (pkg.source_package === 'glibc') {
+  if (pkg.source_package === 'glibc') {
     assert.equal(stamp.strfmon_regression_test, 'PASS', 'strfmon regression test must pass in the build');
     assert.equal(stamp.smoke_compiles, true, 'the runtime smoke must have been compiled and linked');
     assert.ok(stamp.smoke && stamp.smoke.file === 'glibc-smoke' && HEX64.test(stamp.smoke.sha256),
@@ -301,15 +289,9 @@ function packageProof(pkg) {
     architecture: stamp.architecture,
     abi: installed.abi,
     binaries: installed.binaries,
-    debs: stampDebs(stamp),
+    debs: stamp.debs,
   };
-  if (pkg.source_package === 'zlib') {
-    proof.reproducer = {
-      unpatched_exit: stamp.reproducer.unpatched_exit, patched_exit: stamp.reproducer.patched_exit,
-      asan_overflow_before: stamp.reproducer.asan_overflow_before, asan_clean_after: stamp.reproducer.asan_clean_after,
-    };
-    proof.patched_marker_present = true;
-  } else if (pkg.source_package === 'glibc') {
+  if (pkg.source_package === 'glibc') {
     proof.strfmon_regression_test = stamp.strfmon_regression_test;
     proof.smoke_compiles = stamp.smoke_compiles;
     proof.patched_files = stamp.patched_files;
@@ -360,11 +342,11 @@ function install(outDir, configPath) {
   const config = validateConfig(regularFile(configPath));
   const stampBytes = regularFile(path.join(outDir, 'build-stamp.json'));
   const stamp = JSON.parse(stampBytes);
-  const pkg = packageBySource(config, stamp.source_package || 'zlib');
+  const pkg = packageBySource(config, stamp.source_package);
   validateStamp(stamp, pkg);
   // Fail closed when the base no longer carries the reviewed vulnerable version.
   assertReviewedBase(pkg, name => dpkgField(name, 'Version'));
-  const debs = stampDebs(stamp);
+  const debs = stamp.debs;
   const debPaths = [];
   for (const name of pkg.binary_packages) {
     const deb = path.join(outDir, debs[name].file);

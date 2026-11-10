@@ -6,8 +6,8 @@
 //
 // Each row gets exactly one disposition:
 //   backported           a reviewed CVE on a reviewed binary package at the
-//                        verified +toybaco1 source backport (zlib1g for
-//                        CVE-2026-85091; libc6 / libc-bin for CVE-2026-5435 and
+//                        verified +toybaco1 source backport (
+//                        libc6 / libc-bin for CVE-2026-5435 and
 //                        CVE-2026-19499). The code is fixed; the version-based
 //                        finding stays because Debian trixie has no fixed version.
 //   fixed_unapplied      the scanner names a fixed version that the image lacks
@@ -34,13 +34,6 @@ export const POLICY = 'toybaco-postiz-os-source-backport-v1';
 // binary packages whose rows are backported, the CVEs, and the fixed upstream
 // commit per CVE. Adding or widening one requires a review here and in the config.
 export const BACKPORTS = Object.freeze({
-  zlib: Object.freeze({
-    binary_packages: Object.freeze(['zlib1g']),
-    installed_fixed: '1:1.3.dfsg+really1.3.1-1+toybaco1',
-    soname: 'libz.so.1',
-    soname_layout: 'symlink',
-    cves: Object.freeze({ 'CVE-2026-85091': 'df84af25dc1942490e1d1c899a07619152a46148' }),
-  }),
   glibc: Object.freeze({
     binary_packages: Object.freeze(['libc6', 'libc-bin']),
     installed_fixed: '2.41-12+deb13u4+toybaco1',
@@ -86,7 +79,7 @@ const fixAvailable = finding => Boolean(finding.FixedVersion) || finding.Status 
 // while vulnerability rows carry the full epoch:version-release string.
 const debianVersion = pkg => `${pkg.Epoch ? `${pkg.Epoch}:` : ''}${pkg.Version}${pkg.Release ? `-${pkg.Release}` : ''}`;
 
-export const reviewedPackages = () => new Set(Object.values(BACKPORTS).flatMap(b => b.binary_packages));
+export const reviewedPackages = () => new Set(['zlib1g', ...Object.values(BACKPORTS).flatMap(b => b.binary_packages)]);
 // (cve, binaryPackage) -> the backport source entry that covers it, or undefined.
 export function backportFor(cve, binaryPackage) {
   for (const [source, b] of Object.entries(BACKPORTS)) {
@@ -103,6 +96,7 @@ export function validateConfig(config) {
   assert.equal(config.runtime_base.debian_release, 'trixie');
   assert.equal(config.runtime_base.architecture, 'amd64');
   assert.deepEqual(array(config.deferred_findings), [], 'glibc is backported, not deferred; no deferrals remain');
+  equal(config.debian_runtime_packages, { zlib1g: '1:1.3.dfsg+really1.3.1-1+deb13u1' }, 'reviewed Debian security package');
   const sources = config.packages.map(p => p.source_package);
   equal([...sources].sort(), Object.keys(BACKPORTS).sort(), 'config packages match the pinned backport set');
   for (const pkg of config.packages) {
@@ -160,13 +154,7 @@ export function validateProof(proof, config, configSha, context) {
       assert.equal(p.binaries[name].version, b.installed_fixed, `${name} installed at the backport`);
       assert.equal(p.binaries[name].status, 'install ok installed', `${name} installed`);
     }
-    if (p.source_package === 'zlib') {
-      assert.notEqual(p.reproducer.unpatched_exit, 0);
-      assert.equal(p.reproducer.patched_exit, 0);
-      assert.equal(p.reproducer.asan_overflow_before, true);
-      assert.equal(p.reproducer.asan_clean_after, true);
-      assert.equal(p.patched_marker_present, true);
-    } else if (p.source_package === 'glibc') {
+    if (p.source_package === 'glibc') {
       assert.equal(p.strfmon_regression_test, 'PASS', 'glibc strfmon regression test must pass');
       assert.equal(p.smoke_compiles, true);
       const glibcConfig = config.packages.find(x => x.source_package === 'glibc');
@@ -209,6 +197,8 @@ export function classifyRawReport(report, exitStatus, config) {
   assert.equal(results.flatMap(r => r.ExperimentalModifiedFindings || []).length, 0, 'no prefiltered findings');
   // Each configured backport is present in the scanned inventory at +toybaco1.
   const osPackages = results.filter(r => r.Class === 'os-pkgs').flatMap(r => r.Packages || []);
+  assert.equal(debianVersion(one(osPackages.filter(p => p.Name === 'zlib1g'), 'one inventoried zlib1g')),
+    config.debian_runtime_packages.zlib1g, 'inventoried zlib1g must match DSA-6613-1');
   for (const pkg of config.packages) {
     for (const name of pkg.binary_packages) {
       const inv = osPackages.filter(p => p.Name === name);
