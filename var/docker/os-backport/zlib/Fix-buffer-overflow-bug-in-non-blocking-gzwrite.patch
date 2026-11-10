@@ -1,0 +1,28 @@
+From: Mark Adler <git@madler.net>
+Date: Wed, 16 Sep 2026 16:26:14 -0700
+Subject: [PATCH] Fix buffer overflow bug in non-blocking gzwrite.
+
+This addresses CVE-2026-85091.
+
+[Salvatore Bonaccorso: Backport fix to version before 81cc0bebedd9 ("Support
+non-blocking devices in the gz* routines.").]
+Thanks: Tobias Frost and Shafayat Hossain Majumder
+---
+ gzwrite.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+--- a/gzwrite.c
++++ b/gzwrite.c
+@@ -241,8 +241,11 @@
+                 n = (unsigned)len;
+             state->strm.avail_in = n;
+             state->x.pos += n;
+-            if (gz_comp(state, Z_NO_FLUSH) == -1)
++            if (gz_comp(state, Z_NO_FLUSH) == -1) {
++                state->strm.avail_in = 0;
++                state->strm.next_in = state->in;
+                 return 0;
++            }
+             len -= n;
+         } while (len);
+     }

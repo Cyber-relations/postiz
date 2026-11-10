@@ -7,7 +7,7 @@
 //     The running binary must be /usr/local/bin/node with the stamp's SHA-256, built
 //     from the pinned and signature-verified release source with --shared-zlib. Its
 //     ELF must need libz.so.1, carry no RPATH/RUNPATH and export no gz* symbol, and
-//     the libz it maps must be the installed zlib1g +toybaco1 file (the same bytes the
+//     the libz it maps must be the installed Debian zlib1g file (the same bytes the
 //     builder linked and tested against). Prints JSON on stdout and the
 //     TOYBACO_POSTIZ_NODE_SHARED_ZLIB= line on stderr.
 //
@@ -34,7 +34,10 @@ const EXPECTED = Object.freeze({
   shasums_sha256: 'c90c3f1478fda8308b22cc1a1b0dc536169196444e67ee8b5c582fd351d02bce',
   signer_fingerprint: '5BE8A3F6C8A5C01D106C0AD820B1A390B168D356',
   zlib_version: '1.3.1',
-  zlib_fixed: '1:1.3.dfsg+really1.3.1-1+toybaco1',
+  zlib_fixed: '1:1.3.dfsg+really1.3.1-1+deb13u1',
+  deb_sha256: '8c27c342230503b73dfde629642c3b352e87b554e06d60cf58772f236a305ceb',
+  headers_sha256: '88ebb839a7a54c97dceb647e2a2bfa2451d6f440801ceef3d56f654022637eb9',
+  libz_sha256: '6c13931760210e8b391b63a337dfe4071346c4ad6e3827694edb7b6989bb16dd',
   libz_path: '/usr/lib/x86_64-linux-gnu/libz.so.1.3.1',
   libz_soname: 'libz.so.1',
   architecture: 'amd64',
@@ -138,10 +141,12 @@ function validateStamp(stamp) {
   assert.equal(stamp.elf.gz_implementation_symbols, 0);
   assert.equal(stamp.elf.v8_private_zlib_gz_symbols, 0);
   assert.ok(stamp.elf.needed.includes(EXPECTED.libz_soname), 'stamp DT_NEEDED');
-  assert.equal(stamp.zlib_backport.installed_fixed, EXPECTED.zlib_fixed);
+  assert.equal(stamp.debian_zlib.installed_fixed, EXPECTED.zlib_fixed);
   assert.equal(stamp.runtime.libz_mapped, EXPECTED.libz_path);
-  assert.equal(stamp.runtime.libz_matches_backport_deb, true);
-  assert.ok(HEX64.test(stamp.runtime.libz_sha256), 'stamp libz hash');
+  assert.equal(stamp.runtime.libz_matches_debian_deb, true);
+  assert.equal(stamp.debian_zlib.deb_sha256, EXPECTED.deb_sha256, 'Debian package hash');
+  assert.equal(stamp.debian_zlib.headers_deb_sha256, EXPECTED.headers_sha256, 'Debian header package hash');
+  assert.equal(stamp.runtime.libz_sha256, EXPECTED.libz_sha256, 'Debian shared library hash');
   assert.equal(stamp.runtime.versions_zlib, EXPECTED.zlib_version);
   assert.equal(stamp.js_zlib_interop, 'PASS');
   const poc = stamp.gz_addon_poc;

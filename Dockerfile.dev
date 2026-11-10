@@ -42,13 +42,6 @@ RUN test ! -e node_modules/vitest \
  && test -f node_modules/prisma/build/index.js \
  && test -f node_modules/.prisma/client/index.js
 
-# Rebuild Debian zlib1g from checksum-pinned source with the reviewed CVE-2026-85091
-# source backport (same ABI and architecture) and prove the fix with the native
-# reproducer. Only the rebuilt .deb and its build stamp leave this stage.
-FROM node:22.23.4-trixie-slim@sha256:8eb619e402eaede1748a3c8173bffab391592812e85136452f781741c7242ddf AS zlib-backport
-COPY var/docker/os-backport/zlib /toybaco/os-backport/zlib
-RUN bash /toybaco/os-backport/zlib/build-zlib1g-backport.sh /toybaco/os-backport/zlib /toybaco/os-backport/out
-
 # Rebuild Debian glibc (libc6, libc-bin) from checksum-pinned source with the
 # official 2.41 stable-branch backports for CVE-2026-5435 and CVE-2026-19499 (same
 # ABI and architecture). Only the rebuilt .debs and the build stamp leave this stage.
@@ -57,7 +50,7 @@ COPY var/docker/os-backport/glibc /toybaco/os-backport/glibc
 RUN bash /toybaco/os-backport/glibc/build-glibc-backport.sh /toybaco/os-backport/glibc /toybaco/os-backport/out
 
 # Build Node.js 22.23.4 from the exact release source (SHASUMS256.txt signature and
-# SHA-256 pins checked) with --shared-zlib against the reviewed zlib1g source backport,
+# SHA-256 pins checked) with --shared-zlib against the pinned Debian security zlib1g package,
 # so the runtime binary links the system libz.so.1 and carries no gz* of its own. The
 # read-only glibc-backport mount orders the two all-CPU native builds (glibc, then
 # Node); make -j is bounded by memory and the cgroup quota inside the script. Only the
@@ -65,10 +58,9 @@ RUN bash /toybaco/os-backport/glibc/build-glibc-backport.sh /toybaco/os-backport
 FROM node:22.23.4-trixie-slim@sha256:8eb619e402eaede1748a3c8173bffab391592812e85136452f781741c7242ddf AS node-source
 COPY var/docker/os-backport/node /toybaco/os-backport/node
 ARG TOYBACO_NODE_BUILD_DEADLINE_EPOCH
-RUN --mount=type=bind,from=zlib-backport,source=/toybaco/os-backport/out,target=/toybaco/os-backport/zlib-out \
-    --mount=type=bind,from=glibc-backport,source=/toybaco/os-backport/out,target=/toybaco/os-backport/glibc-out \
+RUN --mount=type=bind,from=glibc-backport,source=/toybaco/os-backport/out,target=/toybaco/os-backport/glibc-out \
     --mount=type=bind,source=var/docker/os-backport/zlib,target=/toybaco/os-backport/zlib-src \
-    bash /toybaco/os-backport/node/build-node-shared-zlib.sh /toybaco/os-backport/node /toybaco/os-backport/zlib-out /toybaco/os-backport/glibc-out /toybaco/os-backport/zlib-src /toybaco/os-backport/node-out
+    bash /toybaco/os-backport/node/build-node-shared-zlib.sh /toybaco/os-backport/node /toybaco/os-backport/glibc-out /toybaco/os-backport/zlib-src /toybaco/os-backport/node-out
 
 FROM nginx:1.30.6@sha256:eb1c896deef834f4e056829fd6dadac8305501f16cc71ba65fb252c8d0aa168e AS runtime
 ARG NEXT_PUBLIC_VERSION
@@ -110,9 +102,7 @@ COPY --from=production --chown=www:www /app /app
 COPY --from=build /app/var/docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build --chmod=0555 /app/var/docker/toybaco-entrypoint.sh /usr/local/bin/toybaco-entrypoint
 RUN node /app/var/docker/toybaco-verify-rds-public-ca.cjs --install-system-trust /app
-# Replace the base zlib1g and glibc with the reviewed source backports.
-RUN --mount=type=bind,from=zlib-backport,source=/toybaco/os-backport/out,target=/tmp/toybaco-zlib-backport \
-    node /app/var/docker/toybaco-verify-os-backport.cjs --install /tmp/toybaco-zlib-backport /app/var/docker/os-backport/postiz-os-backport.json
+# Install the reviewed glibc backport. The runtime uses Debian security zlib.
 RUN --mount=type=bind,from=glibc-backport,source=/toybaco/os-backport/out,target=/tmp/toybaco-glibc-backport \
     node /app/var/docker/toybaco-verify-os-backport.cjs --install /tmp/toybaco-glibc-backport /app/var/docker/os-backport/postiz-os-backport.json
 
